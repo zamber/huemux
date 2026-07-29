@@ -119,9 +119,29 @@ func (s *Store) Get(areaID, configurationType string) AreaSettings {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	if v, ok := s.byArea[areaID]; ok {
-		return v
+		return backfillDefaults(v, configurationType)
 	}
 	return DefaultAreaSettings(configurationType)
+}
+
+// backfillDefaults fills in fields that are still at their Go zero value,
+// which for settings saved before those fields existed means "missing," not
+// "deliberately zero." Without this, a settings.json written before the
+// axis-mapping fields existed would decode with AxisVertical == "" and
+// silently degrade zone mapping instead of falling back to the same
+// defaults a fresh area gets — an on-disk schema evolving out from under a
+// still-valid file is exactly the kind of thing that fails silently.
+func backfillDefaults(v AreaSettings, configurationType string) AreaSettings {
+	if v.AxisHorizontal != "" {
+		return v // has axis fields already; assume the rest of the record is current too
+	}
+	d := DefaultAreaSettings(configurationType)
+	v.AxisHorizontal = d.AxisHorizontal
+	v.AxisVertical = d.AxisVertical
+	v.AxisDepth = d.AxisDepth
+	v.InvertVertical = d.InvertVertical
+	v.DepthSizeGain = d.DepthSizeGain
+	return v
 }
 
 // Set updates the in-memory settings for an area and schedules a debounced

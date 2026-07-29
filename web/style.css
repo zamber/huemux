@@ -38,6 +38,12 @@ section {
 
 h2 { font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.04em; color: #9aa; margin: 1rem 0 0.5rem; }
 h2:first-child { margin-top: 0; }
+h3 { font-size: 0.8rem; color: #aab; margin: 0.8rem 0 0.3rem; font-weight: 600; }
+
+.axis-row { display: flex; align-items: flex-end; gap: 0.6rem; margin-bottom: 0.6rem; }
+.axis-row .control { flex: 1; margin-bottom: 0; }
+.axis-row .axis-invert { flex: 0 0 auto; padding-bottom: 0.35rem; }
+.axis-row .axis-invert label { white-space: nowrap; }
 
 label { display: block; margin-bottom: 0.25rem; color: #ccc; }
 select, input[type=number] {

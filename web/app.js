@@ -137,7 +137,10 @@ els.changeSourceBtn.addEventListener('click', async () => {
 });
 
 els.flipDepthBtn.addEventListener('click', () => {
-  const cb = document.querySelector('[data-setting="invert_depth"]');
+  // The common complaint is "zones are upside down," which is a vertical
+  // flip regardless of which physical axis is currently assigned to it —
+  // so this toggles invert_vertical, not whatever's assigned to depth.
+  const cb = document.querySelector('[data-setting="invert_vertical"]');
   cb.checked = !cb.checked;
   cb.dispatchEvent(new Event('change'));
 });
@@ -344,7 +347,10 @@ function renderStatus(s) {
 
 const settingKeys = {
   reactivity: 'float', brightness: 'float', saturation: 'float',
-  mode: 'string', edge_width: 'float', invert_depth: 'bool', letterbox: 'bool',
+  mode: 'string', edge_width: 'float', letterbox: 'bool',
+  axis_horizontal: 'string', axis_vertical: 'string', axis_depth: 'string',
+  invert_horizontal: 'bool', invert_vertical: 'bool', invert_depth: 'bool',
+  depth_size_gain: 'float',
   black_cutoff: 'float', scene_cut_sensitivity: 'float',
   capture_width: 'int', capture_height: 'int', capture_fps: 'int',
   output_hz: 'int', color_space: 'string', disable_ems: 'bool',
