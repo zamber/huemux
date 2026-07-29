@@ -1,0 +1,29 @@
+# Example systemd --user unit for running lightsync as a persistent
+# background service instead of a foreground terminal session.
+#
+# This is an example, not an installer — nothing installs it automatically.
+# To use it:
+#
+#   mkdir -p ~/.config/systemd/user
+#   cp packaging/lightsync.service ~/.config/systemd/user/
+#   # edit ExecStart below if your binary lives somewhere other than ~/bin/
+#   systemctl --user daemon-reload
+#   systemctl --user enable --now lightsync.service
+#
+# Because lightsync opens a browser tab on start (best-effort) and prints a
+# CLI status block, running it under systemd loses both — that's expected.
+# Watch it with `journalctl --user -u lightsync -f` instead, and open
+# http://127.0.0.1:7654 manually.
+
+[Unit]
+Description=lightsync — screen colour sync for Philips Hue Entertainment
+After=network.target
+
+[Service]
+Type=simple
+ExecStart=%h/bin/lightsync
+Restart=on-failure
+RestartSec=3
+
+[Install]
+WantedBy=default.target

@@ -72,6 +72,11 @@ One external dependency: `pion/dtls`. The WebSocket server, colour pipeline
 and UI are all stdlib and plain JavaScript, with no build step for the
 frontend.
 
+Prebuilt binaries (linux-amd64, linux-arm64, windows-amd64) are hosted at
+http://lightsync.lan/ alongside `lights.lan` — download and run, no install
+step. `packaging/lightsync.service` is an example systemd `--user` unit for
+running it as a persistent background service instead of a terminal session.
+
 ## Layout
 
 ```
