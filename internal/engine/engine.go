@@ -152,6 +152,12 @@ func (e *Engine) SelectArea(ctx context.Context, areaID string) error {
 			if f, err := e.client.GetLightFeatures(ctx, lightRID); err == nil {
 				features[lightRID] = f
 			}
+			// Entertainment streaming drives color/brightness only, never
+			// on/off — a physically-off bulb would sit dark through a
+			// perfectly working stream with nothing anywhere to explain why.
+			if err := e.client.SetOn(ctx, lightRID, true); err != nil {
+				log.Printf("lightsync: turn on light %s: %v", lightRID, err)
+			}
 		}
 	}
 

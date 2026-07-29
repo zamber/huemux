@@ -114,9 +114,17 @@ func Dial(ctx context.Context, cfg Config) (*Stream, error) {
 		return nil, fmt.Errorf("invalid bridge ip %q", cfg.BridgeIP)
 	}
 
-	udpConn, err := net.DialUDP("udp", nil, addr)
+	// Deliberately net.ListenUDP, not net.DialUDP: a "connected" UDP socket
+	// only allows plain Write (to the address it was dialed to), and pion's
+	// Conn addresses every write explicitly via WriteTo, which Go's net
+	// package refuses on a connected socket ("use of WriteTo with
+	// pre-connected connection"). That failure doesn't surface until the
+	// first post-handshake application write, which makes it look like the
+	// handshake succeeded and then the session mysteriously died — pion's
+	// own Dial() carries the same comment for the same reason.
+	udpConn, err := net.ListenUDP("udp", nil)
 	if err != nil {
-		return nil, fmt.Errorf("open udp socket to %s: %w", addr, err)
+		return nil, fmt.Errorf("open udp socket: %w", err)
 	}
 
 	// dtls.Client blocks for the full handshake with no context support in
@@ -128,7 +136,7 @@ func Dial(ctx context.Context, cfg Config) (*Stream, error) {
 	}
 	resCh := make(chan result, 1)
 	go func() {
-		conn, err := dtls.Client(udpConn, udpConn.RemoteAddr(), dc)
+		conn, err := dtls.Client(udpConn, addr, dc)
 		resCh <- result{conn, err}
 	}()
 

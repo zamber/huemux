@@ -163,6 +163,8 @@ func cmdTest(args []string) {
 	}
 	fmt.Printf("area %q: %d channels\n", cfg.Metadata.Name, len(cfg.Channels))
 
+	turnOnChannelLights(ctx, client, cfg.Channels)
+
 	if err := client.StartStreaming(ctx, areaID); err != nil {
 		fatalf("PUT action=start: %v", err)
 	}
@@ -184,6 +186,23 @@ func cmdTest(args []string) {
 	runDone := make(chan error, 1)
 	go func() { runDone <- stream.Run(ctx) }()
 
+	// stream.Set() only updates in-memory state; it does not itself detect
+	// or report a dead output loop. Racing every sleep against runDone is
+	// what makes an early failure (e.g. a write error right after the
+	// handshake) show up immediately instead of being silently swallowed
+	// while the rest of the test script sails on regardless.
+	failed := false
+	sleepOrFail := func(d time.Duration) bool {
+		select {
+		case err := <-runDone:
+			fmt.Printf("\nERROR: output loop ended early: %v\n", err)
+			failed = true
+			return false
+		case <-time.After(d):
+			return true
+		}
+	}
+
 	colors := []struct {
 		name    string
 		r, g, b uint8
@@ -194,29 +213,65 @@ func cmdTest(args []string) {
 		{"white", 255, 255, 255},
 	}
 	for _, c := range colors {
+		if failed {
+			break
+		}
 		fmt.Printf("-> %s\n", c.name)
 		chans := make([]hue.Channel, len(cfg.Channels))
 		for i, ch := range cfg.Channels {
 			chans[i] = hue.Channel{ID: ch.ChannelID, R: c.r, G: c.g, B: c.b}
 		}
 		stream.Set(chans)
-		time.Sleep(2 * time.Second)
+		sleepOrFail(2 * time.Second)
 	}
 
-	fmt.Println("holding for 60s with NO further color commands — only the output loop's keepalive.")
-	fmt.Println("watch the lights: if they revert to their previous state before this ends, the keepalive or rate is wrong.")
-	for i := 60; i > 0; i-- {
-		fmt.Printf("\r  %2ds remaining ", i)
-		time.Sleep(time.Second)
+	if !failed {
+		fmt.Println("holding for 60s with NO further color commands — only the output loop's keepalive.")
+		fmt.Println("watch the lights: if they revert to their previous state before this ends, the keepalive or rate is wrong.")
+		for i := 60; i > 0 && !failed; i-- {
+			fmt.Printf("\r  %2ds remaining ", i)
+			sleepOrFail(time.Second)
+		}
+		fmt.Println()
 	}
-	fmt.Println()
 
-	cancel() // triggers Stream.Run's fade-to-black shutdown path
-	<-runDone
+	if !failed {
+		cancel() // triggers Stream.Run's fade-to-black shutdown path
+		<-runDone
+	}
 	_ = stream.Close()
 	_ = client.StopStreaming(context.Background(), areaID)
 
+	if failed {
+		fatalf("milestone 2 test failed: output loop exited early (see error above)")
+	}
 	fmt.Println("done. If the lights held color for the full 60s and then faded out cleanly, milestone 2 passes.")
+}
+
+// turnOnChannelLights makes sure every light behind an area's channels is
+// switched on before streaming starts. Entertainment streaming only
+// controls color/brightness, never the on/off state, so a physically-off
+// bulb would otherwise sit dark through an entire perfect test run with no
+// error to explain why. Best-effort: a light that fails to resolve or
+// switch on is logged and skipped rather than aborting the test.
+func turnOnChannelLights(ctx context.Context, client *hue.Client, channels []hue.EntertainmentChannel) {
+	seen := map[string]bool{}
+	for _, ch := range channels {
+		for _, m := range ch.Members {
+			lightRID, err := client.ResolveLightForService(ctx, m.Service.RID)
+			if err != nil {
+				fmt.Printf("warning: could not resolve light for channel %d: %v\n", ch.ChannelID, err)
+				continue
+			}
+			if seen[lightRID] {
+				continue
+			}
+			seen[lightRID] = true
+			if err := client.SetOn(ctx, lightRID, true); err != nil {
+				fmt.Printf("warning: could not turn on light %s: %v\n", lightRID, err)
+			}
+		}
+	}
 }
 
 // --- run -----------------------------------------------------------------

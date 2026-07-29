@@ -242,11 +242,31 @@ func (c *Client) StopStreaming(ctx context.Context, id string) error {
 		map[string]any{"action": "stop"}, nil)
 }
 
+// SetOn turns a light on or off via its ordinary on/off state.
+//
+// This matters more than it sounds like it should: Entertainment streaming
+// controls color and brightness, but it does not override a light's on/off
+// state. A physically-off bulb receiving a perfect DTLS color stream stays
+// dark and gives no error anywhere — exactly the kind of silent failure this
+// whole project is trying to avoid, so callers that start a stream should
+// make sure the lights are on first rather than leaving a user to discover
+// this by trial and error.
+func (c *Client) SetOn(ctx context.Context, lightRID string, on bool) error {
+	return c.doV2(ctx, http.MethodPut, "/clip/v2/resource/light/"+lightRID,
+		map[string]any{"on": map[string]any{"on": on}}, nil)
+}
+
 // entertainmentService is the subset of the `entertainment` resource needed
 // to resolve a channel member's service back to the physical light it
 // belongs to, for click-to-identify in the calibration UI.
+//
+// `owner` on this resource is the *device*, not the light — a device can
+// have several services (entertainment, light, button, ...) and owner just
+// names the parent. `renderer_reference` is what actually points at the
+// `light` resource this entertainment service drives.
 type entertainmentService struct {
-	Owner ResourceIdentifier `json:"owner"`
+	Owner             ResourceIdentifier `json:"owner"`
+	RendererReference ResourceIdentifier `json:"renderer_reference"`
 }
 
 // ResolveLightForService walks from an entertainment channel member's
@@ -258,6 +278,9 @@ func (c *Client) ResolveLightForService(ctx context.Context, serviceRID string) 
 	}
 	if len(env.Data) == 0 {
 		return "", fmt.Errorf("no entertainment service with id %s", serviceRID)
+	}
+	if rid := env.Data[0].RendererReference.RID; rid != "" {
+		return rid, nil
 	}
 	return env.Data[0].Owner.RID, nil
 }
