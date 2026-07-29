@@ -27,6 +27,11 @@ let stream = null;
 let videoEl = null; // used only by the <video>+rVFC fallback
 let latestStatus = null;
 let suppressSettingsEcho = false;
+// True from the moment capture succeeds until Stop (or the share ending on
+// its own). loadAreas() re-runs on every WS reconnect — including the
+// service simply outliving a brief network hiccup mid-session — and must
+// not clobber the Start/Stop button state of a sync already in progress.
+let syncing = false;
 
 // --- WebSocket transport -----------------------------------------------
 
@@ -85,7 +90,7 @@ async function loadAreas() {
     opt.textContent = `${a.metadata.name} — ${a.configuration_type} · ${a.channels.length} ch${busy}`;
     els.areaSelect.appendChild(opt);
   }
-  els.startBtn.disabled = false;
+  if (!syncing) els.startBtn.disabled = false;
 }
 
 // --- Start / stop ----------------------------------------------------------
@@ -95,8 +100,11 @@ els.startBtn.addEventListener('click', async () => {
   if (!areaId) return;
   els.areaWarning.hidden = true;
 
-  send({ type: 'select_area', area_id: areaId });
-
+  // Capture first, select_area (which dials the real DTLS stream) only once
+  // it succeeds. Reversing this order would mean the bridge starts
+  // streaming black/keepalive frames to real lights for however long the
+  // browser's share picker sits open, which is a needless real-world side
+  // effect of a UI interaction that hasn't finished yet.
   try {
     await startCapture();
   } catch (err) {
@@ -105,6 +113,9 @@ els.startBtn.addEventListener('click', async () => {
     return;
   }
 
+  send({ type: 'select_area', area_id: areaId });
+
+  syncing = true;
   els.startBtn.disabled = true;
   els.stopBtn.disabled = false;
   els.changeSourceBtn.disabled = false;
@@ -114,6 +125,7 @@ els.startBtn.addEventListener('click', async () => {
 els.stopBtn.addEventListener('click', () => {
   stopCapture();
   send({ type: 'stop' });
+  syncing = false;
   els.startBtn.disabled = false;
   els.stopBtn.disabled = true;
   els.changeSourceBtn.disabled = true;
@@ -142,8 +154,11 @@ async function startCapture() {
   const track = stream.getVideoTracks()[0];
   track.onended = () => {
     stopCapture();
+    send({ type: 'stop' });
+    syncing = false;
     els.startBtn.disabled = false;
     els.stopBtn.disabled = true;
+    els.changeSourceBtn.disabled = true;
   };
 
   // Chrome and Firefox disagree on whether bare values or exact/max force the
