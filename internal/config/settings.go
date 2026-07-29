@@ -16,9 +16,19 @@ type AreaSettings struct {
 	Mode         string  `json:"mode"` // edges | quadrant | global | spread
 	EdgeWidth    float64 `json:"edge_width"`
 	QuadrantSize float64 `json:"quadrant_size"`
-	InvertDepth  bool    `json:"invert_depth"`
 	Feather      float64 `json:"feather"`
 	Letterbox    bool    `json:"letterbox"`
+
+	// Zone mapping: which physical axis (x/y/z) plays which role. See
+	// pipeline.ZoneOpts for why this is configurable rather than assumed —
+	// real areas disagree about which axis carries useful information.
+	AxisHorizontal   string  `json:"axis_horizontal"` // x | y | z -> screen U
+	AxisVertical     string  `json:"axis_vertical"`   // x | y | z -> screen V
+	AxisDepth        string  `json:"axis_depth"`      // x | y | z -> sample-size modifier
+	InvertHorizontal bool    `json:"invert_horizontal"`
+	InvertVertical   bool    `json:"invert_vertical"`
+	InvertDepth      bool    `json:"invert_depth"`
+	DepthSizeGain    float64 `json:"depth_size_gain"` // 0 = disabled
 
 	// Primary
 	Reactivity float64 `json:"reactivity"` // 0-100
@@ -50,9 +60,15 @@ func DefaultAreaSettings(configurationType string) AreaSettings {
 		Mode:                mode,
 		EdgeWidth:           0.15,
 		QuadrantSize:        0.35,
-		InvertDepth:         false,
 		Feather:             0.04,
 		Letterbox:           true,
+		AxisHorizontal:      "x",
+		AxisVertical:        "z",
+		AxisDepth:           "y",
+		InvertHorizontal:    false,
+		InvertVertical:      true, // see pipeline.DefaultZoneOpts: z is physical-up, screen-V is image-down
+		InvertDepth:         false,
+		DepthSizeGain:       0.3,
 		Reactivity:          45,
 		Brightness:          100,
 		Saturation:          130,

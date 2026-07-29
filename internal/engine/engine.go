@@ -122,14 +122,7 @@ func (e *Engine) SelectArea(ctx context.Context, areaID string) error {
 	}
 
 	settings := e.store.Get(areaID, cfg.ConfigurationType)
-	zoneOpts := pipeline.ZoneOpts{
-		Mode:         pipeline.SampleMode(settings.Mode),
-		EdgeWidth:    settings.EdgeWidth,
-		QuadrantSize: settings.QuadrantSize,
-		InvertDepth:  settings.InvertDepth,
-		Feather:      settings.Feather,
-	}
-	zones := pipeline.BuildZones(cfg.Channels, zoneOpts)
+	zones := pipeline.BuildZones(cfg.Channels, zoneOptsFromSettings(settings))
 
 	features := map[string]hue.LightColorFeatures{}
 	for i, z := range zones {
@@ -209,6 +202,22 @@ func colorSpaceFromString(s string) hue.ColorSpace {
 	return hue.ColorSpaceRGB
 }
 
+func zoneOptsFromSettings(s config.AreaSettings) pipeline.ZoneOpts {
+	return pipeline.ZoneOpts{
+		Mode:             pipeline.SampleMode(s.Mode),
+		EdgeWidth:        s.EdgeWidth,
+		QuadrantSize:     s.QuadrantSize,
+		AxisHorizontal:   pipeline.Axis(s.AxisHorizontal),
+		AxisVertical:     pipeline.Axis(s.AxisVertical),
+		AxisDepth:        pipeline.Axis(s.AxisDepth),
+		InvertHorizontal: s.InvertHorizontal,
+		InvertVertical:   s.InvertVertical,
+		InvertDepth:      s.InvertDepth,
+		DepthSizeGain:    s.DepthSizeGain,
+		Feather:          s.Feather,
+	}
+}
+
 // Stop ends the current stream cleanly (fade to black, happens inside
 // Stream.Run's shutdown path) and releases the area.
 func (e *Engine) Stop(ctx context.Context) {
@@ -270,13 +279,7 @@ func (e *Engine) UpdateSettings(s config.AreaSettings) {
 	if areaID == "" {
 		return
 	}
-	zones := pipeline.BuildZones(channels, pipeline.ZoneOpts{
-		Mode:         pipeline.SampleMode(s.Mode),
-		EdgeWidth:    s.EdgeWidth,
-		QuadrantSize: s.QuadrantSize,
-		InvertDepth:  s.InvertDepth,
-		Feather:      s.Feather,
-	})
+	zones := pipeline.BuildZones(channels, zoneOptsFromSettings(s))
 	e.mu.Lock()
 	// Preserve resolved light rids from the original zone build (BuildZones
 	// re-derives geometry but has no bridge access to re-resolve services).
