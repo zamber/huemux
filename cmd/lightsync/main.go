@@ -1,0 +1,340 @@
+// Command lightsync is the entry point: pairing/areas/test subcommands and
+// the default run mode that serves the UI and drives the output loop.
+package main
+
+import (
+	"bufio"
+	"context"
+	"encoding/hex"
+	"fmt"
+	"os"
+	"os/exec"
+	"os/signal"
+	"runtime"
+	"syscall"
+	"time"
+
+	"lights.lan/lightsync/internal/config"
+	"lights.lan/lightsync/internal/engine"
+	"lights.lan/lightsync/internal/hue"
+	"lights.lan/lightsync/internal/server"
+	"lights.lan/lightsync/internal/ui"
+)
+
+var version = "dev"
+
+func main() {
+	args := os.Args[1:]
+	if len(args) == 0 {
+		cmdRun(false)
+		return
+	}
+
+	switch args[0] {
+	case "pair":
+		cmdPair(args[1:])
+	case "areas":
+		cmdAreas(args[1:])
+	case "test":
+		cmdTest(args[1:])
+	case "-v", "--verbose":
+		cmdRun(true)
+	case "-h", "--help":
+		usage()
+	case "version", "--version":
+		fmt.Println("lightsync " + version)
+	default:
+		usage()
+		os.Exit(1)
+	}
+}
+
+func usage() {
+	fmt.Println(`lightsync — screen colour sync for Philips Hue Entertainment areas
+
+Usage:
+  lightsync pair <bridge-ip>        Register with the bridge (press the link button when prompted)
+  lightsync areas                   List entertainment areas on the paired bridge
+  lightsync test <area-id>          Prove the DTLS path works: cycles colors, then a 60s keepalive-only hold
+  lightsync [--verbose]             Run the service (default: http://127.0.0.1:7654)`)
+}
+
+// --- pair ------------------------------------------------------------------
+
+func cmdPair(args []string) {
+	ctx, cancel := context.WithTimeout(context.Background(), 90*time.Second)
+	defer cancel()
+
+	if len(args) == 0 {
+		fmt.Println("no bridge IP given; searching for one on the local network...")
+		candidates := hue.Discover(ctx)
+		if len(candidates) == 0 {
+			fmt.Println("no bridge found automatically. Find its IP in the Hue app (Settings → My Bridge) and run:")
+			fmt.Println("  lightsync pair <bridge-ip>")
+			os.Exit(1)
+		}
+		fmt.Println("found candidate bridge(s):")
+		for _, ip := range candidates {
+			fmt.Println("  " + ip)
+		}
+		fmt.Println("run: lightsync pair <bridge-ip>")
+		os.Exit(1)
+	}
+	bridgeIP := args[0]
+
+	info, err := hue.BridgeConfig(ctx, bridgeIP)
+	if err != nil {
+		fatalf("could not contact a bridge at %s: %v", bridgeIP, err)
+	}
+	if !hue.SupportsEntertainment(info) {
+		fatalf("the bridge at %s (model %s) is too old to support Entertainment areas — this needs a square (v2) bridge", bridgeIP, info.ModelID)
+	}
+
+	fmt.Printf("found bridge %q (id %s). Press the link button on the bridge now — waiting up to 60s...\n", info.Name, info.BridgeID)
+
+	username, clientkey, err := hue.Pair(ctx, bridgeIP, fmt.Sprintf("lightsync#%s", hostname()), 60*time.Second)
+	if err != nil {
+		fatalf("pairing failed: %v", err)
+	}
+	if _, err := hex.DecodeString(clientkey); err != nil || len(clientkey) != 32 {
+		fatalf("bridge returned an unexpected clientkey (expected 32 hex chars, got %d): this is a bridge-side surprise, not a bug in the hex decode below", len(clientkey))
+	}
+
+	if err := config.SaveBridge(config.Bridge{
+		BridgeIP:  bridgeIP,
+		BridgeID:  info.BridgeID,
+		Username:  username,
+		ClientKey: clientkey,
+	}); err != nil {
+		fatalf("saving config: %v", err)
+	}
+
+	fmt.Println("paired. Run `lightsync areas` to see your entertainment areas.")
+}
+
+// --- areas -------------------------------------------------------------------
+
+func cmdAreas(args []string) {
+	bridge := mustLoadBridge()
+	client := hue.NewClient(bridge.BridgeIP, bridge.Username)
+
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	areas, err := client.ListEntertainmentConfigurations(ctx)
+	if err != nil {
+		fatalf("listing entertainment areas: %v", err)
+	}
+	if len(areas) == 0 {
+		fmt.Println("no entertainment areas found. Create one in the Hue app: Settings → Entertainment areas.")
+		return
+	}
+	for _, a := range areas {
+		busy := ""
+		if a.IsActive() {
+			busy = "  [in use]"
+		}
+		fmt.Printf("%s  %-24s %-8s %d channels%s\n", a.ID, a.Metadata.Name, a.ConfigurationType, len(a.Channels), busy)
+	}
+}
+
+// --- test --------------------------------------------------------------------
+
+func cmdTest(args []string) {
+	if len(args) == 0 {
+		fatalf("usage: lightsync test <area-id>")
+	}
+	areaID := args[0]
+	bridge := mustLoadBridge()
+	client := hue.NewClient(bridge.BridgeIP, bridge.Username)
+
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	cfg, err := client.GetEntertainmentConfiguration(ctx, areaID)
+	if err != nil {
+		fatalf("fetching area: %v", err)
+	}
+	if cfg.IsActive() {
+		fatalf("area is already being streamed to by another application")
+	}
+	if len(cfg.Channels) == 0 {
+		fatalf("area %s has no channels", areaID)
+	}
+	fmt.Printf("area %q: %d channels\n", cfg.Metadata.Name, len(cfg.Channels))
+
+	if err := client.StartStreaming(ctx, areaID); err != nil {
+		fatalf("PUT action=start: %v", err)
+	}
+	fmt.Println("streaming started on the bridge, dialing DTLS...")
+
+	stream, err := hue.Dial(ctx, hue.Config{
+		BridgeIP:  bridge.BridgeIP,
+		Username:  bridge.Username,
+		ClientKey: bridge.ClientKey,
+		AreaID:    areaID,
+		OutputHz:  20,
+	})
+	if err != nil {
+		_ = client.StopStreaming(ctx, areaID)
+		fatalf("dtls handshake: %v", err)
+	}
+	fmt.Println("handshake OK. Running output loop...")
+
+	runDone := make(chan error, 1)
+	go func() { runDone <- stream.Run(ctx) }()
+
+	colors := []struct {
+		name    string
+		r, g, b uint8
+	}{
+		{"red", 255, 0, 0},
+		{"green", 0, 255, 0},
+		{"blue", 0, 0, 255},
+		{"white", 255, 255, 255},
+	}
+	for _, c := range colors {
+		fmt.Printf("-> %s\n", c.name)
+		chans := make([]hue.Channel, len(cfg.Channels))
+		for i, ch := range cfg.Channels {
+			chans[i] = hue.Channel{ID: ch.ChannelID, R: c.r, G: c.g, B: c.b}
+		}
+		stream.Set(chans)
+		time.Sleep(2 * time.Second)
+	}
+
+	fmt.Println("holding for 60s with NO further color commands — only the output loop's keepalive.")
+	fmt.Println("watch the lights: if they revert to their previous state before this ends, the keepalive or rate is wrong.")
+	for i := 60; i > 0; i-- {
+		fmt.Printf("\r  %2ds remaining ", i)
+		time.Sleep(time.Second)
+	}
+	fmt.Println()
+
+	cancel() // triggers Stream.Run's fade-to-black shutdown path
+	<-runDone
+	_ = stream.Close()
+	_ = client.StopStreaming(context.Background(), areaID)
+
+	fmt.Println("done. If the lights held color for the full 60s and then faded out cleanly, milestone 2 passes.")
+}
+
+// --- run -----------------------------------------------------------------
+
+func cmdRun(verbose bool) {
+	bridge := mustLoadBridge()
+	store, err := config.NewStore()
+	if err != nil {
+		fatalf("loading settings: %v", err)
+	}
+
+	eng := engine.New(bridge, store)
+	srv := server.New(eng)
+	url, err := srv.ListenAndServe()
+	if err != nil {
+		fatalf("starting server: %v", err)
+	}
+
+	fmt.Println("lightsync " + version + "  " + url)
+	openBrowser(url)
+
+	printer := ui.NewPrinter(url)
+	printer.Verbose = verbose
+
+	sigCh := make(chan os.Signal, 1)
+	signal.Notify(sigCh, os.Interrupt, syscall.SIGTERM)
+
+	stdinCh := make(chan string, 1)
+	go readStdinCommands(stdinCh)
+
+	renderTick := time.NewTicker(250 * time.Millisecond) // 4 Hz per ROADMAP Milestone 9
+	defer renderTick.Stop()
+
+	var lastAreaID string
+	for {
+		select {
+		case <-sigCh:
+			shutdown(eng, store)
+			return
+		case cmd := <-stdinCh:
+			switch cmd {
+			case "q":
+				shutdown(eng, store)
+				return
+			case "b":
+				ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+				eng.Stop(ctx)
+				cancel()
+			case "r":
+				if lastAreaID != "" {
+					ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
+					if err := eng.SelectArea(ctx, lastAreaID); err != nil {
+						fmt.Println("reconnect failed:", err)
+					}
+					cancel()
+				}
+			}
+		case <-renderTick.C:
+			st := eng.Snapshot()
+			if st.AreaID != "" {
+				lastAreaID = st.AreaID
+			}
+			printer.Render(st)
+		}
+	}
+}
+
+func shutdown(eng *engine.Engine, store *config.Store) {
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	eng.Stop(ctx)
+	store.Flush()
+}
+
+func readStdinCommands(out chan<- string) {
+	// A line-buffered "q"/"r"/"b" rather than raw single-keypress input:
+	// avoids a terminal-raw-mode dependency for a control surface that has
+	// no exit test riding on it (the browser UI is the primary control
+	// path). Press Enter after the letter.
+	scanner := bufio.NewScanner(os.Stdin)
+	for scanner.Scan() {
+		line := scanner.Text()
+		if len(line) > 0 {
+			out <- line[:1]
+		}
+	}
+}
+
+func openBrowser(url string) {
+	var cmd *exec.Cmd
+	switch runtime.GOOS {
+	case "darwin":
+		cmd = exec.Command("open", url)
+	case "windows":
+		cmd = exec.Command("rundll32", "url.dll,FileProtocolHandler", url)
+	default:
+		cmd = exec.Command("xdg-open", url)
+	}
+	_ = cmd.Start() // best-effort; the URL is printed regardless
+}
+
+func mustLoadBridge() config.Bridge {
+	b, err := config.LoadBridge()
+	if err != nil {
+		fatalf("not paired yet (or config unreadable: %v). Run: lightsync pair <bridge-ip>", err)
+	}
+	return b
+}
+
+func hostname() string {
+	h, err := os.Hostname()
+	if err != nil {
+		return "unknown"
+	}
+	return h
+}
+
+func fatalf(format string, args ...any) {
+	fmt.Fprintf(os.Stderr, "lightsync: "+format+"\n", args...)
+	os.Exit(1)
+}
