@@ -79,13 +79,12 @@ type Engine struct {
 	uiClients    int
 	handshakeMS  int64
 	busyBy       string
+	lastColors   map[uint8][3]byte // per-channel color from the most recent tick, for the status snapshot
 
 	stream   *hue.Stream
 	smoother *pipeline.Smoother
 	cancel   context.CancelFunc
 	loopDone chan struct{}
-
-	onStatus func(Status)
 }
 
 // New builds an Engine for an already-paired bridge.
@@ -98,11 +97,6 @@ func New(bridge config.Bridge, store *config.Store) *Engine {
 		smoother:     pipeline.NewSmoother(),
 	}
 }
-
-// OnStatus registers a callback invoked whenever a fresh Status snapshot is
-// worth pushing to listeners (currently: once per output tick while a
-// stream is active).
-func (e *Engine) OnStatus(fn func(Status)) { e.onStatus = fn }
 
 // ListAreas fetches every entertainment area, fresh from the bridge.
 func (e *Engine) ListAreas(ctx context.Context) ([]hue.EntertainmentConfiguration, error) {
@@ -190,6 +184,7 @@ func (e *Engine) SelectArea(ctx context.Context, areaID string) error {
 	e.handshakeMS = handshakeMS
 	e.busyBy = ""
 	e.grid = nil
+	e.lastColors = nil
 	e.mu.Unlock()
 	e.smoother.Reset()
 
@@ -383,9 +378,13 @@ func (e *Engine) tick(now time.Time) {
 	}
 	stream.Set(channels)
 
-	if e.onStatus != nil {
-		e.onStatus(e.snapshotLocked(zones, colorsByID))
-	}
+	// Cache this tick's colors so Snapshot() — polled once a second by the
+	// status push and by GET /api/status — has something to show. Without
+	// this the calibration preview would always render every zone black,
+	// even while the bridge is receiving a perfectly correct color stream.
+	e.mu.Lock()
+	e.lastColors = colorsByID
+	e.mu.Unlock()
 }
 
 func (e *Engine) snapshotLocked(zones []pipeline.Zone, colors map[uint8][3]byte) Status {
@@ -436,8 +435,9 @@ func (e *Engine) snapshotLocked(zones []pipeline.Zone, colors map[uint8][3]byte)
 func (e *Engine) Snapshot() Status {
 	e.mu.Lock()
 	zones := append([]pipeline.Zone(nil), e.zones...)
+	colors := e.lastColors
 	e.mu.Unlock()
-	return e.snapshotLocked(zones, map[uint8][3]byte{})
+	return e.snapshotLocked(zones, colors)
 }
 
 func gridW(g *pipeline.Grid) int {
