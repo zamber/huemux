@@ -21,6 +21,8 @@ const els = {
   pairingRescanBtn: document.getElementById('pairing-rescan-btn'),
   pairingManualIP: document.getElementById('pairing-manual-ip'),
   pairingManualBtn: document.getElementById('pairing-manual-btn'),
+  scenesDetails: document.getElementById('scenes-details'),
+  scenesStrip: document.getElementById('sync-scenes-strip'),
 };
 
 const previewCtx = els.preview.getContext('2d');
@@ -95,6 +97,7 @@ function handleControlMessage(msg) {
   if (!wasPaired) {
     wasPaired = true;
     loadAreas();
+    loadScenes();
   }
 
   latestStatus = msg;
@@ -182,6 +185,52 @@ async function loadAreas() {
   }
   if (!syncing) els.startBtn.disabled = false;
 }
+
+// --- Scenes ------------------------------------------------------------
+// Compact, collapsed-by-default disclosure near the calibration preview —
+// present for convenience (recall a scene without switching to the Lights
+// page) but deliberately not competing for space with the sync controls.
+// Shows every scene rather than trying to filter to "this entertainment
+// area's room," since entertainment configurations and the room/zone groups
+// scenes belong to are separate CLIP v2 resources with no reliable shared id.
+
+let scenesData = [];
+
+async function loadScenes() {
+  const resp = await fetch('/api/scenes');
+  scenesData = await resp.json();
+  renderScenesStrip();
+}
+
+function escapeHtml(s) {
+  return String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+}
+
+function renderScenesStrip() {
+  if (!scenesData.length) { els.scenesDetails.hidden = true; return; }
+  els.scenesDetails.hidden = false;
+  els.scenesStrip.innerHTML = scenesData.map((sc) => {
+    const swatches = sc.swatches.slice(0, 4).map((sw) => {
+      const [r, g, b] = xyToRgb(sw.x, sw.y);
+      return `<span class="scene-swatch" style="background: rgb(${r},${g},${b})"></span>`;
+    }).join('');
+    const title = sc.group_name ? `${sc.name} — ${sc.group_name}` : sc.name;
+    return `
+      <button type="button" class="scene-chip" data-scene-id="${escapeHtml(sc.id)}" title="${escapeHtml(title)}">
+        <span class="scene-swatches">${swatches}</span>
+        <span class="scene-name">${escapeHtml(sc.name)}</span>
+        ${sc.auto_dynamic ? `<span class="scene-dynamic-badge">&#10022;</span>` : ''}
+      </button>`;
+  }).join('');
+}
+
+els.scenesStrip.addEventListener('click', (e) => {
+  const chip = e.target.closest('.scene-chip');
+  if (!chip) return;
+  send({ type: 'scene_recall', rid: chip.dataset.sceneId });
+});
+
+document.addEventListener('lightsync:langchange', renderScenesStrip);
 
 // --- Start / stop ----------------------------------------------------------
 

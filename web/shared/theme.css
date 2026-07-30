@@ -155,3 +155,18 @@ body {
 .color-picker-btn {
   touch-action: none; /* gestures handled entirely in JS */
 }
+
+/* Scene chip: shared between lights.html's scenes strip and sync.html's
+   compact scenes disclosure — same markup shape, same look. */
+.scenes-strip { display: flex; gap: 0.6rem; overflow-x: auto; padding-bottom: 0.3rem; -webkit-overflow-scrolling: touch; }
+.scene-chip {
+  flex: 0 0 auto; display: flex; align-items: center; gap: 0.5rem;
+  padding: 0.5rem 0.8rem; background: var(--card); border: 1px solid var(--border);
+  border-radius: 999px; cursor: pointer; color: var(--ink); font-size: 0.82rem;
+  white-space: nowrap;
+}
+.scene-chip:hover { border-color: var(--border-strong); background: var(--card-hover); }
+.scene-swatches { display: flex; }
+.scene-swatch { width: 14px; height: 14px; border-radius: 50%; border: 1px solid var(--border); margin-left: -6px; }
+.scene-swatch:first-child { margin-left: 0; }
+.scene-dynamic-badge { color: var(--accent); font-size: 0.9rem; }

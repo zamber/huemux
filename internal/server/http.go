@@ -158,7 +158,18 @@ func (s *Server) routes() {
 	if err != nil {
 		panic("embedded web/ directory missing: " + err.Error()) // programmer error, not a runtime condition
 	}
-	s.mux.Handle("/", http.FileServerFS(webFS))
+	fileServer := http.FileServerFS(webFS)
+	s.mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+		// There's no web/index.html for http.FileServerFS to fall back to —
+		// screen-sync (the historical default) now lives at sync.html
+		// alongside lights.html, neither of which is more "index" than the
+		// other, so root just picks one explicitly.
+		if r.URL.Path == "/" {
+			http.Redirect(w, r, "/sync.html", http.StatusFound)
+			return
+		}
+		fileServer.ServeHTTP(w, r)
+	})
 	s.mux.HandleFunc("/api/areas", s.handleAreas)
 	s.mux.HandleFunc("/api/status", s.handleStatusAPI)
 	s.mux.HandleFunc("/api/lights", s.handleLights)

@@ -1,26 +1,9 @@
-* { box-sizing: border-box; }
 body {
-  font: 14px/1.4 -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   margin: 0;
-  background: #14161a;
-  color: #e8e8e8;
+  font: 14px/1.4 -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
 }
-header {
-  display: flex;
-  align-items: center;
-  gap: 0.6rem;
-  padding: 0.8rem 1.2rem;
-  border-bottom: 1px solid #2a2d33;
-}
-header h1 { font-size: 1.1rem; margin: 0; font-weight: 600; }
-.dot {
-  width: 10px; height: 10px; border-radius: 50%;
-  background: #703; display: inline-block;
-}
-.dot.ok { background: #2ecc71; }
-.dot.warn { background: #f5a623; }
 
-main {
+#app-main {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 1.2rem;
@@ -28,77 +11,101 @@ main {
   max-width: 1100px;
   margin: 0 auto;
 }
+/* #app is a wrapper div, not meaningful layout — display:contents makes its
+   section children real grid items of #app-main. :not([hidden]) so this
+   never fights the browser's own [hidden]{display:none} while pairing. */
+#app:not([hidden]) { display: contents; }
 section {
-  background: #1b1e24;
-  border: 1px solid #2a2d33;
+  background: var(--card);
+  border: 1px solid var(--border);
   border-radius: 8px;
   padding: 1rem;
+  min-width: 0; /* grid items default to min-width:auto, which lets
+    nowrap/overflow-x:auto content (the scenes strip) grow the whole grid
+    track instead of scrolling within it — reset so overflow actually works. */
 }
 #status-panel, #controls-panel { grid-column: span 1; }
 
-h2 { font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.04em; color: #9aa; margin: 1rem 0 0.5rem; }
+h2 { font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.04em; color: var(--ink-muted); margin: 1rem 0 0.5rem; }
 h2:first-child { margin-top: 0; }
-h3 { font-size: 0.8rem; color: #aab; margin: 0.8rem 0 0.3rem; font-weight: 600; }
+h3 { font-size: 0.8rem; color: var(--ink-muted); margin: 0.8rem 0 0.3rem; font-weight: 600; }
 
 .axis-row { display: flex; align-items: flex-end; gap: 0.6rem; margin-bottom: 0.6rem; }
 .axis-row .control { flex: 1; margin-bottom: 0; }
 .axis-row .axis-invert { flex: 0 0 auto; padding-bottom: 0.35rem; }
 .axis-row .axis-invert label { white-space: nowrap; }
 
-label { display: block; margin-bottom: 0.25rem; color: #ccc; }
+label { display: block; margin-bottom: 0.25rem; color: var(--ink); }
 select, input[type=number] {
-  width: 100%; padding: 0.35rem; background: #101215; color: #eee;
-  border: 1px solid #333; border-radius: 4px;
+  width: 100%; padding: 0.35rem; background: var(--surface-alt); color: var(--ink);
+  border: 1px solid var(--border); border-radius: 4px;
 }
 input[type=range] { width: 100%; }
 .control { margin-bottom: 0.9rem; }
 .control.checkbox label { display: flex; align-items: center; gap: 0.4rem; }
 .presets { display: flex; gap: 0.4rem; margin-bottom: 0.3rem; }
 .presets button {
-  flex: 1; padding: 0.3rem; background: #23262c; color: #ddd; border: 1px solid #333;
+  flex: 1; padding: 0.3rem; background: var(--surface-alt); color: var(--ink); border: 1px solid var(--border);
   border-radius: 4px; cursor: pointer; font-size: 0.75rem;
 }
-.presets button:hover { background: #2d3138; }
+.presets button:hover { background: var(--card-hover); }
 
 button {
-  padding: 0.45rem 0.9rem; background: #2d6cdf; color: white; border: none;
+  padding: 0.45rem 0.9rem; background: var(--accent); color: #fff; border: none;
   border-radius: 5px; cursor: pointer; font-size: 0.85rem;
 }
-button:disabled { background: #3a3d43; cursor: not-allowed; }
-#stop-btn, #change-source-btn { background: #444a55; }
+button:hover { background: var(--accent-hover); }
+button:disabled { background: var(--surface-alt); color: var(--ink-muted); cursor: not-allowed; }
+#stop-btn, #change-source-btn { background: var(--surface-alt); color: var(--ink); }
+#stop-btn:hover, #change-source-btn:hover { background: var(--card-hover); }
 
 #pairing-panel { grid-column: 1 / -1; max-width: 480px; margin: 2rem auto; text-align: left; }
-#pairing-panel h2 { margin-top: 0; font-size: 1rem; text-transform: none; letter-spacing: normal; color: #eee; }
+#pairing-panel h2 { margin-top: 0; font-size: 1rem; text-transform: none; letter-spacing: normal; color: var(--ink); }
 .bridge-card {
   display: flex; align-items: center; justify-content: space-between; gap: 0.6rem;
-  padding: 0.6rem 0.8rem; background: #101215; border: 1px solid #2a2d33;
+  padding: 0.6rem 0.8rem; background: var(--surface-alt); border: 1px solid var(--border);
   border-radius: 6px; margin-bottom: 0.5rem;
 }
 .bridge-card .bridge-info { display: flex; flex-direction: column; gap: 0.15rem; }
 .bridge-card .bridge-name { font-weight: 600; }
-.bridge-card .bridge-ip { color: #888; font-size: 0.8rem; font-family: ui-monospace, monospace; }
+.bridge-card .bridge-ip { color: var(--ink-muted); font-size: 0.8rem; font-family: ui-monospace, monospace; }
 .bridge-card.unsupported { opacity: 0.5; }
 #pairing-manual { margin-top: 1rem; }
-#pairing-manual summary { cursor: pointer; color: #9ab; font-size: 0.85rem; }
+#pairing-manual summary { cursor: pointer; color: var(--ink-muted); font-size: 0.85rem; }
 .manual-ip-row { display: flex; gap: 0.5rem; margin-top: 0.6rem; }
 .manual-ip-row input {
-  flex: 1; padding: 0.4rem; background: #101215; color: #eee;
-  border: 1px solid #333; border-radius: 4px; font-family: ui-monospace, monospace;
+  flex: 1; padding: 0.4rem; background: var(--surface-alt); color: var(--ink);
+  border: 1px solid var(--border); border-radius: 4px; font-family: ui-monospace, monospace;
 }
 
 #area-panel { grid-column: 1 / -1; display: flex; align-items: center; gap: 0.6rem; flex-wrap: wrap; }
 #area-panel label { margin: 0; }
 #area-select { width: auto; min-width: 260px; }
-.warning { width: 100%; color: #f5a623; margin: 0.4rem 0 0; }
+.warning { width: 100%; color: var(--warning); margin: 0.4rem 0 0; }
+
+.dot {
+  width: 10px; height: 10px; border-radius: 50%; background: var(--danger);
+  display: inline-block; margin-left: auto;
+}
+.dot.ok { background: var(--success); }
+.dot.warn { background: var(--warning); }
 
 #preview-panel { grid-column: 1 / -1; text-align: center; }
 #preview {
   width: 100%; max-width: 640px; aspect-ratio: 16/9; background: #000;
   border-radius: 6px; cursor: pointer;
 }
-.hint { color: #888; font-size: 0.8rem; margin: 0.4rem 0; }
+.hint { color: var(--ink-muted); font-size: 0.8rem; margin: 0.4rem 0; }
+
+.scenes-details { text-align: left; margin-top: 0.8rem; }
+.scenes-details summary { cursor: pointer; color: var(--ink-muted); font-size: 0.85rem; user-select: none; }
+.scenes-details .scenes-strip { margin-top: 0.6rem; }
 
 .status-grid { display: grid; grid-template-columns: auto 1fr; gap: 0.25rem 0.8rem; font-family: ui-monospace, monospace; font-size: 0.8rem; }
-.status-grid .k { color: #888; }
+.status-grid .k { color: var(--ink-muted); }
 .swatches { display: flex; gap: 0.3rem; flex-wrap: wrap; margin-top: 0.5rem; grid-column: 1 / -1; }
-.swatch { width: 18px; height: 18px; border-radius: 3px; border: 1px solid #444; }
+.swatch { width: 18px; height: 18px; border-radius: 3px; border: 1px solid var(--border); }
+
+@media (max-width: 800px) {
+  #app-main { grid-template-columns: 1fr; }
+}
