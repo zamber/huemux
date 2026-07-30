@@ -19,7 +19,7 @@ body { margin: 0; }
 .dot.warn { background: var(--warning); }
 
 /* Filter menu: native <details> disclosure, no dropdown library needed. */
-.filter-menu { position: relative; font-family: ui-monospace, monospace; }
+.filter-menu { position: relative; }
 .filter-menu summary {
   list-style: none;
   display: flex; align-items: center; gap: 0.4rem;
@@ -82,7 +82,7 @@ body { margin: 0; }
 .light-card-head { display: flex; align-items: center; justify-content: space-between; gap: 0.5rem; min-height: 44px; margin-bottom: 0.7rem; }
 .light-card-head h3 {
   margin: 0; flex: 1; min-width: 0;
-  font-family: ui-monospace, monospace; font-size: 1rem; font-weight: 600; color: var(--ink);
+  font-size: 1rem; font-weight: 600; color: var(--ink);
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
   display: flex; align-items: center; gap: 0.5rem;
 }

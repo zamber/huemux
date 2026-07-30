@@ -3,6 +3,44 @@
    not to be "improved" independently of that source — if it changes, port
    the change here too. */
 
+/* Self-hosted (not CDN) — weights 400 + 600 cover every use in the app.
+   Unlike lights-ui, which applies this only via a selective `font-mono`
+   utility class, every element here uses it: body sets it once and form
+   controls (which don't inherit body's font-family by default in any
+   browser) are told to inherit explicitly, below. */
+@font-face {
+  font-family: 'Fira Code';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url('/shared/fonts/fira-code-400-latin-ext.woff2') format('woff2');
+  unicode-range: U+0100-024F, U+0259, U+1E00-1EFF, U+2020, U+20A0-20AB, U+20AD-20CF, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+@font-face {
+  font-family: 'Fira Code';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url('/shared/fonts/fira-code-400-latin.woff2') format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+2000-206F, U+2074, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+@font-face {
+  font-family: 'Fira Code';
+  font-style: normal;
+  font-weight: 600;
+  font-display: swap;
+  src: url('/shared/fonts/fira-code-600-latin-ext.woff2') format('woff2');
+  unicode-range: U+0100-024F, U+0259, U+1E00-1EFF, U+2020, U+20A0-20AB, U+20AD-20CF, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+@font-face {
+  font-family: 'Fira Code';
+  font-style: normal;
+  font-weight: 600;
+  font-display: swap;
+  src: url('/shared/fonts/fira-code-600-latin.woff2') format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+2000-206F, U+2074, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
 :root {
   color-scheme: light dark;
   --surface: #000000;
@@ -81,7 +119,7 @@ html[data-theme="light"] {
 * { box-sizing: border-box; }
 
 body {
-  font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  font-family: 'Fira Code', ui-monospace, 'Cascadia Code', 'SF Mono', Menlo, Consolas, monospace;
   background: var(--surface);
   color: var(--ink);
   line-height: 1.6;
@@ -92,6 +130,13 @@ body {
   overscroll-behavior: none;
   touch-action: pan-x pan-y;
   transition: background-color 0.2s ease, color 0.2s ease;
+}
+
+/* Form controls don't inherit body's font-family in any browser by
+   default (they use the OS UI font instead) — explicit inherit so
+   buttons/inputs/selects/labels actually render in Fira Code too. */
+button, input, select, textarea, optgroup {
+  font-family: inherit;
 }
 
 /* Radial/blurred tint used behind a light's card, colored per-light via an
