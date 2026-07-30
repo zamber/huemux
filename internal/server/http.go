@@ -123,17 +123,34 @@ func (s *Server) runLightEventBroadcast(ctx context.Context, lights *lightctl.Se
 		if err != nil {
 			continue
 		}
-		s.mu.Lock()
-		for conn := range s.uiConns {
-			_ = conn.WriteMessage(opText, raw)
-		}
-		s.mu.Unlock()
+		s.broadcast(raw)
 	}
+}
+
+// broadcast sends raw to every currently connected WS client (frame source
+// and UI tabs alike — favorite/light-event pushes are relevant to any open
+// tab, not just the one that triggered them).
+func (s *Server) broadcast(raw []byte) {
+	s.mu.Lock()
+	for conn := range s.uiConns {
+		_ = conn.WriteMessage(opText, raw)
+	}
+	s.mu.Unlock()
 }
 
 type lightEventWire struct {
 	Type  string              `json:"type"`
 	Event lightctl.LightEvent `json:"event"`
+}
+
+// favoriteEventWire is pushed after a light_favorite toggle — ToggleFavorite
+// has no eventstream counterpart (favorites are local state, not a bridge
+// resource), so without this the requesting tab has no way to learn the new
+// state short of re-fetching /api/lights.
+type favoriteEventWire struct {
+	Type     string `json:"type"`
+	ID       string `json:"id"`
+	Favorite bool   `json:"favorite"`
 }
 
 func (s *Server) routes() {
@@ -404,7 +421,10 @@ func (s *Server) handleControlMessage(payload []byte) {
 			}
 			return
 		case "light_favorite":
-			lights.ToggleFavorite(msg.RID)
+			fav := lights.ToggleFavorite(msg.RID)
+			if raw, err := json.Marshal(favoriteEventWire{Type: "favorite_event", ID: msg.RID, Favorite: fav}); err == nil {
+				s.broadcast(raw)
+			}
 			return
 		case "room_toggle":
 			if err := lights.SetRoomOn(ctx, msg.RID, msg.On); err != nil {

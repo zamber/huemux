@@ -203,3 +203,12 @@ Every field on `event` except `type`/`id` is a pointer server-side and only
 present when that field actually changed in this update — the bridge's
 eventstream sends partial resource deltas, never full resources, so treat a
 missing field as "unchanged," never as "reset to zero."
+
+`light_favorite` has no eventstream counterpart — favorites are local state
+(`internal/config/favorites.go`), not a bridge resource — so the new state is
+pushed explicitly, broadcast to every connected tab (not just the one that
+sent the toggle, so multiple open windows stay in sync):
+
+```json
+{"type": "favorite_event", "id": "<light id or room:<room id>>", "favorite": true}
+```
