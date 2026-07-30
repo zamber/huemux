@@ -234,6 +234,18 @@ function filteredLights() {
   return lights;
 }
 
+// Groups an already-filtered list by room_name, preserving first-seen room
+// order (Map iteration order). Shared shape for both lights and scenes.
+function groupByRoomName(list, roomNameOf) {
+  const byRoom = new Map();
+  for (const item of list) {
+    const key = roomNameOf(item) || '—';
+    if (!byRoom.has(key)) byRoom.set(key, []);
+    byRoom.get(key).push(item);
+  }
+  return byRoom;
+}
+
 function renderGrid() {
   const list = filteredLights();
   // The all-lights tile also participates in the Favorites view once it's
@@ -241,8 +253,23 @@ function renderGrid() {
   // access from that tab.
   const showAllTile = filter === 'all' || (filter === 'favorites' && !!favoritesRaw.all);
   let html = '';
-  if (showAllTile) html += renderAllLightsTile();
-  html += list.map(renderLightCard).join('');
+  if (showAllTile) html += `<div class="lights-cards-grid">${renderAllLightsTile()}</div>`;
+
+  if (filter === 'room') {
+    // Already scoped to one room by the filter itself — a header repeating
+    // that room's name would be redundant.
+    html += `<div class="lights-cards-grid">${list.map(renderLightCard).join('')}</div>`;
+  } else {
+    // 'all' / 'favorites': grouped by room, same pattern as the scenes
+    // strip, so lamps and scenes read as belonging to the same rooms.
+    const byRoom = groupByRoomName(list, (l) => l.room_name);
+    html += [...byRoom.entries()].map(([roomName, ls]) => `
+      <div class="room-group">
+        <h3 class="room-header">${escapeHtml(roomName)}</h3>
+        <div class="lights-cards-grid">${ls.map(renderLightCard).join('')}</div>
+      </div>`).join('');
+  }
+
   if (!list.length && !showAllTile) {
     html += `<p class="hint lights-empty">${escapeHtml(LightsyncI18n.t('lights.empty'))}</p>`;
   }
@@ -312,6 +339,13 @@ function sortScenesFavoriteFirst(list) {
   return [...list].sort((a, b) => (favoritesRaw[b.id] ? 1 : 0) - (favoritesRaw[a.id] ? 1 : 0));
 }
 
+// One pill, not two adjacent buttons: the left/main zone recalls the scene,
+// the right zone (present only outside the Favorites view) toggles its
+// favorite star — both live inside the same .scene-chip element so there's
+// a single visual tag, not a chip plus a separate button bolted on next to
+// it. When the star zone is absent (Favorites view), .scene-chip-main
+// naturally fills the whole chip, so a click anywhere just recalls —
+// there's no dead zone that could be mistaken for an unfavorite control.
 function renderSceneChip(sc) {
   const swatches = sc.swatches.slice(0, 4).map((sw) => {
     const [r, g, b] = xyToRgb(sw.x, sw.y);
@@ -321,14 +355,14 @@ function renderSceneChip(sc) {
   const fav = !!favoritesRaw[sc.id];
   const showFavBtn = filter !== 'favorites';
   return `
-    <span class="scene-chip-wrap">
-      <button type="button" class="scene-chip" data-scene-id="${escapeHtml(sc.id)}" title="${escapeHtml(title)}">
+    <div class="scene-chip" title="${escapeHtml(title)}">
+      <span class="scene-chip-main" data-action="recall" data-scene-id="${escapeHtml(sc.id)}">
         <span class="scene-swatches">${swatches}</span>
         <span class="scene-name">${escapeHtml(sc.name)}</span>
         ${sc.auto_dynamic ? `<span class="scene-dynamic-badge" title="${escapeHtml(LightsyncI18n.t('lights.sceneDynamic'))}">&#10022;</span>` : ''}
-      </button>
-      ${showFavBtn ? `<button type="button" class="icon-btn scene-fav-btn ${fav ? 'active' : ''}" data-action="favorite" data-id="${escapeHtml(sc.id)}" title="${escapeHtml(LightsyncI18n.t('lights.toggleFavorite'))}">${fav ? ICONS.star : ICONS.starOutline}</button>` : ''}
-    </span>`;
+      </span>
+      ${showFavBtn ? `<span class="scene-chip-star ${fav ? 'active' : ''}" data-action="favorite" data-id="${escapeHtml(sc.id)}" title="${escapeHtml(LightsyncI18n.t('lights.toggleFavorite'))}">${fav ? ICONS.star : ICONS.starOutline}</span>` : ''}
+    </div>`;
 }
 
 function renderScenes() {
@@ -336,27 +370,23 @@ function renderScenes() {
   if (!list.length) { els.scenesSection.hidden = true; return; }
   els.scenesSection.hidden = false;
 
-  if (filter === 'favorites') {
-    // Grouped by room with its own header — favorites from every room are
-    // mixed together in this view (lights are too, as a flat list), but
-    // scenes need the extra grouping so it's clear which room each one
-    // belongs to.
-    els.scenesStrip.classList.add('grouped');
-    const byRoom = new Map();
-    for (const sc of list) {
-      const key = sc.group_name || sc.group_id || '';
-      if (!byRoom.has(key)) byRoom.set(key, []);
-      byRoom.get(key).push(sc);
-    }
-    els.scenesStrip.innerHTML = [...byRoom.entries()].map(([roomName, scs]) => `
-      <div class="scenes-room-group">
-        <h3 class="scenes-room-header">${escapeHtml(roomName)}</h3>
-        <div class="scenes-strip">${sortScenesFavoriteFirst(scs).map(renderSceneChip).join('')}</div>
-      </div>`).join('');
-  } else {
+  if (filter === 'room') {
+    // Already scoped to one room — no header needed.
     els.scenesStrip.classList.remove('grouped');
     els.scenesStrip.innerHTML = sortScenesFavoriteFirst(list).map(renderSceneChip).join('');
+    return;
   }
+
+  // 'all' / 'favorites': grouped by room with its own header, same pattern
+  // as the light grid, so lamps and scenes read as belonging to the same
+  // rooms rather than one flat mix.
+  els.scenesStrip.classList.add('grouped');
+  const byRoom = groupByRoomName(list, (sc) => sc.group_name);
+  els.scenesStrip.innerHTML = [...byRoom.entries()].map(([roomName, scs]) => `
+    <div class="scenes-room-group">
+      <h3 class="scenes-room-header">${escapeHtml(roomName)}</h3>
+      <div class="scenes-strip">${sortScenesFavoriteFirst(scs).map(renderSceneChip).join('')}</div>
+    </div>`).join('');
 }
 
 function renderFilterMenu() {
@@ -591,14 +621,14 @@ els.filterList.addEventListener('click', (e) => {
 });
 
 els.scenesStrip.addEventListener('click', (e) => {
-  const favBtn = e.target.closest('.scene-fav-btn');
-  if (favBtn) {
-    send({ type: 'light_favorite', rid: favBtn.dataset.id });
+  const star = e.target.closest('.scene-chip-star');
+  if (star) {
+    send({ type: 'light_favorite', rid: star.dataset.id });
     return;
   }
-  const chip = e.target.closest('.scene-chip');
-  if (!chip) return;
-  send({ type: 'scene_recall', rid: chip.dataset.sceneId });
+  const main = e.target.closest('.scene-chip-main');
+  if (!main) return;
+  send({ type: 'scene_recall', rid: main.dataset.sceneId });
 });
 
 document.addEventListener('lightsync:langchange', () => {

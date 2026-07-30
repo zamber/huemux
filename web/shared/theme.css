@@ -227,23 +227,38 @@ input[type=checkbox], input[type=radio] {
 }
 
 /* Scene chip: shared between lights.html's scenes strip and sync.html's
-   compact scenes disclosure — same markup shape, same look. */
+   compact scenes disclosure — same markup shape, same look. One pill
+   (.scene-chip) with two internal click zones, not a chip plus a separate
+   button bolted on next to it: .scene-chip-main (left, recalls the scene)
+   and .scene-chip-star (right, toggles favorite — absent entirely in the
+   Favorites view, at which point .scene-chip-main just fills the pill). */
 .scenes-strip { display: flex; flex-wrap: wrap; gap: 0.5rem 0.6rem; }
 .scene-chip {
-  flex: 0 0 auto; display: flex; align-items: center; gap: 0.5rem;
-  padding: 0.5rem 0.8rem; background: var(--card); border: 1px solid var(--border);
-  border-radius: 999px; cursor: pointer; color: var(--ink); font-size: 0.82rem;
-  white-space: nowrap;
+  display: flex; align-items: center;
+  background: var(--card); border: 1px solid var(--border);
+  border-radius: 999px; color: var(--ink); font-size: 0.82rem;
 }
-.scene-chip:hover { border-color: var(--border-strong); background: var(--card-hover); }
+.scene-chip:hover { border-color: var(--border-strong); }
+.scene-chip-main {
+  display: flex; align-items: center; gap: 0.5rem;
+  padding: 0.5rem 0.8rem; cursor: pointer; white-space: nowrap; flex: 1;
+  border-radius: 999px 0 0 999px;
+}
+.scene-chip-star:only-child, .scene-chip-main:only-child { border-radius: 999px; }
+.scene-chip-main:hover { background: var(--card-hover); }
 .scene-swatches { display: flex; }
 .scene-swatch { width: 14px; height: 14px; border-radius: 50%; border: 1px solid var(--border); margin-left: -6px; }
 .scene-swatch:first-child { margin-left: 0; }
 .scene-dynamic-badge { color: var(--accent); font-size: 0.9rem; }
 
-.scene-chip-wrap { display: inline-flex; align-items: center; gap: 0.3rem; }
-.scene-fav-btn { width: 32px; height: 32px; flex-shrink: 0; }
-.scene-fav-btn svg { width: 16px; height: 16px; }
+.scene-chip-star {
+  display: flex; align-items: center; justify-content: center;
+  width: 32px; height: 32px; flex-shrink: 0; margin-right: 0.25rem;
+  border-radius: 50%; cursor: pointer; color: var(--ink-muted);
+}
+.scene-chip-star svg { width: 16px; height: 16px; }
+.scene-chip-star:hover { background: var(--card-hover); color: var(--ink); }
+.scene-chip-star.active { color: var(--accent); }
 
 /* Favorites view: scenes grouped by room instead of one flat/wrapped row —
    .scenes-strip's own flex-wrap is overridden per group here since each

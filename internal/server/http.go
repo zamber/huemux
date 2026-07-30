@@ -12,6 +12,7 @@ import (
 	"net"
 	"net/http"
 	"os"
+	"strings"
 	"sync"
 	"time"
 
@@ -176,6 +177,7 @@ func (s *Server) routes() {
 	s.mux.HandleFunc("/api/rooms", s.handleRooms)
 	s.mux.HandleFunc("/api/scenes", s.handleScenes)
 	s.mux.HandleFunc("/api/favorites", s.handleFavorites)
+	s.mux.HandleFunc("/api/locale", s.handleLocale)
 	s.mux.HandleFunc("/ws", s.handleWS)
 }
 
@@ -286,9 +288,47 @@ func (s *Server) handleFavorites(w http.ResponseWriter, r *http.Request) {
 	_ = json.NewEncoder(w).Encode(s.favorites.All())
 }
 
+// handleLocale exposes a locale hint derived from this *process's*
+// environment, which i18n.js prefers over navigator.language when present.
+// That's not redundant with the browser's own locale: under the Electron
+// wrapper (cmd/lightsync-desktop), the bundled Chromium's reported
+// navigator.language often doesn't reflect the host OS locale at all (it
+// depends on how Electron itself was launched/packaged), while this
+// process's environment — inherited from whatever shell, systemd unit, or
+// desktop launcher started it — usually does.
+func (s *Server) handleLocale(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+	_ = json.NewEncoder(w).Encode(map[string]string{"lang": detectSystemLang()})
+}
+
+// detectSystemLang reads the standard POSIX locale environment variables in
+// their usual precedence order. LANGUAGE is a GNU extension and may be a
+// colon-separated priority list; the others are single locale strings like
+// "pl_PL.UTF-8". Returns "" (no opinion) rather than guessing if none of
+// them name a language this app actually supports.
+func detectSystemLang() string {
+	supported := map[string]bool{"pl": true, "en": true}
+	for _, key := range []string{"LANGUAGE", "LC_ALL", "LC_MESSAGES", "LANG"} {
+		v := os.Getenv(key)
+		if v == "" || v == "C" || v == "POSIX" {
+			continue
+		}
+		first := strings.SplitN(v, ":", 2)[0]
+		code := first
+		if i := strings.IndexAny(code, "_.@"); i >= 0 {
+			code = code[:i]
+		}
+		code = strings.ToLower(code)
+		if supported[code] {
+			return code
+		}
+	}
+	return ""
+}
+
 func (s *Server) handleStatusAPI(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
-	_ = json.NewEncoder(w).Encode(s.statusMessage())
+	_ = json.NewEncoder(w).Encode(s.statusMessage(nil))
 }
 
 type statusWire struct {
@@ -298,18 +338,36 @@ type statusWire struct {
 	Snapshot *engine.Status       `json:"snapshot,omitempty"`
 	Zones    []engine.ZoneStatus  `json:"zones,omitempty"`
 	Settings *config.AreaSettings `json:"settings,omitempty"`
+
+	// Multiple WS clients (a browser tab and the desktop app, say) can be
+	// connected at once, but only one — whichever sent a grid frame first —
+	// is ever s.frameSource; every other client's captured frames are
+	// silently dropped in handleGridFrame. Without these, a second client
+	// has no way to know its own "sync" is a local-only preview that isn't
+	// actually reaching the bridge. SourceHeld/YouAreSource are per*
+	// connection, computed fresh for whoever asked, unlike the rest of this
+	// struct which is identical for every recipient.
+	SourceHeld   bool `json:"source_held"`
+	YouAreSource bool `json:"you_are_source"`
 }
 
-func (s *Server) statusMessage() statusWire {
+func (s *Server) statusMessage(conn *Conn) statusWire {
+	var msg statusWire
 	eng := s.engine()
 	if eng == nil {
 		s.pairMu.Lock()
 		ps := s.pairState
 		s.pairMu.Unlock()
-		return statusWire{Type: "status", Paired: false, Pairing: &ps}
+		msg = statusWire{Type: "status", Paired: false, Pairing: &ps}
+	} else {
+		snap := eng.Snapshot()
+		msg = statusWire{Type: "status", Paired: true, Snapshot: &snap, Zones: snap.Zones, Settings: &snap.Settings}
 	}
-	snap := eng.Snapshot()
-	return statusWire{Type: "status", Paired: true, Snapshot: &snap, Zones: snap.Zones, Settings: &snap.Settings}
+	s.mu.Lock()
+	msg.SourceHeld = s.frameSource != nil
+	msg.YouAreSource = conn != nil && s.frameSource == conn
+	s.mu.Unlock()
+	return msg
 }
 
 // controlMessage is every shape of JSON text frame the browser may send, per
@@ -618,7 +676,7 @@ func (s *Server) pushStatusLoop(conn *Conn, done chan struct{}) {
 	defer t.Stop()
 
 	send := func() {
-		raw, err := json.Marshal(s.statusMessage())
+		raw, err := json.Marshal(s.statusMessage(conn))
 		if err != nil {
 			return
 		}

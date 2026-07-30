@@ -49,23 +49,36 @@ body { margin: 0; }
 .filter-item:hover { background: var(--card-hover); color: var(--ink); }
 .filter-item.active { color: var(--ink); font-weight: 600; }
 
-/* Card grid — breakpoints match lights-ui's app.svelte exactly. */
-.lights-grid {
+/* #lights-grid itself is just a vertical stack of room groups (or, for the
+   single-room filter, one bare .lights-cards-grid) — the actual responsive
+   card grid lives on .lights-cards-grid so it can apply equally to a lone
+   grid and to each room group's own grid. Breakpoints match lights-ui's
+   app.svelte exactly. */
+.lights-grid { display: block; }
+
+.lights-cards-grid {
   display: flex;
   flex-direction: column;
   gap: 0.75rem;
 }
 @media (min-width: 900px) {
-  .lights-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 1rem; }
+  .lights-cards-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 1rem; }
 }
 @media (min-width: 1400px) {
-  .lights-grid { grid-template-columns: repeat(3, 1fr); }
+  .lights-cards-grid { grid-template-columns: repeat(3, 1fr); }
 }
 @media (min-width: 1800px) {
-  .lights-grid { grid-template-columns: repeat(4, 1fr); }
+  .lights-cards-grid { grid-template-columns: repeat(4, 1fr); }
 }
 
-.lights-empty { grid-column: 1 / -1; text-align: center; padding: 2rem 0; }
+.room-group { margin-bottom: 1.2rem; }
+.room-group:last-child { margin-bottom: 0; }
+.room-header {
+  font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.04em;
+  color: var(--ink-muted); margin: 0 0 0.6rem; font-weight: 600;
+}
+
+.lights-empty { text-align: center; padding: 2rem 0; }
 
 .light-card {
   border: 1px solid var(--border);

@@ -9,10 +9,35 @@ const LightsyncI18n = (() => {
   const SUPPORTED = ['en', 'pl'];
   let dict = {};
   let lang = 'en';
+  let serverLangHint = null;
+
+  // /api/locale reflects the *server process's* environment (LANG etc.),
+  // not the browser's — needed because under the Electron wrapper
+  // (cmd/lightsync-desktop), the bundled Chromium's navigator.language
+  // often doesn't track the host OS locale at all, while the Go process's
+  // environment (inherited from whatever launched it) usually does.
+  // Preferred over navigator.language/navigator.languages when present.
+  async function fetchServerLangHint() {
+    try {
+      const res = await fetch('/api/locale');
+      const data = await res.json();
+      if (SUPPORTED.indexOf(data.lang) !== -1) serverLangHint = data.lang;
+    } catch (_) {
+      // Endpoint unreachable — navigator.language/.languages still apply.
+    }
+  }
 
   function detectSystemLang() {
-    const nav = (navigator.language || 'en').slice(0, 2).toLowerCase();
-    return SUPPORTED.indexOf(nav) !== -1 ? nav : 'en';
+    if (serverLangHint) return serverLangHint;
+    // navigator.languages (full preference list) over the single
+    // navigator.language, which is sometimes less reliable in embedded
+    // contexts than the browser's complete list.
+    const candidates = (navigator.languages && navigator.languages.length) ? navigator.languages : [navigator.language || 'en'];
+    for (const c of candidates) {
+      const code = (c || '').slice(0, 2).toLowerCase();
+      if (SUPPORTED.indexOf(code) !== -1) return code;
+    }
+    return 'en';
   }
 
   // The explicit user choice, or null if following system.
@@ -72,6 +97,7 @@ const LightsyncI18n = (() => {
   }
 
   async function init() {
+    await fetchServerLangHint();
     lang = resolved();
     await load(lang);
     document.documentElement.setAttribute('lang', lang);

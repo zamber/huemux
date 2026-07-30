@@ -11,7 +11,7 @@ const els = {
   changeSourceBtn: document.getElementById('change-source-btn'),
   areaWarning: document.getElementById('area-warning'),
   preview: document.getElementById('preview'),
-  flipDepthBtn: document.getElementById('flip-depth-btn'),
+  sourceWarning: document.getElementById('source-warning'),
   statusGrid: document.getElementById('status-grid'),
   app: document.getElementById('app'),
   pairingPanel: document.getElementById('pairing-panel'),
@@ -102,6 +102,11 @@ function handleControlMessage(msg) {
 
   latestStatus = msg;
   renderStatus(msg);
+  // Another connected client (a second tab, or the desktop app running
+  // alongside a browser tab) can be the one actually holding the frame
+  // source — this client would otherwise show a perfectly normal-looking
+  // local capture preview with no indication it isn't reaching the bridge.
+  els.sourceWarning.hidden = !(msg.source_held && !msg.you_are_source);
 }
 
 // --- Pairing ---------------------------------------------------------------
@@ -168,23 +173,39 @@ els.pairingManualIP.addEventListener('keydown', (ev) => {
 
 // --- Areas ---------------------------------------------------------------
 
+// configuration_type is a raw CLIP v2 enum value (screen/monitor/music/
+// 3dspace/other) — translated via this map rather than displayed as-is.
+const AREA_TYPE_KEYS = {
+  screen: 'sync.configTypeScreen',
+  monitor: 'sync.configTypeMonitor',
+  music: 'sync.configTypeMusic',
+  '3dspace': 'sync.configTypeSpace3d',
+  other: 'sync.configTypeOther',
+};
+
 async function loadAreas() {
   const resp = await fetch('/api/areas');
   const areas = await resp.json();
   els.areaSelect.innerHTML = '';
   if (!areas || areas.length === 0) {
-    els.areaSelect.innerHTML = '<option value="">No entertainment areas found</option>';
+    const opt = document.createElement('option');
+    opt.value = '';
+    opt.textContent = LightsyncI18n.t('sync.noAreasFound');
+    els.areaSelect.appendChild(opt);
     return;
   }
   for (const a of areas) {
     const opt = document.createElement('option');
     opt.value = a.id;
-    const busy = a.active_streamer ? ' (in use)' : '';
-    opt.textContent = `${a.metadata.name} — ${a.configuration_type} · ${a.channels.length} ch${busy}`;
+    const busy = a.active_streamer ? LightsyncI18n.t('sync.areaInUse') : '';
+    const typeLabel = LightsyncI18n.t(AREA_TYPE_KEYS[a.configuration_type] || 'sync.configTypeOther');
+    opt.textContent = `${a.metadata.name} — ${typeLabel} · ${LightsyncI18n.t('sync.status.channels', { n: a.channels.length })}${busy}`;
     els.areaSelect.appendChild(opt);
   }
   if (!syncing) els.startBtn.disabled = false;
 }
+
+document.addEventListener('lightsync:langchange', loadAreas);
 
 // --- Scenes ------------------------------------------------------------
 // Compact, collapsed-by-default disclosure near the calibration preview —
@@ -261,7 +282,6 @@ els.startBtn.addEventListener('click', async () => {
   els.startBtn.disabled = true;
   els.stopBtn.disabled = false;
   els.changeSourceBtn.disabled = false;
-  els.flipDepthBtn.disabled = false;
 });
 
 els.stopBtn.addEventListener('click', () => {
@@ -276,15 +296,6 @@ els.stopBtn.addEventListener('click', () => {
 els.changeSourceBtn.addEventListener('click', async () => {
   stopCapture();
   await startCapture();
-});
-
-els.flipDepthBtn.addEventListener('click', () => {
-  // The common complaint is "zones are upside down," which is a vertical
-  // flip regardless of which physical axis is currently assigned to it —
-  // so this toggles invert_vertical, not whatever's assigned to depth.
-  const cb = document.querySelector('[data-setting="invert_vertical"]');
-  cb.checked = !cb.checked;
-  cb.dispatchEvent(new Event('change'));
 });
 
 // getDisplayMedia() unconditionally, in the browser and under the optional

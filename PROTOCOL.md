@@ -130,13 +130,24 @@ Pushed once per second and on change:
   "type": "status",
   "snapshot": { "BridgeState": "...", "Colors": [[r,g,b], ...], ... },
   "zones": [{ "ChannelID": 0, "U0": 0, "V0": 0.2, "U1": 0.15, "V1": 0.5, "LightRID": "..." }],
-  "settings": { ... }
+  "settings": { ... },
+  "source_held": true,
+  "you_are_source": false
 }
 ```
 
 Zone rects are in normalised screen space: `u` runs 0 (left) to 1 (right), `v`
 runs 0 (top) to 1 (bottom). The page draws them over the preview without needing
 to know how they were derived.
+
+`source_held`/`you_are_source` answer "is anyone streaming, and is it me?" —
+computed per connection (unlike every other field here, which is identical
+for every recipient), since only one WS connection is ever the frame source
+(`internal/server/http.go`'s `frameSource`, first grid frame wins). Every
+other connected client's captured frames are silently dropped, which without
+this is invisible: a second tab or the desktop app both keep showing their
+own local capture preview with no indication that it's not actually reaching
+the bridge.
 
 ### HTTP
 
@@ -149,6 +160,7 @@ to know how they were derived.
 | `GET /api/rooms` | Every room, fresh from the bridge (`internal/lightctl.Room`) |
 | `GET /api/scenes` | Every scene, fresh from the bridge (`internal/lightctl.Scene`) |
 | `GET /api/favorites` | Every favourited id (light, `room:<id>`, scene, or the synthetic `all`), id → unix-seconds favourited-at |
+| `GET /api/locale` | `{"lang": "pl"}` (or `""`) — locale hint from this *process's* environment, preferred over the browser's own `navigator.language` since Electron's often doesn't reflect the host OS locale |
 | `GET /ws` | WebSocket upgrade |
 
 ## 3. Light control (day-to-day Hue control, over the same `/ws`)
