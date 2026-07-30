@@ -151,10 +151,20 @@ func (p *patchingProvisioner) Provision(ctx context.Context, appName, osName, ar
 		if err := p.fetch(ctx, paths.AstilectronDownloadSrc(), paths.AstilectronDownloadDst(), paths.AstilectronUnzipSrc(), paths.AstilectronDirectory()); err != nil {
 			return fmt.Errorf("provisioning astilectron: %w", err)
 		}
-		if err := patchIndexJS(paths.AstilectronDirectory() + "/index.js"); err != nil {
-			return fmt.Errorf("patching astilectron index.js: %w", err)
-		}
 		status.Astilectron = &astilectron.ProvisionStatusPackage{Version: versionAstilectron}
+	}
+	// Deliberately outside the block above: patchIndexJS is idempotent per
+	// patch (checks its own marker comments), so it's safe — and necessary —
+	// to run on every launch, not just when astilectron itself needed a
+	// fresh download. Real bug this fixes: an install that already had
+	// astilectron provisioned under an *older* version of this program (with
+	// only, say, the onReady patch) would otherwise never receive a
+	// *newly added* patch (like the PipeWire one) on a later version bump,
+	// since the version check above would see astilectron's own version is
+	// unchanged and skip this block entirely, silently leaving the install
+	// permanently on the old, incomplete patch set.
+	if err := patchIndexJS(paths.AstilectronDirectory() + "/index.js"); err != nil {
+		return fmt.Errorf("patching astilectron index.js: %w", err)
 	}
 
 	key := osName + "-" + arch
