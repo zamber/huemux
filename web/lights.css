@@ -18,6 +18,19 @@ body { margin: 0; }
 .dot.ok { background: var(--success); }
 .dot.warn { background: var(--warning); }
 
+/* Shown only while a screen-sync stream is actually active (any client,
+   not just this one) — entertainment streaming holds exclusive control of
+   its lights' color/brightness, same as the real Hue app; this is how you
+   get manual control back without switching to the Sync page. */
+.stop-streaming-btn {
+  padding: 0.4rem 0.8rem;
+  background: var(--danger); color: #fff;
+  border: none; border-radius: 999px;
+  font-size: 0.8rem; font-weight: 600;
+  cursor: pointer;
+}
+.stop-streaming-btn:hover { opacity: 0.88; }
+
 /* Filter menu: native <details> disclosure, no dropdown library needed. */
 .filter-menu { position: relative; }
 .filter-menu summary {
@@ -77,6 +90,10 @@ body { margin: 0; }
   font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.04em;
   color: var(--ink-muted); margin: 0 0 0.6rem; font-weight: 600;
 }
+/* A room's own scenes sit right below that room's light cards, inside the
+   same .room-group — needs its own top margin so it doesn't butt up
+   against the cards above it. */
+.room-group .scenes-strip { margin-top: 0.75rem; }
 
 .lights-empty { text-align: center; padding: 2rem 0; }
 

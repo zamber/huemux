@@ -340,13 +340,13 @@ type statusWire struct {
 	Settings *config.AreaSettings `json:"settings,omitempty"`
 
 	// Multiple WS clients (a browser tab and the desktop app, say) can be
-	// connected at once, but only one — whichever sent a grid frame first —
-	// is ever s.frameSource; every other client's captured frames are
-	// silently dropped in handleGridFrame. Without these, a second client
-	// has no way to know its own "sync" is a local-only preview that isn't
-	// actually reaching the bridge. SourceHeld/YouAreSource are per*
-	// connection, computed fresh for whoever asked, unlike the rest of this
-	// struct which is identical for every recipient.
+	// connected at once, but only one is ever s.frameSource — claimed
+	// explicitly by select_area (see claimFrameSource), which evicts and
+	// notifies whoever held it before. Without these fields, a second
+	// client has no way to know its own "sync" is a local-only preview
+	// that isn't actually reaching the bridge. SourceHeld/YouAreSource are
+	// per-connection, computed fresh for whoever asked, unlike the rest of
+	// this struct which is identical for every recipient.
 	SourceHeld   bool `json:"source_held"`
 	YouAreSource bool `json:"you_are_source"`
 }
@@ -427,16 +427,16 @@ func (s *Server) handleWS(w http.ResponseWriter, r *http.Request) {
 		case opBinary:
 			s.handleGridFrame(conn, payload)
 		case opText:
-			s.handleControlMessage(payload)
+			s.handleControlMessage(conn, payload)
 		}
 	}
 }
 
 // handleGridFrame accepts a binary grid frame only from whichever
-// connection is currently designated the frame source, claiming that role
-// for the first connection to send one. Two tabs both capturing produces a
-// strobe that is very hard to trace back from the light end, so only one is
-// ever honoured.
+// connection currently holds the frame source, claimed explicitly via
+// select_area (see claimFrameSource) rather than by whoever happens to send
+// a frame first. Two tabs both capturing produces a strobe that is very
+// hard to trace back from the light end, so only one is ever honoured.
 func (s *Server) handleGridFrame(conn *Conn, payload []byte) {
 	eng := s.engine()
 	if eng == nil {
@@ -444,9 +444,6 @@ func (s *Server) handleGridFrame(conn *Conn, payload []byte) {
 	}
 
 	s.mu.Lock()
-	if s.frameSource == nil {
-		s.frameSource = conn
-	}
 	isSource := s.frameSource == conn
 	s.mu.Unlock()
 	if !isSource {
@@ -465,7 +462,50 @@ func (s *Server) handleGridFrame(conn *Conn, payload []byte) {
 	eng.SetFrame(grid)
 }
 
-func (s *Server) handleControlMessage(payload []byte) {
+// claimFrameSource makes conn the frame source, evicting whoever held it
+// before. Called from select_area, i.e. whenever a client actually starts
+// (or restarts) a sync session — explicit, rather than the old "first
+// connection to send a grid frame wins" implicit claim, so that starting
+// sync from a second client visibly preempts the first instead of just
+// having its own frames silently dropped forever with no feedback.
+func (s *Server) claimFrameSource(conn *Conn) {
+	s.mu.Lock()
+	previous := s.frameSource
+	s.frameSource = conn
+	s.mu.Unlock()
+	s.notifyStreamStopped(previous, conn)
+}
+
+// stopStreamAndNotifySource stops being any connection's frame source.
+// Called whenever anyone sends "stop" — including from the Lights page,
+// which has no frame of its own but can still cut a sync session started
+// elsewhere, mirroring the real Hue app's "turn off entertainment sync to
+// control lights directly" behavior.
+func (s *Server) stopStreamAndNotifySource(caller *Conn) {
+	s.mu.Lock()
+	previous := s.frameSource
+	s.frameSource = nil
+	s.mu.Unlock()
+	s.notifyStreamStopped(previous, caller)
+}
+
+// notifyStreamStopped tells previous (if it exists and isn't exceptConn,
+// which already knows) that its stream was stopped out from under it — by
+// a preemption or a remote stop — so its UI can stop local capture and
+// reset its preview instead of leaving it frozen on the last frame,
+// looking like it's still streaming when it no longer is.
+func (s *Server) notifyStreamStopped(previous, exceptConn *Conn) {
+	if previous == nil || previous == exceptConn {
+		return
+	}
+	raw, err := json.Marshal(map[string]string{"type": "stream_stopped"})
+	if err != nil {
+		return
+	}
+	_ = previous.WriteMessage(opText, raw)
+}
+
+func (s *Server) handleControlMessage(conn *Conn, payload []byte) {
 	var msg controlMessage
 	if err := json.Unmarshal(payload, &msg); err != nil {
 		log.Printf("lightsync: bad control message: %v", err)
@@ -534,11 +574,13 @@ func (s *Server) handleControlMessage(payload []byte) {
 
 	switch msg.Type {
 	case "select_area":
+		s.claimFrameSource(conn)
 		if err := eng.SelectArea(ctx, msg.AreaID); err != nil {
 			log.Printf("lightsync: select_area %s: %v", msg.AreaID, err)
 		}
 	case "stop":
 		eng.Stop(ctx)
+		s.stopStreamAndNotifySource(conn)
 	case "settings":
 		var settings config.AreaSettings
 		if err := json.Unmarshal(msg.Settings, &settings); err != nil {

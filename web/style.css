@@ -94,10 +94,20 @@ button:disabled { background: var(--surface-alt); color: var(--ink-muted); curso
 .dot.warn { background: var(--warning); }
 
 #preview-panel { grid-column: 1 / -1; text-align: center; }
+.preview-wrap { position: relative; display: inline-block; width: 100%; max-width: 640px; }
 #preview {
-  width: 100%; max-width: 640px; aspect-ratio: 16/9; background: #000;
+  display: block; width: 100%; aspect-ratio: 16/9; background: #000;
   border-radius: 6px; cursor: pointer;
 }
+.live-badge {
+  position: absolute; top: 10px; left: 10px;
+  background: var(--danger); color: #fff;
+  padding: 0.2rem 0.65rem; border-radius: 999px;
+  font-size: 0.7rem; font-weight: 700; letter-spacing: 0.04em;
+  animation: live-pulse 1.6s ease-in-out infinite;
+  pointer-events: none;
+}
+@keyframes live-pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
 .hint { color: var(--ink-muted); font-size: 0.8rem; margin: 0.4rem 0; }
 
 .scenes-details { text-align: left; margin-top: 0.8rem; }

@@ -35,6 +35,7 @@
     "changeSource": "Zmień źródło",
     "previewHint": "Kliknij prostokąt, aby mrugnąć tym światłem. Strefy aktualizują się na żywo podczas synchronizacji.",
     "sourceHeldByOther": "Inne połączone okno aktualnie strumieniuje — ten widok to tylko lokalny podgląd.",
+    "live": "● NA ŻYWO",
     "primary": "Podstawowe",
     "reactivity": "Reaktywność",
     "presetSubtle": "Subtelna",
@@ -92,6 +93,7 @@
     "filterFavorites": "Ulubione",
     "filterCategories": "Kategorie",
     "allLights": "Wszystkie światła",
+    "allInRoom": "Wszystkie w tym pokoju",
     "colorPickerTitle": "Wybierz kolor: {name}",
     "toggleFavorite": "Przełącz ulubione",
     "chooseColor": "Wybierz kolor",
@@ -101,7 +103,9 @@
     "turnAllOff": "Wyłącz wszystkie",
     "chooseColorAll": "Wybierz kolor dla wszystkich świateł",
     "scenes": "Sceny",
+    "entertainmentScenes": "Sceny stref rozrywki",
     "sceneDynamic": "Dynamiczna",
-    "empty": "Nie znaleziono świateł na tym mostku."
+    "empty": "Nie znaleziono świateł na tym mostku.",
+    "stopStreaming": "Zatrzymaj strumieniowanie"
   }
 }

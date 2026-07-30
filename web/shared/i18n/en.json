@@ -35,6 +35,7 @@
     "changeSource": "Change source",
     "previewHint": "Click a rect to blink that light. Zones update live once syncing.",
     "sourceHeldByOther": "Another connected window is currently streaming — this view is a local preview only.",
+    "live": "● LIVE",
     "primary": "Primary",
     "reactivity": "Reactivity",
     "presetSubtle": "Subtle",
@@ -92,6 +93,7 @@
     "filterFavorites": "Favorites",
     "filterCategories": "Categories",
     "allLights": "All lights",
+    "allInRoom": "All in this room",
     "colorPickerTitle": "Choose color: {name}",
     "toggleFavorite": "Toggle favorite",
     "chooseColor": "Choose color",
@@ -101,7 +103,9 @@
     "turnAllOff": "Turn all off",
     "chooseColorAll": "Choose color for all lights",
     "scenes": "Scenes",
+    "entertainmentScenes": "Entertainment area scenes",
     "sceneDynamic": "Dynamic",
-    "empty": "No lights found on this bridge."
+    "empty": "No lights found on this bridge.",
+    "stopStreaming": "Stop streaming"
   }
 }

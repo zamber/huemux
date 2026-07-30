@@ -40,6 +40,7 @@ const els = {
   grid: document.getElementById('lights-grid'),
   scenesSection: document.getElementById('scenes-section'),
   scenesStrip: document.getElementById('scenes-strip'),
+  stopStreamingBtn: document.getElementById('stop-streaming-btn'),
 };
 
 let ws = null;
@@ -95,12 +96,18 @@ function handleMessage(msg) {
         ready = false;
         els.unpaired.hidden = false;
         els.app.hidden = true;
-      } else if (!ready) {
+        break;
+      }
+      if (!ready) {
         ready = true;
         els.unpaired.hidden = true;
         els.app.hidden = false;
         initialLoad();
       }
+      // Entertainment streaming (from any client) holds exclusive control
+      // of its lights' color/brightness, same as the real Hue app — this
+      // is how you get manual control back without switching to Sync.
+      els.stopStreamingBtn.hidden = !(msg.snapshot && msg.snapshot.StreamActive);
       break;
     case 'light_event':
       mergeLightEvent(msg.event);
@@ -141,7 +148,7 @@ function mergeFavorite(id, fav) {
   }
   if (editingIds.size === 0) {
     renderGrid();
-    renderScenes();
+    renderZoneScenes();
     renderFilterMenu();
   }
 }
@@ -163,7 +170,8 @@ async function fetchRooms() {
 async function fetchScenes() {
   const res = await fetch('/api/scenes');
   scenes = await res.json();
-  renderScenes();
+  renderZoneScenes();
+  renderGrid(); // room-scoped scenes now render inline as part of the grid too
 }
 
 async function fetchFavorites() {
@@ -184,7 +192,7 @@ async function initialLoad() {
   }
   renderFilterMenu();
   renderGrid();
-  renderScenes();
+  renderZoneScenes();
 }
 
 function hasAnyFavorites() {
@@ -253,27 +261,76 @@ function renderGrid() {
   // access from that tab.
   const showAllTile = filter === 'all' || (filter === 'favorites' && !!favoritesRaw.all);
   let html = '';
-  if (showAllTile) html += `<div class="lights-cards-grid">${renderAllLightsTile()}</div>`;
+  // Wrapped in .room-group (not just .lights-cards-grid) so its bottom
+  // margin matches every room block that follows — previously this and the
+  // first room-group butted up against each other with no gap.
+  if (showAllTile) html += `<div class="room-group"><div class="lights-cards-grid">${renderAllLightsTile()}</div></div>`;
 
   if (filter === 'room') {
     // Already scoped to one room by the filter itself — a header repeating
-    // that room's name would be redundant.
-    html += `<div class="lights-cards-grid">${list.map(renderLightCard).join('')}</div>`;
-  } else {
-    // 'all' / 'favorites': grouped by room, same pattern as the scenes
-    // strip, so lamps and scenes read as belonging to the same rooms.
-    const byRoom = groupByRoomName(list, (l) => l.room_name);
-    html += [...byRoom.entries()].map(([roomName, ls]) => `
+    // that room's name would be redundant. Still gets its own room-scoped
+    // all-lights tile and its own (room, not zone) scenes, merged into the
+    // same block, same as each room gets in the 'all'/'favorites' case
+    // below.
+    const room = rooms.find((r) => r.id === filterRoomId);
+    const tile = (room && list.length) ? renderRoomTile(room, list) : '';
+    const sceneList = sortScenesFavoriteFirst(filteredScenes());
+    html += `
       <div class="room-group">
-        <h3 class="room-header">${escapeHtml(roomName)}</h3>
-        <div class="lights-cards-grid">${ls.map(renderLightCard).join('')}</div>
-      </div>`).join('');
+        <div class="lights-cards-grid">${tile}${list.map(renderLightCard).join('')}</div>
+        ${sceneList.length ? `<div class="scenes-strip">${sceneList.map(renderSceneChip).join('')}</div>` : ''}
+      </div>`;
+  } else {
+    // 'all' / 'favorites': one merged block per room — header, a
+    // room-scoped all-lights tile, that room's lights, and that room's own
+    // scenes, all together (entertainment-zone scenes aren't tied to one
+    // room and get their own separate section instead — see
+    // renderZoneScenes). No room tile in the Favorites view: bulk
+    // room-wide control doesn't fit "quick access to what I favorited."
+    const byRoomId = new Map();
+    for (const l of list) {
+      const key = l.room_id || '';
+      if (!byRoomId.has(key)) byRoomId.set(key, { name: l.room_name || '—', lights: [] });
+      byRoomId.get(key).lights.push(l);
+    }
+    const { roomScenes } = splitScenesByRoomVsZone(filteredScenes());
+    const scenesByRoomId = new Map();
+    for (const sc of roomScenes) {
+      if (!scenesByRoomId.has(sc.group_id)) scenesByRoomId.set(sc.group_id, []);
+      scenesByRoomId.get(sc.group_id).push(sc);
+    }
+
+    html += [...byRoomId.entries()].map(([roomId, entry]) => {
+      const room = rooms.find((r) => r.id === roomId);
+      const tile = (room && filter !== 'favorites') ? renderRoomTile(room, entry.lights) : '';
+      const sceneList = sortScenesFavoriteFirst(scenesByRoomId.get(roomId) || []);
+      return `
+        <div class="room-group">
+          <h3 class="room-header">${escapeHtml(entry.name)}</h3>
+          <div class="lights-cards-grid">${tile}${entry.lights.map(renderLightCard).join('')}</div>
+          ${sceneList.length ? `<div class="scenes-strip">${sceneList.map(renderSceneChip).join('')}</div>` : ''}
+        </div>`;
+    }).join('');
   }
 
   if (!list.length && !showAllTile) {
     html += `<p class="hint lights-empty">${escapeHtml(LightsyncI18n.t('lights.empty'))}</p>`;
   }
   els.grid.innerHTML = html;
+}
+
+// Scenes tied to an actual room (sc.group_id matches something in the
+// /api/rooms list) vs. scenes tied to a zone that isn't a room at all —
+// most commonly the entertainment zone screen-sync uses, which spans
+// multiple rooms and so doesn't belong under any single room's header.
+function splitScenesByRoomVsZone(list) {
+  const roomIds = new Set(rooms.map((r) => r.id));
+  const roomScenes = [];
+  const zoneScenes = [];
+  for (const sc of list) {
+    (roomIds.has(sc.group_id) ? roomScenes : zoneScenes).push(sc);
+  }
+  return { roomScenes, zoneScenes };
 }
 
 function renderLightCard(l) {
@@ -324,6 +381,36 @@ function renderAllLightsTile() {
     </div>`;
 }
 
+// Per-room equivalent of renderAllLightsTile — same idea (aggregate
+// toggle/brightness/color), scoped to one room instead of every light on
+// the bridge. Toggle/brightness go through the real room_toggle/
+// room_brightness WS messages (Room.GroupedLightID, already wired up
+// server-side since M2) rather than a client-side fan-out; color has no
+// room-level CLIP v2 primitive, so that one *does* fan out to just this
+// room's colorable lights, same technique as the global tile's color-all.
+// No favorite star here — favoriting is per-light/per-scene/the global
+// "all", not per-room, at least for now.
+function renderRoomTile(room, roomLights) {
+  const anyOn = roomLights.some((l) => l.on);
+  const hasBrightness = roomLights.some((l) => l.dimmable);
+  const hasColor = roomLights.some((l) => l.colorable);
+  const onLights = roomLights.filter((l) => l.on && l.dimmable);
+  const avgBrightness = onLights.length
+    ? Math.round(onLights.reduce((sum, l) => sum + l.brightness, 0) / onLights.length)
+    : 50;
+  return `
+    <div class="light-card all-lights-tile" data-room-id="${escapeHtml(room.id)}">
+      <div class="light-card-head">
+        <h3>${ICONS.lightbulb}<span>${escapeHtml(LightsyncI18n.t('lights.allInRoom'))}</span></h3>
+        <div class="light-card-actions">
+          ${hasColor ? `<button type="button" class="icon-btn" data-action="color-room" data-room-id="${escapeHtml(room.id)}" title="${escapeHtml(LightsyncI18n.t('lights.chooseColorAll'))}">${ICONS.palette}</button>` : ''}
+          <button type="button" class="icon-btn ${anyOn ? 'active' : ''}" data-action="toggle-room" data-room-id="${escapeHtml(room.id)}" data-id="${escapeHtml(room.grouped_light_id)}" title="${escapeHtml(LightsyncI18n.t(anyOn ? 'lights.turnAllOff' : 'lights.turnAllOn'))}">${anyOn ? ICONS.powerOn : ICONS.powerOff}</button>
+        </div>
+      </div>
+      ${hasBrightness ? `<input type="range" class="brightness-slider" min="0" max="100" value="${avgBrightness}" data-action="brightness-room" data-id="room:${escapeHtml(room.grouped_light_id)}">` : ''}
+    </div>`;
+}
+
 // Scenes are tied to a room/zone (group_id) — filtered to match whatever
 // the light grid is currently showing, rather than always listing every
 // scene from every room regardless of context.
@@ -365,28 +452,37 @@ function renderSceneChip(sc) {
     </div>`;
 }
 
-function renderScenes() {
-  const list = filteredScenes();
-  if (!list.length) { els.scenesSection.hidden = true; return; }
-  els.scenesSection.hidden = false;
-
+// Entertainment-zone-scoped scenes only (see splitScenesByRoomVsZone) — a
+// room's own scenes are rendered inline as part of its block in
+// renderGrid() instead, alongside that room's lights and its all-lights
+// tile.
+function renderZoneScenes() {
   if (filter === 'room') {
-    // Already scoped to one room — no header needed.
-    els.scenesStrip.classList.remove('grouped');
-    els.scenesStrip.innerHTML = sortScenesFavoriteFirst(list).map(renderSceneChip).join('');
+    // A specific room has no entertainment-zone scenes of its own by
+    // definition — its own (room-scoped) scenes are already shown inline
+    // in renderGrid().
+    els.scenesSection.hidden = true;
     return;
   }
 
-  // 'all' / 'favorites': grouped by room with its own header, same pattern
-  // as the light grid, so lamps and scenes read as belonging to the same
-  // rooms rather than one flat mix.
-  els.scenesStrip.classList.add('grouped');
-  const byRoom = groupByRoomName(list, (sc) => sc.group_name);
-  els.scenesStrip.innerHTML = [...byRoom.entries()].map(([roomName, scs]) => `
-    <div class="scenes-room-group">
-      <h3 class="scenes-room-header">${escapeHtml(roomName)}</h3>
-      <div class="scenes-strip">${sortScenesFavoriteFirst(scs).map(renderSceneChip).join('')}</div>
-    </div>`).join('');
+  const { zoneScenes } = splitScenesByRoomVsZone(filteredScenes());
+  if (!zoneScenes.length) { els.scenesSection.hidden = true; return; }
+  els.scenesSection.hidden = false;
+
+  if (filter === 'favorites') {
+    // Grouped by zone with its own header, in case favorited scenes span
+    // more than one entertainment zone.
+    els.scenesStrip.classList.add('grouped');
+    const byZone = groupByRoomName(zoneScenes, (sc) => sc.group_name);
+    els.scenesStrip.innerHTML = [...byZone.entries()].map(([zoneName, scs]) => `
+      <div class="scenes-room-group">
+        <h3 class="scenes-room-header">${escapeHtml(zoneName)}</h3>
+        <div class="scenes-strip">${sortScenesFavoriteFirst(scs).map(renderSceneChip).join('')}</div>
+      </div>`).join('');
+  } else {
+    els.scenesStrip.classList.remove('grouped');
+    els.scenesStrip.innerHTML = sortScenesFavoriteFirst(zoneScenes).map(renderSceneChip).join('');
+  }
 }
 
 function renderFilterMenu() {
@@ -428,12 +524,17 @@ function actionColorAll(r, g, b) {
   lights.filter((l) => l.colorable).forEach((l) => send({ type: 'light_color', rid: l.id, r, g, b }));
 }
 
+// id is either a light id, the sentinel "__all__", or "room:<grouped_light_id>"
+// (the room tile's slider — prefixed since, unlike a light id, it isn't
+// self-describing on its own).
 function scheduleBrightness(id, pct) {
   editingIds.add(id);
   clearTimeout(brightnessTimers[id]);
   brightnessTimers[id] = setTimeout(() => {
     if (id === '__all__') {
       lights.filter((l) => l.dimmable).forEach((l) => send({ type: 'light_brightness', rid: l.id, brightness: pct }));
+    } else if (id.indexOf('room:') === 0) {
+      send({ type: 'room_brightness', rid: id.slice(5), brightness: pct });
     } else {
       send({ type: 'light_brightness', rid: id, brightness: pct });
     }
@@ -447,6 +548,11 @@ function scheduleBrightness(id, pct) {
   // user's finger instead of getting replaced mid-drag).
   if (id === '__all__') {
     lights.filter((l) => l.dimmable).forEach((l) => { l.brightness = pct; l.on = pct > 0; });
+  } else if (id.indexOf('room:') === 0) {
+    const room = rooms.find((r) => r.grouped_light_id === id.slice(5));
+    if (room) {
+      lights.filter((l) => l.room_id === room.id && l.dimmable).forEach((l) => { l.brightness = pct; l.on = pct > 0; });
+    }
   } else {
     const l = lights.find((x) => x.id === id);
     if (l) { l.brightness = pct; l.on = pct > 0; }
@@ -455,11 +561,19 @@ function scheduleBrightness(id, pct) {
 
 // ---------- color picker ----------
 
+// targetId is a light id, "room:<roomId>" (fans out to that room's
+// colorable lights — CLIP v2 has no room-level color PUT), or null (every
+// colorable light on the bridge).
 function openColorPicker(targetId) {
   const overlay = document.createElement('div');
   overlay.className = 'color-picker-overlay';
   overlay.setAttribute('role', 'application');
-  const name = targetId ? ((lights.find((l) => l.id === targetId) || {}).name || '') : LightsyncI18n.t('lights.allLights');
+  let name = LightsyncI18n.t('lights.allLights');
+  if (targetId && targetId.indexOf('room:') === 0) {
+    name = (rooms.find((r) => r.id === targetId.slice(5)) || {}).name || '';
+  } else if (targetId) {
+    name = (lights.find((l) => l.id === targetId) || {}).name || '';
+  }
   overlay.setAttribute('aria-label', LightsyncI18n.t('lights.colorPickerTitle', { name }));
   overlay.innerHTML =
     `<div class="color-picker-head"><h2>${escapeHtml(name)}</h2></div>` +
@@ -508,8 +622,14 @@ function openColorPicker(targetId) {
     if (!pendingColor) return;
     const { r, g, b } = pendingColor;
     pendingColor = null;
-    if (targetId) send({ type: 'light_color', rid: targetId, r, g, b });
-    else actionColorAll(r, g, b);
+    if (targetId && targetId.indexOf('room:') === 0) {
+      const roomId = targetId.slice(5);
+      lights.filter((l) => l.room_id === roomId && l.colorable).forEach((l) => send({ type: 'light_color', rid: l.id, r, g, b }));
+    } else if (targetId) {
+      send({ type: 'light_color', rid: targetId, r, g, b });
+    } else {
+      actionColorAll(r, g, b);
+    }
   }
 
   function pick(e) {
@@ -571,6 +691,20 @@ function openColorPicker(targetId) {
 // ---------- event delegation ----------
 
 els.grid.addEventListener('click', (e) => {
+  // Room-embedded scenes (see renderGrid) are <span>s, not <button>s, same
+  // as the entertainment-zone scenes strip — checked first since they'd
+  // never match the button[data-action] selector below.
+  const star = e.target.closest('.scene-chip-star');
+  if (star) {
+    send({ type: 'light_favorite', rid: star.dataset.id });
+    return;
+  }
+  const sceneMain = e.target.closest('.scene-chip-main');
+  if (sceneMain) {
+    send({ type: 'scene_recall', rid: sceneMain.dataset.sceneId });
+    return;
+  }
+
   const btn = e.target.closest('button[data-action]');
   if (!btn) return;
   const action = btn.dataset.action;
@@ -593,16 +727,30 @@ els.grid.addEventListener('click', (e) => {
     case 'color-all':
       openColorPicker(null);
       break;
+    case 'toggle-room': {
+      const roomId = btn.dataset.roomId;
+      const anyOn = lights.filter((l) => l.room_id === roomId).some((l) => l.on);
+      send({ type: 'room_toggle', rid: id, on: !anyOn });
+      break;
+    }
+    case 'color-room':
+      openColorPicker('room:' + btn.dataset.roomId);
+      break;
   }
 });
 
 els.grid.addEventListener('input', (e) => {
   const el = e.target;
-  if (el.dataset.action === 'brightness') {
+  if (el.dataset.action === 'brightness' || el.dataset.action === 'brightness-room') {
+    // el.dataset.id already carries the "room:" prefix for brightness-room.
     scheduleBrightness(el.dataset.id, parseInt(el.value, 10));
   } else if (el.dataset.action === 'brightness-all') {
     scheduleBrightness('__all__', parseInt(el.value, 10));
   }
+});
+
+els.stopStreamingBtn.addEventListener('click', () => {
+  send({ type: 'stop' });
 });
 
 els.filterList.addEventListener('click', (e) => {
@@ -617,7 +765,7 @@ els.filterList.addEventListener('click', (e) => {
   els.filterDetails.open = false;
   renderFilterMenu();
   renderGrid();
-  renderScenes();
+  renderZoneScenes();
 });
 
 els.scenesStrip.addEventListener('click', (e) => {
@@ -634,7 +782,7 @@ els.scenesStrip.addEventListener('click', (e) => {
 document.addEventListener('lightsync:langchange', () => {
   renderFilterMenu();
   renderGrid();
-  renderScenes();
+  renderZoneScenes();
 });
 
 // ---------- filter <-> URL ----------

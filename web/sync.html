@@ -64,7 +64,10 @@
   </section>
 
   <section id="preview-panel">
-    <canvas id="preview" width="640" height="360"></canvas>
+    <div class="preview-wrap">
+      <canvas id="preview" width="640" height="360"></canvas>
+      <span id="live-badge" class="live-badge" hidden data-i18n="sync.live">● LIVE</span>
+    </div>
     <p class="hint" data-i18n="sync.previewHint">Click a rect to blink that light. Zones update live once syncing.</p>
     <p id="source-warning" class="warning" hidden data-i18n="sync.sourceHeldByOther">Another connected window is currently streaming — this view is a local preview only.</p>
 

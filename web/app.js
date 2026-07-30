@@ -11,6 +11,7 @@ const els = {
   changeSourceBtn: document.getElementById('change-source-btn'),
   areaWarning: document.getElementById('area-warning'),
   preview: document.getElementById('preview'),
+  liveBadge: document.getElementById('live-badge'),
   sourceWarning: document.getElementById('source-warning'),
   statusGrid: document.getElementById('status-grid'),
   app: document.getElementById('app'),
@@ -79,6 +80,20 @@ function sendGrid(buf) {
 }
 
 function handleControlMessage(msg) {
+  if (msg.type === 'stream_stopped') {
+    // Another client either preempted us (started its own sync) or sent a
+    // remote stop (e.g. the Lights page's own stop-streaming button) — our
+    // stream is over whether we asked for it or not. Stop local capture and
+    // reset the preview instead of leaving it frozen on the last frame,
+    // which otherwise looks exactly like it's still streaming.
+    stopCapture();
+    resetPreview();
+    syncing = false;
+    els.startBtn.disabled = false;
+    els.stopBtn.disabled = true;
+    els.changeSourceBtn.disabled = true;
+    return;
+  }
   if (msg.type !== 'status') return;
 
   if (!msg.paired) {
@@ -286,6 +301,7 @@ els.startBtn.addEventListener('click', async () => {
 
 els.stopBtn.addEventListener('click', () => {
   stopCapture();
+  resetPreview();
   send({ type: 'stop' });
   syncing = false;
   els.startBtn.disabled = false;
@@ -318,6 +334,7 @@ async function startCapture() {
   const track = stream.getVideoTracks()[0];
   track.onended = () => {
     stopCapture();
+    resetPreview();
     send({ type: 'stop' });
     syncing = false;
     els.startBtn.disabled = false;
@@ -433,6 +450,15 @@ function stopCapture() {
 
 // --- Calibration preview ---------------------------------------------------
 
+// Clears the preview back to empty (the black CSS background shows through)
+// instead of leaving it frozen on whatever the last captured frame was —
+// which otherwise looks exactly like sync is still running when it isn't,
+// whether that's because the user pressed Stop, the browser's share ended
+// on its own, or another client's stream_stopped preempted this one.
+function resetPreview() {
+  previewCtx.clearRect(0, 0, els.preview.width, els.preview.height);
+}
+
 function drawPreviewFromGrid(gridW, gridH, rgba) {
   gridCanvas.width = gridW;
   gridCanvas.height = gridH;
@@ -477,6 +503,7 @@ els.preview.addEventListener('click', (ev) => {
 
 function renderStatus(s) {
   const t = LightsyncI18n.t;
+  els.liveBadge.hidden = !s.snapshot.StreamActive;
   const rows = [
     [t('sync.status.bridge'), `${s.snapshot.BridgeIP} ${t(s.snapshot.BridgeConnected ? 'sync.status.connected' : 'sync.status.disconnected')} · ${t('sync.status.handshake', { ms: s.snapshot.HandshakeMS })}`],
     [t('sync.status.area'), `${s.snapshot.AreaName || '—'} ${s.snapshot.AreaType || ''} · ${t('sync.status.channels', { n: s.snapshot.ChannelCount })}`],

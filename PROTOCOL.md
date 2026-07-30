@@ -143,11 +143,31 @@ to know how they were derived.
 `source_held`/`you_are_source` answer "is anyone streaming, and is it me?" —
 computed per connection (unlike every other field here, which is identical
 for every recipient), since only one WS connection is ever the frame source
-(`internal/server/http.go`'s `frameSource`, first grid frame wins). Every
-other connected client's captured frames are silently dropped, which without
-this is invisible: a second tab or the desktop app both keep showing their
-own local capture preview with no indication that it's not actually reaching
-the bridge.
+(`internal/server/http.go`'s `frameSource`). Every other connected client's
+captured frames are silently dropped, which without this is invisible: a
+second tab or the desktop app both keep showing their own local capture
+preview with no indication that it's not actually reaching the bridge.
+
+The frame source is claimed explicitly by `select_area` (`claimFrameSource`),
+not by whichever connection happens to send a grid frame first — starting
+sync from a second client preempts the first rather than just having its
+frames silently dropped from then on. `stop` releases the frame source too,
+from *any* connection, not just the one holding it — sent from the Lights
+page this is how you get manual light control back without switching to
+Sync and stopping it there, mirroring the real Hue app's own "turn off
+entertainment sync to control lights directly" behavior.
+
+Whenever a connection stops being the frame source for a reason *other than
+its own explicit stop* — preempted by another client's `select_area`, or
+told to stop by a `stop` sent from somewhere else — it receives:
+
+```json
+{"type": "stream_stopped"}
+```
+
+so its UI can stop local capture and reset the preview instead of leaving
+it frozen on the last frame, which otherwise looks exactly like it's still
+streaming when it no longer is.
 
 ### HTTP
 
