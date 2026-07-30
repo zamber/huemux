@@ -96,16 +96,47 @@ http://lightsync.lan/ alongside `lights.lan` — download and run, no install
 step. `packaging/lightsync.service` is an example systemd `--user` unit for
 running it as a persistent background service instead of a terminal session.
 
+## Branches
+
+Three branches, each building on the last:
+
+- **`main`** — the screen-sync core: CLIP v2 client, DTLS streaming, zone
+  mapping, the loopback HTTP/WS server, and the browser UI. Ships as
+  `cmd/lightsync`.
+- **`feature/astilectron-wrapper`** — wraps the same core in an optional
+  Electron shell (`cmd/lightsync-desktop`, via go-astilectron) to sidestep
+  browser variability in screen capture (`getDisplayMedia` picker quirks,
+  `MediaStreamTrackProcessor` support) by targeting one pinned Chromium
+  instead of whatever browser the user has. `internal/`, `cmd/lightsync`,
+  and the browser UI are untouched by this; a `--headless` flag on the new
+  binary reproduces the plain one exactly, with no Electron dependency paid
+  at runtime. See `cmd/lightsync-desktop/README.md`.
+- **`feature/lights-go`** (current) — extends both binaries with a second,
+  independent reimplementation of day-to-day Hue light control (browse
+  rooms/lights, on/off, brightness, color, favorites, scenes) directly in
+  Go. This is a deliberate parallel to the separate `lights-ui` project,
+  which keeps serving the `lights.lan` picture-frame dashboard unchanged —
+  not a replacement for it, so the two can be compared head-to-head. Adds
+  `internal/lightctl`, a light-control message family on the existing `/ws`
+  connection (`PROTOCOL.md` §3), and a shared design system (`web/shared/`:
+  theme tokens, i18n, header) applied to both the new `lights.html` panel
+  and a restyled, decluttered `sync.html` (formerly `index.html`).
+
 ## Layout
 
 ```
-cmd/lightsync/     entry point, subcommands, output loop
-internal/hue/       CLIP v2 REST client, DTLS session, HueStream encoder
-internal/pipeline/  zone mapping, colour, temporal smoothing
-internal/server/    loopback HTTP server, minimal WebSocket
-internal/config/    credentials and per-area settings
-internal/ui/        CLI status readout
-web/                plain HTML/CSS/JS, embedded into the binary
+cmd/lightsync/         entry point, subcommands, output loop
+cmd/lightsync-desktop/ optional Electron shell (feature/astilectron-wrapper)
+internal/hue/           CLIP v2 REST client, DTLS session, HueStream encoder
+internal/pipeline/      zone mapping, colour, temporal smoothing
+internal/lightctl/      day-to-day light control: rooms/lights/scenes, favorites
+internal/server/        loopback HTTP server, minimal WebSocket
+internal/config/        credentials, per-area settings, favorites
+internal/ui/            CLI status readout
+web/                    plain HTML/CSS/JS, embedded into the binary
+web/shared/             theme tokens, i18n, header — shared by every page
+web/sync.html           screen-sync UI (formerly index.html)
+web/lights.html         light-control panel
 ```
 
 ## Security
