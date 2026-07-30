@@ -235,6 +235,14 @@ els.flipDepthBtn.addEventListener('click', () => {
   cb.dispatchEvent(new Event('change'));
 });
 
+// getDisplayMedia() unconditionally, in the browser and under the optional
+// Electron wrapper (cmd/lightsync-desktop) alike. This is the whole payoff
+// of that wrapper: Electron's main process registers a
+// setDisplayMediaRequestHandler (see cmd/lightsync-desktop/provisioner.go)
+// that intercepts this exact call and hands back the primary screen with no
+// picker UI, no desktopCapturer plumbing needed here — desktopCapturer
+// itself is main-process-only in modern Electron and simply isn't reachable
+// from this side. The page has no idea which context it's running in.
 async function startCapture() {
   const capW = Number(getControl('capture_width') || 320);
   const capH = Number(getControl('capture_height') || 180);
@@ -256,7 +264,8 @@ async function startCapture() {
 
   // Chrome and Firefox disagree on whether bare values or exact/max force the
   // downscale; apply both forms and verify with getSettings() rather than
-  // assuming either took effect.
+  // assuming either took effect. Electron's intercepted stream accepts the
+  // same constraints, so this isn't browser-only either.
   try {
     await track.applyConstraints({ width: capW, height: capH });
   } catch (_) { /* fall through to the exact/max form below */ }

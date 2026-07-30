@@ -2,7 +2,11 @@ module lights.lan/lightsync
 
 go 1.24.0
 
-require github.com/pion/dtls/v3 v3.1.5
+require (
+	github.com/asticode/go-astikit v0.59.0
+	github.com/asticode/go-astilectron v0.30.0
+	github.com/pion/dtls/v3 v3.1.5
+)
 
 require (
 	github.com/pion/logging v0.2.4 // indirect
