@@ -277,20 +277,30 @@ func turnOnChannelLights(ctx context.Context, client *hue.Client, channels []hue
 // --- run -----------------------------------------------------------------
 
 func cmdRun(verbose bool) {
-	bridge := mustLoadBridge()
 	store, err := config.NewStore()
 	if err != nil {
 		fatalf("loading settings: %v", err)
 	}
 
-	eng := engine.New(bridge, store)
-	srv := server.New(eng)
+	// No pairing required up front: if config.LoadBridge fails (not paired
+	// yet, or the file is missing/unreadable), the server still starts and
+	// serves a web-driven pairing flow over the same /ws connection
+	// everything else uses. `lightsync pair <ip>` on the command line still
+	// works too, for scripting.
+	var eng *engine.Engine
+	if bridge, err := config.LoadBridge(); err == nil {
+		eng = engine.New(bridge, store)
+	}
+	srv := server.New(store, eng)
 	url, err := srv.ListenAndServe()
 	if err != nil {
 		fatalf("starting server: %v", err)
 	}
 
 	fmt.Println("lightsync " + version + "  " + url)
+	if eng == nil {
+		fmt.Println("not paired yet — open the URL above to pair with your bridge")
+	}
 	openBrowser(url)
 
 	printer := ui.NewPrinter(url)
@@ -309,13 +319,18 @@ func cmdRun(verbose bool) {
 	for {
 		select {
 		case <-sigCh:
-			shutdown(eng, store)
+			shutdown(srv.Engine(), store)
 			return
 		case cmd := <-stdinCh:
-			switch cmd {
-			case "q":
-				shutdown(eng, store)
+			if cmd == "q" {
+				shutdown(srv.Engine(), store)
 				return
+			}
+			eng := srv.Engine()
+			if eng == nil {
+				continue // not paired yet; r/b have nothing to act on
+			}
+			switch cmd {
 			case "b":
 				ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 				eng.Stop(ctx)
@@ -330,6 +345,11 @@ func cmdRun(verbose bool) {
 				}
 			}
 		case <-renderTick.C:
+			eng := srv.Engine()
+			if eng == nil {
+				printer.RenderUnpaired(url)
+				continue
+			}
 			st := eng.Snapshot()
 			if st.AreaID != "" {
 				lastAreaID = st.AreaID
@@ -340,9 +360,11 @@ func cmdRun(verbose bool) {
 }
 
 func shutdown(eng *engine.Engine, store *config.Store) {
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-	defer cancel()
-	eng.Stop(ctx)
+	if eng != nil {
+		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		defer cancel()
+		eng.Stop(ctx)
+	}
 	store.Flush()
 }
 

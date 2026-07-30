@@ -67,6 +67,25 @@ button {
 button:disabled { background: #3a3d43; cursor: not-allowed; }
 #stop-btn, #change-source-btn { background: #444a55; }
 
+#pairing-panel { grid-column: 1 / -1; max-width: 480px; margin: 2rem auto; text-align: left; }
+#pairing-panel h2 { margin-top: 0; font-size: 1rem; text-transform: none; letter-spacing: normal; color: #eee; }
+.bridge-card {
+  display: flex; align-items: center; justify-content: space-between; gap: 0.6rem;
+  padding: 0.6rem 0.8rem; background: #101215; border: 1px solid #2a2d33;
+  border-radius: 6px; margin-bottom: 0.5rem;
+}
+.bridge-card .bridge-info { display: flex; flex-direction: column; gap: 0.15rem; }
+.bridge-card .bridge-name { font-weight: 600; }
+.bridge-card .bridge-ip { color: #888; font-size: 0.8rem; font-family: ui-monospace, monospace; }
+.bridge-card.unsupported { opacity: 0.5; }
+#pairing-manual { margin-top: 1rem; }
+#pairing-manual summary { cursor: pointer; color: #9ab; font-size: 0.85rem; }
+.manual-ip-row { display: flex; gap: 0.5rem; margin-top: 0.6rem; }
+.manual-ip-row input {
+  flex: 1; padding: 0.4rem; background: #101215; color: #eee;
+  border: 1px solid #333; border-radius: 4px; font-family: ui-monospace, monospace;
+}
+
 #area-panel { grid-column: 1 / -1; display: flex; align-items: center; gap: 0.6rem; flex-wrap: wrap; }
 #area-panel label { margin: 0; }
 #area-select { width: auto; min-width: 260px; }

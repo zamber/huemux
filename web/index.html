@@ -12,6 +12,30 @@
 </header>
 
 <main>
+  <section id="pairing-panel" hidden>
+    <h2>Pair with your Hue bridge</h2>
+    <p id="pairing-message" class="hint">Searching for a bridge on your network…</p>
+    <p id="pairing-error" class="warning" hidden></p>
+
+    <div id="pairing-discovered"></div>
+
+    <button id="pairing-rescan-btn">Search again</button>
+
+    <details id="pairing-manual">
+      <summary>Enter bridge IP manually</summary>
+      <p class="hint">
+        Needed if your bridge is on a different network segment than this
+        computer (common for isolated IoT VLANs) — find the IP in the Hue
+        app under Settings → My Bridge.
+      </p>
+      <div class="manual-ip-row">
+        <input type="text" id="pairing-manual-ip" placeholder="192.168.1.42">
+        <button id="pairing-manual-btn">Pair with this IP</button>
+      </div>
+    </details>
+  </section>
+
+  <div id="app" hidden>
   <section id="area-panel">
     <label for="area-select">Entertainment area</label>
     <select id="area-select"><option value="">Loading areas…</option></select>
@@ -175,6 +199,7 @@
       </div>
     </details>
   </section>
+  </div>
 </main>
 
 <script src="/app.js"></script>

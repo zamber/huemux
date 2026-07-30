@@ -13,6 +13,14 @@ const els = {
   preview: document.getElementById('preview'),
   flipDepthBtn: document.getElementById('flip-depth-btn'),
   statusGrid: document.getElementById('status-grid'),
+  app: document.getElementById('app'),
+  pairingPanel: document.getElementById('pairing-panel'),
+  pairingMessage: document.getElementById('pairing-message'),
+  pairingError: document.getElementById('pairing-error'),
+  pairingDiscovered: document.getElementById('pairing-discovered'),
+  pairingRescanBtn: document.getElementById('pairing-rescan-btn'),
+  pairingManualIP: document.getElementById('pairing-manual-ip'),
+  pairingManualBtn: document.getElementById('pairing-manual-btn'),
 };
 
 const previewCtx = els.preview.getContext('2d');
@@ -32,6 +40,8 @@ let suppressSettingsEcho = false;
 // service simply outliving a brief network hiccup mid-session — and must
 // not clobber the Start/Stop button state of a sync already in progress.
 let syncing = false;
+let wasPaired = false; // detects the unpaired->paired transition to trigger loadAreas() once
+let discoveryStarted = false;
 
 // --- WebSocket transport -----------------------------------------------
 
@@ -43,7 +53,7 @@ function connect() {
   ws.onopen = () => {
     wsReady = true;
     els.connDot.className = 'dot ok';
-    loadAreas();
+    discoveryStarted = false; // a fresh connection gets a fresh scan if still unpaired
   };
   ws.onclose = () => {
     wsReady = false;
@@ -67,11 +77,91 @@ function sendGrid(buf) {
 }
 
 function handleControlMessage(msg) {
-  if (msg.type === 'status') {
-    latestStatus = msg;
-    renderStatus(msg);
+  if (msg.type !== 'status') return;
+
+  if (!msg.paired) {
+    els.pairingPanel.hidden = false;
+    els.app.hidden = true;
+    if (!discoveryStarted) {
+      discoveryStarted = true;
+      send({ type: 'discover_bridges' });
+    }
+    renderPairing(msg.pairing || {});
+    return;
   }
+
+  els.pairingPanel.hidden = true;
+  els.app.hidden = false;
+  if (!wasPaired) {
+    wasPaired = true;
+    loadAreas();
+  }
+
+  latestStatus = msg;
+  renderStatus(msg);
 }
+
+// --- Pairing ---------------------------------------------------------------
+
+function renderPairing(p) {
+  if (p.error) {
+    els.pairingError.textContent = p.error;
+    els.pairingError.hidden = false;
+  } else {
+    els.pairingError.hidden = true;
+  }
+
+  if (p.pairing) {
+    els.pairingMessage.textContent = p.message || 'Pairing…';
+  } else if (p.discovering) {
+    els.pairingMessage.textContent = 'Searching for a bridge on your network…';
+  } else if (p.discovered && p.discovered.length > 0) {
+    els.pairingMessage.textContent = 'Found a bridge:';
+  } else {
+    els.pairingMessage.textContent = 'No bridge found automatically — enter its IP manually below.';
+  }
+
+  els.pairingDiscovered.innerHTML = '';
+  for (const b of p.discovered || []) {
+    const card = document.createElement('div');
+    card.className = 'bridge-card' + (b.supported ? '' : ' unsupported');
+
+    const info = document.createElement('div');
+    info.className = 'bridge-info';
+    const name = document.createElement('span');
+    name.className = 'bridge-name';
+    name.textContent = b.name || 'Hue Bridge';
+    const ip = document.createElement('span');
+    ip.className = 'bridge-ip';
+    ip.textContent = b.ip + (b.supported ? '' : ' — too old for Entertainment areas');
+    info.appendChild(name);
+    info.appendChild(ip);
+    card.appendChild(info);
+
+    if (b.supported) {
+      const btn = document.createElement('button');
+      btn.textContent = p.pairing ? 'Pairing…' : 'Pair';
+      btn.disabled = !!p.pairing;
+      btn.addEventListener('click', () => send({ type: 'pair', bridge_ip: b.ip }));
+      card.appendChild(btn);
+    }
+    els.pairingDiscovered.appendChild(card);
+  }
+
+  els.pairingRescanBtn.disabled = !!p.discovering || !!p.pairing;
+  els.pairingManualBtn.disabled = !!p.pairing;
+}
+
+els.pairingRescanBtn.addEventListener('click', () => send({ type: 'discover_bridges' }));
+
+els.pairingManualBtn.addEventListener('click', () => {
+  const ip = els.pairingManualIP.value.trim();
+  if (!ip) return;
+  send({ type: 'pair', bridge_ip: ip });
+});
+els.pairingManualIP.addEventListener('keydown', (ev) => {
+  if (ev.key === 'Enter') els.pairingManualBtn.click();
+});
 
 // --- Areas ---------------------------------------------------------------
 

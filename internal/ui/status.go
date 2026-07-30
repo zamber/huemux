@@ -39,8 +39,23 @@ func (p *Printer) Render(s engine.Status) {
 		fmt.Println(p.flatLine(s))
 		return
 	}
+	p.repaint(p.block(s))
+}
 
-	block := p.block(s)
+// RenderUnpaired is what's shown before the bridge has been paired — there
+// is no engine.Status yet, so it's a distinct, much shorter block rather
+// than Render with a zero-valued Status (which would print a bridge IP of
+// "" and other nonsense fields with nothing to explain them).
+func (p *Printer) RenderUnpaired(url string) {
+	line := "lightsync " + url + " — not paired yet. Open the URL above in a browser to pair with your bridge."
+	if !p.isTTY || p.Verbose {
+		fmt.Println(line)
+		return
+	}
+	p.repaint(line)
+}
+
+func (p *Printer) repaint(block string) {
 	if p.lastLines > 0 {
 		fmt.Printf("\x1b[%dA", p.lastLines) // cursor up, so we repaint instead of scrolling
 	}

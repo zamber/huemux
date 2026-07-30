@@ -25,21 +25,25 @@ over UDP, and no browser API exposes that. One binary solves both problems.
 ## Quick start
 
 ```bash
-# 1. pair (press the link button on the bridge when prompted)
-./lightsync pair 192.168.1.42
-
-# 2. check it sees your areas
-./lightsync areas
-
-# 3. prove the DTLS path works before touching any video
-./lightsync test <entertainment-configuration-id>
-
-# 4. run it
 ./lightsync
 ```
 
-Step 4 opens `http://127.0.0.1:7654`. Pick an area, press **Start sync**, and
-choose a screen or window in the browser's share dialogue.
+This opens `http://127.0.0.1:7654`. If you haven't paired yet, it walks you
+through that first: it searches for a bridge automatically (falling back to
+a manual IP field — useful if your Hue gear lives on a separate VLAN, which
+automatic discovery won't cross), then asks you to press the link button.
+Once paired, pick an area, press **Start sync**, and choose a screen or
+window in the browser's share dialogue. No terminal required for any of it.
+
+Pairing, listing areas and a DTLS smoke test are also available from the
+command line, for scripting or for diagnosing a stream that isn't reaching
+the bridge:
+
+```bash
+./lightsync pair 192.168.1.42                        # press the link button when prompted
+./lightsync areas                                     # list entertainment areas
+./lightsync test <entertainment-configuration-id>      # prove the DTLS path works before touching any video
+```
 
 You need at least one entertainment area, created in the Hue app under
 **Settings → Entertainment areas**. Where you place each light in that layout
@@ -56,8 +60,23 @@ roughly right.
 | Black cutoff | Below this, lights go fully off instead of flickering at the bottom of their range |
 | Mode | `edges` / `quadrant` / `global` / `spread` — see ROADMAP |
 | Edge width | How far in from the screen edge the sampled bands sit |
-| Flip depth axis | One press if the zones come out upside down relative to your room |
 | Ignore black bars | Letterbox detection, so bars do not drag every zone toward black |
+
+### Zone mapping
+
+Which physical axis from the Hue app's room layout (x/y/z) becomes
+screen-horizontal, screen-vertical, and "depth" is configurable per area,
+each independently invertible. Areas don't agree on which axis carries
+useful information — a pair of Play bars either side of a monitor plus a
+strip above it has meaningful x (left/right) and z (height) but a y (room
+depth) that barely varies, since everything's mounted right at the screen,
+which is why the defaults are horizontal=x, vertical=z, depth=y rather than
+the x/y-only mapping an early version of this shipped with. **Flip
+vertical** is the one-press fix if zones come out upside down; the full axis
+selects live under Sampling → Zone mapping. Depth doesn't position a zone at
+all — it scales how large an area it samples (**Depth size effect**), on
+the idea that a light physically further from the screen suits a bigger,
+more averaged region better than a precise accent.
 
 Settings are stored per entertainment area, so each room keeps its own tuning.
 
