@@ -17,6 +17,7 @@ import (
 	"lights.lan/lightsync/internal/config"
 	"lights.lan/lightsync/internal/engine"
 	"lights.lan/lightsync/internal/hue"
+	"lights.lan/lightsync/internal/lightctl"
 	"lights.lan/lightsync/internal/server"
 	"lights.lan/lightsync/internal/ui"
 )
@@ -281,6 +282,10 @@ func cmdRun(verbose bool) {
 	if err != nil {
 		fatalf("loading settings: %v", err)
 	}
+	favorites, err := config.NewFavoritesStore()
+	if err != nil {
+		fatalf("loading favorites: %v", err)
+	}
 
 	// No pairing required up front: if config.LoadBridge fails (not paired
 	// yet, or the file is missing/unreadable), the server still starts and
@@ -288,10 +293,12 @@ func cmdRun(verbose bool) {
 	// everything else uses. `lightsync pair <ip>` on the command line still
 	// works too, for scripting.
 	var eng *engine.Engine
+	var lights *lightctl.Service
 	if bridge, err := config.LoadBridge(); err == nil {
 		eng = engine.New(bridge, store)
+		lights = lightctl.New(bridge, favorites)
 	}
-	srv := server.New(store, eng)
+	srv := server.New(store, favorites, eng, lights)
 	url, err := srv.ListenAndServe()
 	if err != nil {
 		fatalf("starting server: %v", err)

@@ -19,6 +19,7 @@ import (
 	"lights.lan/lightsync/internal/config"
 	"lights.lan/lightsync/internal/engine"
 	"lights.lan/lightsync/internal/hue"
+	"lights.lan/lightsync/internal/lightctl"
 	"lights.lan/lightsync/internal/pipeline"
 )
 
@@ -26,15 +27,19 @@ import (
 // 0.0.0.0 — because there is no authentication and the WebSocket it serves
 // drives real lights.
 type Server struct {
-	store *config.Store
-	mux   *http.ServeMux
+	store     *config.Store
+	favorites *config.FavoritesStore
+	mux       *http.ServeMux
 
-	// eng is nil until the bridge is paired. Every handler that needs it
-	// goes through engine()/setEngine() rather than touching this field
-	// directly, since pairing can complete — and swap this in — at any
-	// point while the server is already running and serving other tabs.
-	engMu sync.RWMutex
-	eng   *engine.Engine
+	// p holds both paired-bridge services (screen-sync engine and light
+	// control) behind one lock: they always become valid at the same
+	// moment — pairing success — so one guarded struct is simpler than two
+	// separate engMu/lightsMu pairs. Both are nil until paired; every
+	// handler that needs either goes through engine()/lights() rather than
+	// touching p directly, since pairing can complete at any point while
+	// the server is already running and serving other tabs.
+	pairedMu sync.RWMutex
+	p        paired
 
 	pairMu    sync.Mutex
 	pairState pairingState
@@ -46,25 +51,40 @@ type Server struct {
 	Addr string
 }
 
+type paired struct {
+	eng    *engine.Engine
+	lights *lightctl.Service
+	cancel context.CancelFunc // stops the light-event broadcast goroutine below
+}
+
 // New builds a Server. eng may be nil if the bridge has not been paired
 // yet — the server still starts and serves a web-driven pairing flow over
 // the same /ws connection everything else uses, rather than requiring a
 // separate CLI step before the UI is even reachable.
-func New(store *config.Store, eng *engine.Engine) *Server {
+func New(store *config.Store, favorites *config.FavoritesStore, eng *engine.Engine, lights *lightctl.Service) *Server {
 	s := &Server{
-		store:   store,
-		eng:     eng,
-		mux:     http.NewServeMux(),
-		uiConns: map[*Conn]struct{}{},
+		store:     store,
+		favorites: favorites,
+		mux:       http.NewServeMux(),
+		uiConns:   map[*Conn]struct{}{},
+	}
+	if eng != nil || lights != nil {
+		s.setPaired(eng, lights)
 	}
 	s.routes()
 	return s
 }
 
 func (s *Server) engine() *engine.Engine {
-	s.engMu.RLock()
-	defer s.engMu.RUnlock()
-	return s.eng
+	s.pairedMu.RLock()
+	defer s.pairedMu.RUnlock()
+	return s.p.eng
+}
+
+func (s *Server) lights() *lightctl.Service {
+	s.pairedMu.RLock()
+	defer s.pairedMu.RUnlock()
+	return s.p.lights
 }
 
 // Engine returns the current engine, or nil if the bridge has not been
@@ -74,10 +94,46 @@ func (s *Server) engine() *engine.Engine {
 // startup path.
 func (s *Server) Engine() *engine.Engine { return s.engine() }
 
-func (s *Server) setEngine(eng *engine.Engine) {
-	s.engMu.Lock()
-	s.eng = eng
-	s.engMu.Unlock()
+// setPaired swaps in the pairing-derived services and (re)starts the
+// light-event broadcast goroutine. Safe to call more than once — a second
+// pairing (shouldn't normally happen, but no reason to leak if it does)
+// cancels the previous broadcast goroutine before starting a new one.
+func (s *Server) setPaired(eng *engine.Engine, lights *lightctl.Service) {
+	ctx, cancel := context.WithCancel(context.Background())
+
+	s.pairedMu.Lock()
+	if s.p.cancel != nil {
+		s.p.cancel()
+	}
+	s.p = paired{eng: eng, lights: lights, cancel: cancel}
+	s.pairedMu.Unlock()
+
+	if lights != nil {
+		go s.runLightEventBroadcast(ctx, lights)
+	}
+}
+
+// runLightEventBroadcast relays every event from the bridge's eventstream
+// (translated into UI-ready lightctl.LightEvents) to every currently
+// connected WS client — this is what gets the light-control panel
+// SSE-like responsiveness without a second transport (see PROTOCOL.md §3).
+func (s *Server) runLightEventBroadcast(ctx context.Context, lights *lightctl.Service) {
+	for le := range lights.Subscribe(ctx) {
+		raw, err := json.Marshal(lightEventWire{Type: "light_event", Event: le})
+		if err != nil {
+			continue
+		}
+		s.mu.Lock()
+		for conn := range s.uiConns {
+			_ = conn.WriteMessage(opText, raw)
+		}
+		s.mu.Unlock()
+	}
+}
+
+type lightEventWire struct {
+	Type  string              `json:"type"`
+	Event lightctl.LightEvent `json:"event"`
 }
 
 func (s *Server) routes() {
@@ -88,6 +144,9 @@ func (s *Server) routes() {
 	s.mux.Handle("/", http.FileServerFS(webFS))
 	s.mux.HandleFunc("/api/areas", s.handleAreas)
 	s.mux.HandleFunc("/api/status", s.handleStatusAPI)
+	s.mux.HandleFunc("/api/lights", s.handleLights)
+	s.mux.HandleFunc("/api/rooms", s.handleRooms)
+	s.mux.HandleFunc("/api/scenes", s.handleScenes)
 	s.mux.HandleFunc("/ws", s.handleWS)
 }
 
@@ -134,6 +193,57 @@ func (s *Server) handleAreas(w http.ResponseWriter, r *http.Request) {
 	_ = json.NewEncoder(w).Encode(areas)
 }
 
+func (s *Server) handleLights(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+	lights := s.lights()
+	if lights == nil {
+		_, _ = w.Write([]byte("[]"))
+		return
+	}
+	ctx, cancel := context.WithTimeout(r.Context(), 10*time.Second)
+	defer cancel()
+	list, err := lights.ListLights(ctx)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadGateway)
+		return
+	}
+	_ = json.NewEncoder(w).Encode(list)
+}
+
+func (s *Server) handleRooms(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+	lights := s.lights()
+	if lights == nil {
+		_, _ = w.Write([]byte("[]"))
+		return
+	}
+	ctx, cancel := context.WithTimeout(r.Context(), 10*time.Second)
+	defer cancel()
+	list, err := lights.ListRooms(ctx)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadGateway)
+		return
+	}
+	_ = json.NewEncoder(w).Encode(list)
+}
+
+func (s *Server) handleScenes(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+	lights := s.lights()
+	if lights == nil {
+		_, _ = w.Write([]byte("[]"))
+		return
+	}
+	ctx, cancel := context.WithTimeout(r.Context(), 10*time.Second)
+	defer cancel()
+	list, err := lights.ListScenes(ctx)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadGateway)
+		return
+	}
+	_ = json.NewEncoder(w).Encode(list)
+}
+
 func (s *Server) handleStatusAPI(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	_ = json.NewEncoder(w).Encode(s.statusMessage())
@@ -161,13 +271,22 @@ func (s *Server) statusMessage() statusWire {
 }
 
 // controlMessage is every shape of JSON text frame the browser may send, per
-// PROTOCOL.md §2 plus the pairing extension.
+// PROTOCOL.md §2 (screen-sync), §3 (light control) and the pairing extension.
 type controlMessage struct {
 	Type     string          `json:"type"`
 	AreaID   string          `json:"area_id"`
 	Settings json.RawMessage `json:"settings"`
 	LightRID string          `json:"light_rid"`
 	BridgeIP string          `json:"bridge_ip"`
+
+	// Light control (internal/lightctl) — RID is a light id for
+	// light_*/scene_recall messages, a grouped_light id for room_*.
+	RID        string  `json:"rid"`
+	On         bool    `json:"on"`
+	Brightness float64 `json:"brightness"`
+	R          uint8   `json:"r"`
+	G          uint8   `json:"g"`
+	B          uint8   `json:"b"`
 }
 
 func (s *Server) handleWS(w http.ResponseWriter, r *http.Request) {
@@ -256,17 +375,59 @@ func (s *Server) handleControlMessage(payload []byte) {
 	switch msg.Type {
 	case "discover_bridges":
 		go s.runDiscovery()
+		return
 	case "pair":
 		go s.runPair(msg.BridgeIP)
-	}
-
-	eng := s.engine()
-	if eng == nil {
-		return // everything below drives an active session; nothing to do until paired
+		return
 	}
 
 	ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
 	defer cancel()
+
+	// Light-control messages (PROTOCOL.md §3), routed here first since
+	// their types never overlap with the screen-sync ones below.
+	if lights := s.lights(); lights != nil {
+		switch msg.Type {
+		case "light_toggle":
+			if err := lights.SetLightOn(ctx, msg.RID, msg.On); err != nil {
+				log.Printf("lightsync: light_toggle %s: %v", msg.RID, err)
+			}
+			return
+		case "light_brightness":
+			if err := lights.SetLightBrightness(ctx, msg.RID, msg.Brightness); err != nil {
+				log.Printf("lightsync: light_brightness %s: %v", msg.RID, err)
+			}
+			return
+		case "light_color":
+			if err := lights.SetLightColorRGB(ctx, msg.RID, msg.R, msg.G, msg.B); err != nil {
+				log.Printf("lightsync: light_color %s: %v", msg.RID, err)
+			}
+			return
+		case "light_favorite":
+			lights.ToggleFavorite(msg.RID)
+			return
+		case "room_toggle":
+			if err := lights.SetRoomOn(ctx, msg.RID, msg.On); err != nil {
+				log.Printf("lightsync: room_toggle %s: %v", msg.RID, err)
+			}
+			return
+		case "room_brightness":
+			if err := lights.SetRoomBrightness(ctx, msg.RID, msg.Brightness); err != nil {
+				log.Printf("lightsync: room_brightness %s: %v", msg.RID, err)
+			}
+			return
+		case "scene_recall":
+			if err := lights.RecallScene(ctx, msg.RID); err != nil {
+				log.Printf("lightsync: scene_recall %s: %v", msg.RID, err)
+			}
+			return
+		}
+	}
+
+	eng := s.engine()
+	if eng == nil {
+		return // everything below drives an active screen-sync session; nothing to do until paired
+	}
 
 	switch msg.Type {
 	case "select_area":
@@ -388,9 +549,9 @@ func (s *Server) runPair(bridgeIP string) {
 		return
 	}
 
-	// No restart needed: swap the engine in and every handler that was
+	// No restart needed: swap both services in and every handler that was
 	// checking for nil starts working on its very next call.
-	s.setEngine(engine.New(bridge, s.store))
+	s.setPaired(engine.New(bridge, s.store), lightctl.New(bridge, s.favorites))
 
 	s.pairMu.Lock()
 	s.pairState = pairingState{Message: "Paired"}

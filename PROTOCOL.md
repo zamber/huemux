@@ -1,7 +1,8 @@
 # Protocol reference
 
-Two protocols meet in this program: the Hue Entertainment stream going out, and
-the browser-to-service link coming in.
+Three protocols meet in this program: the Hue Entertainment stream going out
+(§1), the browser-to-service link for screen sync (§2), and the day-to-day
+light-control feature layered on the same WS connection (§3).
 
 ## 1. Hue Entertainment (outbound)
 
@@ -143,5 +144,62 @@ to know how they were derived.
 |---|---|
 | `GET /` | Embedded UI |
 | `GET /api/areas` | Entertainment areas, fetched fresh from the bridge |
-| `GET /api/status` | Current snapshot |
+| `GET /api/status` | Current screen-sync snapshot |
+| `GET /api/lights` | Every light, fresh from the bridge (`internal/lightctl.Light`) |
+| `GET /api/rooms` | Every room, fresh from the bridge (`internal/lightctl.Room`) |
+| `GET /api/scenes` | Every scene, fresh from the bridge (`internal/lightctl.Scene`) |
 | `GET /ws` | WebSocket upgrade |
+
+## 3. Light control (day-to-day Hue control, over the same `/ws`)
+
+Mutations and live updates for the light-control panel share the same `/ws`
+connection as everything else in PROTOCOL.md §2 — a second message family on
+the same socket, not a second transport. Rationale: the connection is already
+origin-checked and already has a push loop; a second SSE endpoint (the
+approach lights-ui uses, connecting directly to the bridge's own
+`/eventstream/clip/v2`) would just be more to keep alive for no benefit.
+
+### Control: browser → service (JSON text)
+
+```json
+{"type": "light_toggle",     "rid": "<light id>",         "on": true}
+{"type": "light_brightness", "rid": "<light id>",         "brightness": 42}
+{"type": "light_color",      "rid": "<light id>",         "r": 255, "g": 128, "b": 0}
+{"type": "light_favorite",   "rid": "<light id or room:<room id>>"}
+{"type": "room_toggle",      "rid": "<grouped_light id>", "on": true}
+{"type": "room_brightness",  "rid": "<grouped_light id>", "brightness": 42}
+{"type": "scene_recall",     "rid": "<scene id>"}
+```
+
+`light_color`'s `rid` always addresses an individual light — CLIP v2 has no
+room/zone-level color PUT. `r`/`g`/`b` (0-255) are converted to CIE xy
+chromaticity server-side (`internal/lightctl/color.go`) before the PUT, since
+CLIP v2's `color` resource only ever accepts `xy`, never RGB or HSV directly.
+`room_toggle`/`room_brightness` target a room or zone's `grouped_light`
+resource id specifically (`Room.GroupedLightID` in the `/api/rooms` response)
+— not the room's own id, which only names the group.
+
+### State: service → browser (JSON text)
+
+Pushed the instant an eventstream event arrives — event-driven, not the 1Hz
+poll `status` uses, since that's what gets this feature SSE-like
+responsiveness without a second transport:
+
+```json
+{
+  "type": "light_event",
+  "event": {
+    "type": "light",
+    "id": "<light or grouped_light id>",
+    "on": true,
+    "brightness": 42.0,
+    "x": 0.45,
+    "y": 0.41
+  }
+}
+```
+
+Every field on `event` except `type`/`id` is a pointer server-side and only
+present when that field actually changed in this update — the bridge's
+eventstream sends partial resource deltas, never full resources, so treat a
+missing field as "unchanged," never as "reset to zero."
