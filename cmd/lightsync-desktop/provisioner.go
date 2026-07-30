@@ -47,21 +47,71 @@ const displayMediaPatch = `function onReady () {
 
 const onReadyMarker = "function onReady () {"
 
-// patchIndexJS splices displayMediaPatch into the astilectron index.js at
-// dir. Idempotent: if the marker comment is already present (e.g. a status
-// file got lost but the directory didn't), it's a no-op rather than
-// double-patching.
+// electronDestructureMarker is the line right after `require('electron')`
+// that pulls app out of it — the earliest point in the file where `app` is
+// available, and (critically) still well before app.whenReady()/the "ready"
+// event fires later in this same file. Command-line switches — including
+// the Ozone/PipeWire one below — are read by Chromium at startup and mostly
+// have no effect if set any later than this, so they cannot go in the
+// onReady patch above.
+const electronDestructureMarker = "const {app, BrowserWindow, ipcMain, Menu, MenuItem, Tray, dialog, Notification} = electron"
+
+// pipeWireCapturePatch enables real screen capture on a Wayland session.
+// Without WebRTCPipeWireCapturer, desktopCapturer.getSources() under
+// Wayland doesn't error — it just doesn't return real screen content, and
+// what actually reaches the page's <video> is a fixed placeholder frame
+// (observed on a real Wayland desktop: solid green, unconditionally,
+// regardless of what's on screen — much harder to diagnose than an
+// outright failure would have been, since nothing throws or logs).
+//
+// This does not restore the "no picker at all" UX the onReady patch above
+// gets on X11: Wayland's own security model requires a one-time compositor
+// consent dialog (via xdg-desktop-portal) before any app can capture the
+// screen, which — unlike X11 — cannot be bypassed by picking a source
+// programmatically. That's a platform constraint, not something fixable
+// from this side.
+const pipeWireCapturePatch = `const {app, BrowserWindow, ipcMain, Menu, MenuItem, Tray, dialog, Notification} = electron
+// lightsync: pipewire capture switch, patched in by cmd/lightsync-desktop's
+// custom provisioner (see provisioner.go's pipeWireCapturePatch).
+app.commandLine.appendSwitch('enable-features', 'WebRTCPipeWireCapturer')
+app.commandLine.appendSwitch('ozone-platform-hint', 'auto')
+`
+
+// pipeWireCapturePatchMarker is deliberately distinct from the onReady
+// patch's own "lightsync: patched in by" marker text below — reusing the
+// same substring in both would make patchIndexJS unable to tell the two
+// patches apart (caught by a throwaway idempotency test against a real,
+// already-once-patched cache file before this constant existed).
+const pipeWireCapturePatchMarker = "lightsync: pipewire capture switch"
+
+// patchIndexJS splices both the PipeWire-capture and display-media patches
+// into the astilectron index.js at indexJSPath. Idempotent per-patch: each
+// checks its own marker comment independently, so a partially-patched file
+// (e.g. from an interrupted previous run) still gets whichever half it's
+// missing rather than being skipped or double-patched.
 func patchIndexJS(indexJSPath string) error {
 	raw, err := os.ReadFile(indexJSPath)
 	if err != nil {
 		return fmt.Errorf("reading %s: %w", indexJSPath, err)
 	}
-	if bytes.Contains(raw, []byte("lightsync: patched in by")) {
-		return nil
+
+	patched := raw
+	if !bytes.Contains(patched, []byte(pipeWireCapturePatchMarker)) {
+		next := bytes.Replace(patched, []byte(electronDestructureMarker), []byte(pipeWireCapturePatch), 1)
+		if bytes.Equal(next, patched) {
+			return fmt.Errorf("marker %q not found in %s — astilectron's bundled index.js has likely changed shape upstream", electronDestructureMarker, indexJSPath)
+		}
+		patched = next
 	}
-	patched := bytes.Replace(raw, []byte(onReadyMarker), []byte(displayMediaPatch), 1)
+	if !bytes.Contains(patched, []byte("lightsync: patched in by")) {
+		next := bytes.Replace(patched, []byte(onReadyMarker), []byte(displayMediaPatch), 1)
+		if bytes.Equal(next, patched) {
+			return fmt.Errorf("marker %q not found in %s — astilectron's bundled index.js has likely changed shape upstream", onReadyMarker, indexJSPath)
+		}
+		patched = next
+	}
 	if bytes.Equal(patched, raw) {
-		return fmt.Errorf("marker %q not found in %s — astilectron's bundled index.js has likely changed shape upstream", onReadyMarker, indexJSPath)
+		return nil // both patches already present
 	}
 	return os.WriteFile(indexJSPath, patched, 0o644)
 }
