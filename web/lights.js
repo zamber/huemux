@@ -49,9 +49,11 @@ let ready = false; // becomes true once a paired status arrives and initial data
 let lights = [];
 let rooms = [];
 let scenes = [];
+let favoritesRaw = {}; // id -> unix-seconds; covers ids /api/lights and /api/rooms don't carry a favorite flag for (scenes, and the synthetic "all" pseudo-id)
 
 let filter = 'favorites'; // 'favorites' | 'all' | 'room'
 let filterRoomId = null;
+let filterExplicitFromURL = false; // true if the URL named a filter — otherwise the empty-favorites fallback below may override the 'favorites' default
 
 // While a light (or the all-lights tile, keyed "__all__") is mid-drag on its
 // brightness slider, external light_event merges still update the in-memory
@@ -97,9 +99,7 @@ function handleMessage(msg) {
         ready = true;
         els.unpaired.hidden = true;
         els.app.hidden = false;
-        fetchLights();
-        fetchRooms();
-        fetchScenes();
+        initialLoad();
       }
       break;
     case 'light_event':
@@ -129,6 +129,9 @@ function mergeLightEvent(ev) {
 }
 
 function mergeFavorite(id, fav) {
+  if (fav) favoritesRaw[id] = Math.floor(Date.now() / 1000);
+  else delete favoritesRaw[id];
+
   if (id.indexOf('room:') === 0) {
     const r = rooms.find((x) => x.id === id.slice(5));
     if (r) r.favorite = fav;
@@ -136,7 +139,11 @@ function mergeFavorite(id, fav) {
     const l = lights.find((x) => x.id === id);
     if (l) l.favorite = fav;
   }
-  if (editingIds.size === 0) renderGrid();
+  if (editingIds.size === 0) {
+    renderGrid();
+    renderScenes();
+    renderFilterMenu();
+  }
 }
 
 // ---------- data fetch ----------
@@ -157,6 +164,31 @@ async function fetchScenes() {
   const res = await fetch('/api/scenes');
   scenes = await res.json();
   renderScenes();
+}
+
+async function fetchFavorites() {
+  const res = await fetch('/api/favorites');
+  favoritesRaw = await res.json();
+}
+
+// Runs once, when the WS first reports a paired bridge. Waits for every
+// fetch so the empty-favorites fallback below sees complete data rather
+// than deciding based on whatever happened to resolve first.
+async function initialLoad() {
+  await Promise.all([fetchLights(), fetchRooms(), fetchScenes(), fetchFavorites()]);
+  if (!filterExplicitFromURL && filter === 'favorites' && !hasAnyFavorites()) {
+    // Landing on an empty Favorites view is a dead end for a first-time
+    // user — All is the more useful default until they've favorited
+    // something.
+    filter = 'all';
+  }
+  renderFilterMenu();
+  renderGrid();
+  renderScenes();
+}
+
+function hasAnyFavorites() {
+  return lights.some((l) => l.favorite) || scenes.some((sc) => !!favoritesRaw[sc.id]) || !!favoritesRaw.all;
 }
 
 // ---------- color math ----------
@@ -204,10 +236,14 @@ function filteredLights() {
 
 function renderGrid() {
   const list = filteredLights();
+  // The all-lights tile also participates in the Favorites view once it's
+  // been favorited itself — the whole point of favoriting it is quick
+  // access from that tab.
+  const showAllTile = filter === 'all' || (filter === 'favorites' && !!favoritesRaw.all);
   let html = '';
-  if (filter === 'all') html += renderAllLightsTile();
+  if (showAllTile) html += renderAllLightsTile();
   html += list.map(renderLightCard).join('');
-  if (!list.length && filter !== 'all') {
+  if (!list.length && !showAllTile) {
     html += `<p class="hint lights-empty">${escapeHtml(LightsyncI18n.t('lights.empty'))}</p>`;
   }
   els.grid.innerHTML = html;
@@ -217,13 +253,18 @@ function renderLightCard(l) {
   const off = !l.on;
   const brightnessPct = l.on ? Math.round(l.brightness) : 0;
   const gradient = l.colorable ? gradientStyleFor(xyToRgb(l.x, l.y, brightnessPct || 40), brightnessPct || 40) : '';
+  // Hidden, not just disabled, in the Favorites view — lights-ui's own rule
+  // (showFavoriteButton={currentFilter !== 'favorites'}): favorites are for
+  // quick access, and a star sitting right there invites an accidental
+  // unfavorite when all you meant to do was tap the power button.
+  const showFavBtn = filter !== 'favorites';
   return `
     <div class="light-card ${off ? 'off' : ''}" data-id="${escapeHtml(l.id)}">
       ${gradient ? `<div class="light-card-gradient" style="${gradient}"></div>` : ''}
       <div class="light-card-head">
         <h3 title="${escapeHtml(l.name)}">${escapeHtml(l.name)}</h3>
         <div class="light-card-actions">
-          <button type="button" class="icon-btn ${l.favorite ? 'active' : ''}" data-action="favorite" data-id="${escapeHtml(l.id)}" title="${escapeHtml(LightsyncI18n.t('lights.toggleFavorite'))}">${l.favorite ? ICONS.star : ICONS.starOutline}</button>
+          ${showFavBtn ? `<button type="button" class="icon-btn ${l.favorite ? 'active' : ''}" data-action="favorite" data-id="${escapeHtml(l.id)}" title="${escapeHtml(LightsyncI18n.t('lights.toggleFavorite'))}">${l.favorite ? ICONS.star : ICONS.starOutline}</button>` : ''}
           ${l.colorable ? `<button type="button" class="icon-btn" data-action="color" data-id="${escapeHtml(l.id)}" title="${escapeHtml(LightsyncI18n.t('lights.chooseColor'))}">${ICONS.palette}</button>` : ''}
           <button type="button" class="icon-btn ${l.on ? 'active' : ''}" data-action="toggle" data-id="${escapeHtml(l.id)}" title="${escapeHtml(LightsyncI18n.t(l.on ? 'lights.turnOff' : 'lights.turnOn'))}">${l.on ? ICONS.powerOn : ICONS.powerOff}</button>
         </div>
@@ -240,11 +281,14 @@ function renderAllLightsTile() {
   const avgBrightness = onLights.length
     ? Math.round(onLights.reduce((sum, l) => sum + l.brightness, 0) / onLights.length)
     : 50;
+  const allFav = !!favoritesRaw.all;
+  const showFavBtn = filter !== 'favorites';
   return `
     <div class="light-card all-lights-tile" data-id="__all__">
       <div class="light-card-head">
         <h3>${ICONS.lightbulb}<span>${escapeHtml(LightsyncI18n.t('lights.allLights'))}</span></h3>
         <div class="light-card-actions">
+          ${showFavBtn ? `<button type="button" class="icon-btn ${allFav ? 'active' : ''}" data-action="favorite" data-id="all" title="${escapeHtml(LightsyncI18n.t('lights.toggleFavorite'))}">${allFav ? ICONS.star : ICONS.starOutline}</button>` : ''}
           ${hasColor ? `<button type="button" class="icon-btn" data-action="color-all" title="${escapeHtml(LightsyncI18n.t('lights.chooseColorAll'))}">${ICONS.palette}</button>` : ''}
           <button type="button" class="icon-btn ${anyOn ? 'active' : ''}" data-action="toggle-all" title="${escapeHtml(LightsyncI18n.t(anyOn ? 'lights.turnAllOff' : 'lights.turnAllOn'))}">${anyOn ? ICONS.powerOn : ICONS.powerOff}</button>
         </div>
@@ -253,22 +297,66 @@ function renderAllLightsTile() {
     </div>`;
 }
 
-function renderScenes() {
-  if (!scenes.length) { els.scenesSection.hidden = true; return; }
-  els.scenesSection.hidden = false;
-  els.scenesStrip.innerHTML = scenes.map((sc) => {
-    const swatches = sc.swatches.slice(0, 4).map((sw) => {
-      const [r, g, b] = xyToRgb(sw.x, sw.y);
-      return `<span class="scene-swatch" style="background: rgb(${r},${g},${b})"></span>`;
-    }).join('');
-    const title = sc.group_name ? `${sc.name} — ${sc.group_name}` : sc.name;
-    return `
+// Scenes are tied to a room/zone (group_id) — filtered to match whatever
+// the light grid is currently showing, rather than always listing every
+// scene from every room regardless of context.
+function filteredScenes() {
+  if (filter === 'room' && filterRoomId) return scenes.filter((sc) => sc.group_id === filterRoomId);
+  if (filter === 'favorites') return scenes.filter((sc) => !!favoritesRaw[sc.id]);
+  return scenes; // 'all': unfiltered, matching the light grid's own "everything" view
+}
+
+// Favorited scenes first — same idea as the light grid, just scoped to
+// whatever room (or "all") is currently in view rather than global.
+function sortScenesFavoriteFirst(list) {
+  return [...list].sort((a, b) => (favoritesRaw[b.id] ? 1 : 0) - (favoritesRaw[a.id] ? 1 : 0));
+}
+
+function renderSceneChip(sc) {
+  const swatches = sc.swatches.slice(0, 4).map((sw) => {
+    const [r, g, b] = xyToRgb(sw.x, sw.y);
+    return `<span class="scene-swatch" style="background: rgb(${r},${g},${b})"></span>`;
+  }).join('');
+  const title = sc.group_name ? `${sc.name} — ${sc.group_name}` : sc.name;
+  const fav = !!favoritesRaw[sc.id];
+  const showFavBtn = filter !== 'favorites';
+  return `
+    <span class="scene-chip-wrap">
       <button type="button" class="scene-chip" data-scene-id="${escapeHtml(sc.id)}" title="${escapeHtml(title)}">
         <span class="scene-swatches">${swatches}</span>
         <span class="scene-name">${escapeHtml(sc.name)}</span>
         ${sc.auto_dynamic ? `<span class="scene-dynamic-badge" title="${escapeHtml(LightsyncI18n.t('lights.sceneDynamic'))}">&#10022;</span>` : ''}
-      </button>`;
-  }).join('');
+      </button>
+      ${showFavBtn ? `<button type="button" class="icon-btn scene-fav-btn ${fav ? 'active' : ''}" data-action="favorite" data-id="${escapeHtml(sc.id)}" title="${escapeHtml(LightsyncI18n.t('lights.toggleFavorite'))}">${fav ? ICONS.star : ICONS.starOutline}</button>` : ''}
+    </span>`;
+}
+
+function renderScenes() {
+  const list = filteredScenes();
+  if (!list.length) { els.scenesSection.hidden = true; return; }
+  els.scenesSection.hidden = false;
+
+  if (filter === 'favorites') {
+    // Grouped by room with its own header — favorites from every room are
+    // mixed together in this view (lights are too, as a flat list), but
+    // scenes need the extra grouping so it's clear which room each one
+    // belongs to.
+    els.scenesStrip.classList.add('grouped');
+    const byRoom = new Map();
+    for (const sc of list) {
+      const key = sc.group_name || sc.group_id || '';
+      if (!byRoom.has(key)) byRoom.set(key, []);
+      byRoom.get(key).push(sc);
+    }
+    els.scenesStrip.innerHTML = [...byRoom.entries()].map(([roomName, scs]) => `
+      <div class="scenes-room-group">
+        <h3 class="scenes-room-header">${escapeHtml(roomName)}</h3>
+        <div class="scenes-strip">${sortScenesFavoriteFirst(scs).map(renderSceneChip).join('')}</div>
+      </div>`).join('');
+  } else {
+    els.scenesStrip.classList.remove('grouped');
+    els.scenesStrip.innerHTML = sortScenesFavoriteFirst(list).map(renderSceneChip).join('');
+  }
 }
 
 function renderFilterMenu() {
@@ -494,13 +582,20 @@ els.filterList.addEventListener('click', (e) => {
   if (key === 'favorites') { filter = 'favorites'; filterRoomId = null; }
   else if (key === 'all') { filter = 'all'; filterRoomId = null; }
   else if (key.indexOf('room:') === 0) { filter = 'room'; filterRoomId = key.slice(5); }
+  filterExplicitFromURL = true;
   persistFilterToURL();
   els.filterDetails.open = false;
   renderFilterMenu();
   renderGrid();
+  renderScenes();
 });
 
 els.scenesStrip.addEventListener('click', (e) => {
+  const favBtn = e.target.closest('.scene-fav-btn');
+  if (favBtn) {
+    send({ type: 'light_favorite', rid: favBtn.dataset.id });
+    return;
+  }
   const chip = e.target.closest('.scene-chip');
   if (!chip) return;
   send({ type: 'scene_recall', rid: chip.dataset.sceneId });
@@ -525,8 +620,8 @@ function restoreFilterFromURL() {
   const params = new URLSearchParams(location.search);
   const f = params.get('filter');
   const r = params.get('room');
-  if (f === 'favorites' || f === 'all') { filter = f; filterRoomId = null; }
-  else if (f === 'room' && r) { filter = 'room'; filterRoomId = r; }
+  if (f === 'favorites' || f === 'all') { filter = f; filterRoomId = null; filterExplicitFromURL = true; }
+  else if (f === 'room' && r) { filter = 'room'; filterRoomId = r; filterExplicitFromURL = true; }
 }
 
 // ---------- init ----------

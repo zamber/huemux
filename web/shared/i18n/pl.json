@@ -58,7 +58,26 @@
     "colorSpace": "Przestrzeń kolorów",
     "colorSpaceRgb": "RGB",
     "colorSpaceXy": "xy + jasność",
-    "disableEms": "Wyłącz extended master secret"
+    "disableEms": "Wyłącz extended master secret",
+    "status": {
+      "bridge": "mostek",
+      "area": "strefa",
+      "stream": "strumień",
+      "capture": "przechwytywanie",
+      "busy": "zajęte",
+      "error": "błąd",
+      "connected": "połączony",
+      "disconnected": "rozłączony",
+      "handshake": "uzgadnianie {ms}ms",
+      "channels": "{n} kanałów",
+      "streamActive": "aktywny",
+      "streamStopped": "zatrzymany",
+      "hzOut": "{hz} Hz wyjścia",
+      "sent": "wysłano {n}",
+      "clients": "{n} klient(ów)",
+      "fpsIn": "{fps} fps wejścia",
+      "busyHeldBy": "zajęte przez inną aplikację ({app})"
+    }
   },
   "lights": {
     "filterAll": "Wszystkie",

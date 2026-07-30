@@ -161,11 +161,11 @@ func (s *Server) routes() {
 	fileServer := http.FileServerFS(webFS)
 	s.mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		// There's no web/index.html for http.FileServerFS to fall back to —
-		// screen-sync (the historical default) now lives at sync.html
-		// alongside lights.html, neither of which is more "index" than the
-		// other, so root just picks one explicitly.
+		// root goes to the app.html shell, which hosts sync.html and
+		// lights.html each in their own iframe (see shared/shell.js) so
+		// switching between them doesn't tear down whichever one you leave.
 		if r.URL.Path == "/" {
-			http.Redirect(w, r, "/sync.html", http.StatusFound)
+			http.Redirect(w, r, "/app.html", http.StatusFound)
 			return
 		}
 		fileServer.ServeHTTP(w, r)
@@ -175,6 +175,7 @@ func (s *Server) routes() {
 	s.mux.HandleFunc("/api/lights", s.handleLights)
 	s.mux.HandleFunc("/api/rooms", s.handleRooms)
 	s.mux.HandleFunc("/api/scenes", s.handleScenes)
+	s.mux.HandleFunc("/api/favorites", s.handleFavorites)
 	s.mux.HandleFunc("/ws", s.handleWS)
 }
 
@@ -270,6 +271,19 @@ func (s *Server) handleScenes(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	_ = json.NewEncoder(w).Encode(list)
+}
+
+// handleFavorites exposes every favourited id (light, "room:<id>", scene,
+// or the synthetic "all" pseudo-id for the all-lights tile) — the /api/
+// lights and /api/rooms responses only carry a light's/room's own favorite
+// flag, with no way to learn about ids that aren't lights or rooms.
+func (s *Server) handleFavorites(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+	if s.favorites == nil {
+		_, _ = w.Write([]byte("{}"))
+		return
+	}
+	_ = json.NewEncoder(w).Encode(s.favorites.All())
 }
 
 func (s *Server) handleStatusAPI(w http.ResponseWriter, r *http.Request) {

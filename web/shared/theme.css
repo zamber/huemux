@@ -156,7 +156,13 @@ button, input, select, textarea, optgroup {
 .light-card:hover .light-card-gradient { opacity: 0.44; }
 .light-card.off .light-card-gradient { opacity: 0.12; }
 
-.brightness-slider {
+/* Themed for every range slider in the app, not just lights.html's cards —
+   a bare <input type=range> with no class (sync.html's Reactivity/
+   Brightness/etc) otherwise renders with the OS-native track/thumb, which
+   ignores --card/--ink entirely and looks wrong (often stays dark) in light
+   theme. .brightness-slider is kept as an alias so existing markup needing
+   no visual difference doesn't have to change. */
+input[type=range], .brightness-slider {
   -webkit-appearance: none;
   appearance: none;
   touch-action: none;
@@ -165,13 +171,14 @@ button, input, select, textarea, optgroup {
   background: var(--surface-alt);
   border-radius: 999px;
   cursor: pointer;
+  accent-color: var(--accent);
 }
-.brightness-slider::-moz-range-track {
+input[type=range]::-moz-range-track, .brightness-slider::-moz-range-track {
   height: 8px;
   background: var(--surface-alt);
   border-radius: 999px;
 }
-.brightness-slider::-webkit-slider-thumb {
+input[type=range]::-webkit-slider-thumb, .brightness-slider::-webkit-slider-thumb {
   -webkit-appearance: none;
   appearance: none;
   width: 22px;
@@ -183,9 +190,9 @@ button, input, select, textarea, optgroup {
   transition: transform 0.15s cubic-bezier(0.4, 0, 0.2, 1), border-color 0.15s ease;
   box-shadow: 0 2px 4px var(--shadow);
 }
-.brightness-slider::-webkit-slider-thumb:hover { transform: scale(1.15); }
-.brightness-slider::-webkit-slider-thumb:active { cursor: grabbing; transform: scale(1.05); }
-.brightness-slider::-moz-range-thumb {
+input[type=range]::-webkit-slider-thumb:hover, .brightness-slider::-webkit-slider-thumb:hover { transform: scale(1.15); }
+input[type=range]::-webkit-slider-thumb:active, .brightness-slider::-webkit-slider-thumb:active { cursor: grabbing; transform: scale(1.05); }
+input[type=range]::-moz-range-thumb, .brightness-slider::-moz-range-thumb {
   width: 22px;
   height: 22px;
   border-radius: 50%;
@@ -195,7 +202,25 @@ button, input, select, textarea, optgroup {
   transition: transform 0.15s cubic-bezier(0.4, 0, 0.2, 1), border-color 0.15s ease;
   box-shadow: 0 2px 4px var(--shadow);
 }
-.brightness-slider::-moz-range-thumb:hover { transform: scale(1.15); }
+input[type=range]::-moz-range-thumb:hover, .brightness-slider::-moz-range-thumb:hover { transform: scale(1.15); }
+
+/* Checkboxes/radios: accent-color themes the native check mark/fill while
+   keeping the OS's own control shape — no need to reimplement one. */
+input[type=checkbox], input[type=radio] {
+  accent-color: var(--accent);
+}
+
+/* Scrollbars: Firefox via scrollbar-color, Chromium/Electron via the
+   -webkit- pseudo-elements — both needed since neither engine honors the
+   other's mechanism. */
+* {
+  scrollbar-color: var(--border-strong) var(--surface-alt);
+  scrollbar-width: thin;
+}
+::-webkit-scrollbar { width: 10px; height: 10px; }
+::-webkit-scrollbar-track { background: var(--surface-alt); }
+::-webkit-scrollbar-thumb { background: var(--border-strong); border-radius: 999px; }
+::-webkit-scrollbar-thumb:hover { background: var(--ink-muted); }
 
 .color-picker-btn {
   touch-action: none; /* gestures handled entirely in JS */
@@ -203,7 +228,7 @@ button, input, select, textarea, optgroup {
 
 /* Scene chip: shared between lights.html's scenes strip and sync.html's
    compact scenes disclosure — same markup shape, same look. */
-.scenes-strip { display: flex; gap: 0.6rem; overflow-x: auto; padding-bottom: 0.3rem; -webkit-overflow-scrolling: touch; }
+.scenes-strip { display: flex; flex-wrap: wrap; gap: 0.5rem 0.6rem; }
 .scene-chip {
   flex: 0 0 auto; display: flex; align-items: center; gap: 0.5rem;
   padding: 0.5rem 0.8rem; background: var(--card); border: 1px solid var(--border);
@@ -215,3 +240,19 @@ button, input, select, textarea, optgroup {
 .scene-swatch { width: 14px; height: 14px; border-radius: 50%; border: 1px solid var(--border); margin-left: -6px; }
 .scene-swatch:first-child { margin-left: 0; }
 .scene-dynamic-badge { color: var(--accent); font-size: 0.9rem; }
+
+.scene-chip-wrap { display: inline-flex; align-items: center; gap: 0.3rem; }
+.scene-fav-btn { width: 32px; height: 32px; flex-shrink: 0; }
+.scene-fav-btn svg { width: 16px; height: 16px; }
+
+/* Favorites view: scenes grouped by room instead of one flat/wrapped row —
+   .scenes-strip's own flex-wrap is overridden per group here since each
+   .scenes-room-group's *inner* .scenes-strip is the thing that should wrap,
+   not the outer list of room groups (which should stack vertically). */
+.scenes-strip.grouped { display: block; }
+.scenes-room-group { margin-bottom: 0.7rem; }
+.scenes-room-group:last-child { margin-bottom: 0; }
+.scenes-room-header {
+  font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.04em;
+  color: var(--ink-muted); margin: 0 0 0.35rem; font-weight: 600;
+}

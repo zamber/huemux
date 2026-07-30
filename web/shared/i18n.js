@@ -78,5 +78,12 @@ const LightsyncI18n = (() => {
     applyTo(document);
   }
 
+  // Cross-frame sync for the app.html shell (sync.html/lights.html each run
+  // in their own iframe — see the identical comment in theme.js). setLang
+  // re-writing the same value to localStorage here is a harmless no-op.
+  window.addEventListener('storage', (e) => {
+    if (e.key === 'lang') setLang(current() || 'system');
+  });
+
   return { t, applyTo, setLang, cycle, init, current, resolved };
 })();

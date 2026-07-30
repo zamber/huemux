@@ -148,6 +148,7 @@ to know how they were derived.
 | `GET /api/lights` | Every light, fresh from the bridge (`internal/lightctl.Light`) |
 | `GET /api/rooms` | Every room, fresh from the bridge (`internal/lightctl.Room`) |
 | `GET /api/scenes` | Every scene, fresh from the bridge (`internal/lightctl.Scene`) |
+| `GET /api/favorites` | Every favourited id (light, `room:<id>`, scene, or the synthetic `all`), id → unix-seconds favourited-at |
 | `GET /ws` | WebSocket upgrade |
 
 ## 3. Light control (day-to-day Hue control, over the same `/ws`)

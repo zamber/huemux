@@ -229,13 +229,11 @@ type ColorParams struct {
 	ColorCapable bool // false for white-only bulbs: drive brightness only
 }
 
-// Process runs one zone's linear-light average through gain, cutoff and
-// gamut steps, in the order the roadmap specifies, and returns the 8-bit
-// channel ready to encode onto the wire.
-//
-// Order matters: saturation and brightness gain happen in linear light,
-// gamma re-encoding happens last, and it happens exactly once.
-func Process(rLin, gLin, bLin float64, channelID uint8, p ColorParams) hue.Channel {
+// processLinear applies saturation, brightness/channel gain and black
+// cutoff in linear light — the color-space-agnostic part of Process, shared
+// with DisplayRGB below so the calibration preview can run the exact same
+// adjustments without the xy-packing step.
+func processLinear(rLin, gLin, bLin float64, p ColorParams) (float64, float64, float64) {
 	// Saturation: push away from (or toward) the perceptual gray point.
 	sat := p.Saturation / 100
 	l := luma(rLin, gLin, bLin)
@@ -252,9 +250,17 @@ func Process(rLin, gLin, bLin float64, channelID uint8, p ColorParams) hue.Chann
 	if maxOf3(rLin, gLin, bLin) < p.BlackCutoff {
 		rLin, gLin, bLin = 0, 0, 0
 	}
-	rLin = clamp01f(rLin)
-	gLin = clamp01f(gLin)
-	bLin = clamp01f(bLin)
+	return clamp01f(rLin), clamp01f(gLin), clamp01f(bLin)
+}
+
+// Process runs one zone's linear-light average through gain, cutoff and
+// gamut steps, in the order the roadmap specifies, and returns the 8-bit
+// channel ready to encode onto the wire.
+//
+// Order matters: saturation and brightness gain happen in linear light,
+// gamma re-encoding happens last, and it happens exactly once.
+func Process(rLin, gLin, bLin float64, channelID uint8, p ColorParams) hue.Channel {
+	rLin, gLin, bLin = processLinear(rLin, gLin, bLin, p)
 
 	if !p.ColorCapable {
 		// White-only bulbs only respond to brightness: collapse to a gray
@@ -272,7 +278,8 @@ func Process(rLin, gLin, bLin float64, channelID uint8, p ColorParams) hue.Chann
 		// X, Y chromaticity and brightness, each scaled 0-255. The bridge's
 		// low-byte-ignored behavior (see PROTOCOL.md) applies uniformly, so
 		// there is no benefit to carrying more than 8 bits of precision
-		// through this struct.
+		// through this struct. NOTE: these bytes are NOT displayable RGB —
+		// see DisplayRGB for the preview-safe equivalent.
 		return hue.Channel{
 			ID: channelID,
 			R:  byte(clampf(x*255, 0, 255)),
@@ -287,6 +294,25 @@ func Process(rLin, gLin, bLin float64, channelID uint8, p ColorParams) hue.Chann
 			B:  linearToSRGB(bLin),
 		}
 	}
+}
+
+// DisplayRGB runs the same linear-light adjustments as Process but always
+// gamma-encodes to real sRGB, regardless of p.ColorSpace — for callers that
+// want "what color does this zone look like" (the calibration preview)
+// rather than "what bytes go on the wire." Process's ColorSpaceXY branch
+// packs x/y chromaticity and brightness into the Channel's R/G/B fields for
+// the bridge; reusing those same bytes as a literal preview color (as the
+// engine's status snapshot used to) renders every zone with a consistent
+// greenish/yellowish cast, since y (landing in the G byte) tends to sit in
+// a moderate-to-high range for most captured content regardless of what's
+// actually on screen.
+func DisplayRGB(rLin, gLin, bLin float64, p ColorParams) [3]byte {
+	rLin, gLin, bLin = processLinear(rLin, gLin, bLin, p)
+	if !p.ColorCapable {
+		v := linearToSRGB(luma(rLin, gLin, bLin))
+		return [3]byte{v, v, v}
+	}
+	return [3]byte{linearToSRGB(rLin), linearToSRGB(gLin), linearToSRGB(bLin)}
 }
 
 // linearRGBtoXYBrightness converts linear sRGB to CIE 1931 xy chromaticity

@@ -230,7 +230,10 @@ els.scenesStrip.addEventListener('click', (e) => {
   send({ type: 'scene_recall', rid: chip.dataset.sceneId });
 });
 
-document.addEventListener('lightsync:langchange', renderScenesStrip);
+document.addEventListener('lightsync:langchange', () => {
+  renderScenesStrip();
+  if (latestStatus) renderStatus(latestStatus);
+});
 
 // --- Start / stop ----------------------------------------------------------
 
@@ -462,14 +465,15 @@ els.preview.addEventListener('click', (ev) => {
 // --- Status readout ---------------------------------------------------------
 
 function renderStatus(s) {
+  const t = LightsyncI18n.t;
   const rows = [
-    ['bridge', `${s.snapshot.BridgeIP} ${s.snapshot.BridgeConnected ? 'connected' : 'disconnected'} · handshake ${s.snapshot.HandshakeMS}ms`],
-    ['area', `${s.snapshot.AreaName || '—'} ${s.snapshot.AreaType || ''} · ${s.snapshot.ChannelCount} channels`],
-    ['stream', `${s.snapshot.StreamActive ? 'active' : 'stopped'} · ${s.snapshot.OutputHz} Hz out · sent ${s.snapshot.Sent}`],
-    ['capture', `${s.snapshot.CaptureClients} client(s) · ${s.snapshot.InboundFPS.toFixed(1)} fps in · ${s.snapshot.CaptureW}x${s.snapshot.CaptureH} → ${s.snapshot.GridW}x${s.snapshot.GridH}`],
+    [t('sync.status.bridge'), `${s.snapshot.BridgeIP} ${t(s.snapshot.BridgeConnected ? 'sync.status.connected' : 'sync.status.disconnected')} · ${t('sync.status.handshake', { ms: s.snapshot.HandshakeMS })}`],
+    [t('sync.status.area'), `${s.snapshot.AreaName || '—'} ${s.snapshot.AreaType || ''} · ${t('sync.status.channels', { n: s.snapshot.ChannelCount })}`],
+    [t('sync.status.stream'), `${t(s.snapshot.StreamActive ? 'sync.status.streamActive' : 'sync.status.streamStopped')} · ${t('sync.status.hzOut', { hz: s.snapshot.OutputHz })} · ${t('sync.status.sent', { n: s.snapshot.Sent })}`],
+    [t('sync.status.capture'), `${t('sync.status.clients', { n: s.snapshot.CaptureClients })} · ${t('sync.status.fpsIn', { fps: s.snapshot.InboundFPS.toFixed(1) })} · ${s.snapshot.CaptureW}x${s.snapshot.CaptureH} → ${s.snapshot.GridW}x${s.snapshot.GridH}`],
   ];
-  if (s.snapshot.AreaBusyBy) rows.push(['busy', `held by another application (${s.snapshot.AreaBusyBy})`]);
-  if (s.snapshot.LastError) rows.push(['error', s.snapshot.LastError]);
+  if (s.snapshot.AreaBusyBy) rows.push([t('sync.status.busy'), t('sync.status.busyHeldBy', { app: s.snapshot.AreaBusyBy })]);
+  if (s.snapshot.LastError) rows.push([t('sync.status.error'), s.snapshot.LastError]);
 
   els.statusGrid.innerHTML = '';
   for (const [k, v] of rows) {

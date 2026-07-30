@@ -30,16 +30,20 @@ const LightsyncTheme = (() => {
     meta.setAttribute('content', THEME_COLOR[resolved(choice)]);
   }
 
-  function apply(choice) {
+  function applyToDOM(choice) {
     if (choice === 'system') {
-      localStorage.removeItem('theme');
       document.documentElement.removeAttribute('data-theme');
     } else {
-      localStorage.setItem('theme', choice);
       document.documentElement.setAttribute('data-theme', choice);
     }
     updateThemeColorMeta(choice);
     document.dispatchEvent(new CustomEvent('lightsync:themechange', { detail: { choice } }));
+  }
+
+  function apply(choice) {
+    if (choice === 'system') localStorage.removeItem('theme');
+    else localStorage.setItem('theme', choice);
+    applyToDOM(choice);
   }
 
   function cycle() {
@@ -52,6 +56,16 @@ const LightsyncTheme = (() => {
   // preference changes without a page reload.
   window.matchMedia('(prefers-color-scheme: light)').addEventListener('change', () => {
     if (current() === 'system') updateThemeColorMeta('system');
+  });
+
+  // The app.html shell embeds sync.html/lights.html each in their own
+  // iframe — separate browsing contexts that don't see each other's DOM
+  // events, but the native `storage` event fires on every other same-origin
+  // window when localStorage changes, which is exactly the cross-frame
+  // signal needed here (this listener never fires in the frame that made
+  // the change itself, only in the others).
+  window.addEventListener('storage', (e) => {
+    if (e.key === 'theme') applyToDOM(current());
   });
 
   return { current, resolved, cycle };

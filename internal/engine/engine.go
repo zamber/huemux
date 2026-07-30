@@ -368,16 +368,21 @@ func (e *Engine) tick(now time.Time) {
 		if f, ok := features[z.LightRID]; ok {
 			colorCapable = f.SupportsColor
 		}
-		ch := pipeline.Process(c.R, c.G, c.B, z.ChannelID, pipeline.ColorParams{
+		params := pipeline.ColorParams{
 			Saturation:   settings.Saturation,
 			Brightness:   settings.Brightness,
 			BlackCutoff:  settings.BlackCutoff,
 			ChannelGain:  gain,
 			ColorSpace:   colorSpaceFromString(settings.ColorSpace),
 			ColorCapable: colorCapable,
-		})
+		}
+		ch := pipeline.Process(c.R, c.G, c.B, z.ChannelID, params)
 		channels = append(channels, ch)
-		colorsByID[z.ChannelID] = [3]byte{ch.R, ch.G, ch.B}
+		// Always real RGB for the status/preview snapshot, independent of
+		// which color space is actually on the wire — ch.R/G/B are x/y/
+		// brightness bytes, not displayable, whenever ColorSpaceXY is
+		// selected (see pipeline.DisplayRGB).
+		colorsByID[z.ChannelID] = pipeline.DisplayRGB(c.R, c.G, c.B, params)
 	}
 	stream.Set(channels)
 
