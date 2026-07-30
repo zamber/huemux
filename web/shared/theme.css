@@ -1,0 +1,149 @@
+/* Design tokens ported verbatim from lights-ui's svelte/src/app.css, so the
+   lights.lan dashboard and this app read as one design language. Values are
+   not to be "improved" independently of that source — if it changes, port
+   the change here too. */
+
+:root {
+  color-scheme: light dark;
+  --surface: #000000;
+  --surface-alt: #0a0a0a;
+  --card: #0f0f0f;
+  --card-hover: #161616;
+  --ink: #f5f5f0;
+  --ink-muted: #9a9a92;
+  --accent: #7AA5F2;
+  --accent-hover: #9dbdf5;
+  --success: #5fd66a;
+  --warning: #ffb347;
+  --danger: #ff6b5f;
+  --border: rgba(255, 255, 255, 0.22);
+  --border-strong: rgba(255, 255, 255, 0.4);
+  --shadow: rgba(0, 0, 0, 0.6);
+  --glass: rgba(255, 255, 255, 0.06);
+}
+
+@media (prefers-color-scheme: light) {
+  :root {
+    --surface: #f7f3ea;
+    --surface-alt: #efe8d8;
+    --card: #fffdf7;
+    --card-hover: #f2ecdd;
+    --ink: #1c1a14;
+    --ink-muted: #6f6a5a;
+    --accent: #2c56b8;
+    --accent-hover: #1f4291;
+    --success: #1f7a2e;
+    --warning: #a15c00;
+    --danger: #b3261e;
+    --border: rgba(0, 0, 0, 0.22);
+    --border-strong: rgba(0, 0, 0, 0.35);
+    --shadow: rgba(0, 0, 0, 0.15);
+    --glass: rgba(0, 0, 0, 0.04);
+  }
+}
+
+html[data-theme="dark"] {
+  --surface: #000000;
+  --surface-alt: #0a0a0a;
+  --card: #0f0f0f;
+  --card-hover: #161616;
+  --ink: #f5f5f0;
+  --ink-muted: #9a9a92;
+  --accent: #7AA5F2;
+  --accent-hover: #9dbdf5;
+  --success: #5fd66a;
+  --warning: #ffb347;
+  --danger: #ff6b5f;
+  --border: rgba(255, 255, 255, 0.22);
+  --border-strong: rgba(255, 255, 255, 0.4);
+  --shadow: rgba(0, 0, 0, 0.6);
+  --glass: rgba(255, 255, 255, 0.06);
+}
+
+html[data-theme="light"] {
+  --surface: #f7f3ea;
+  --surface-alt: #efe8d8;
+  --card: #fffdf7;
+  --card-hover: #f2ecdd;
+  --ink: #1c1a14;
+  --ink-muted: #6f6a5a;
+  --accent: #2c56b8;
+  --accent-hover: #1f4291;
+  --success: #1f7a2e;
+  --warning: #a15c00;
+  --danger: #b3261e;
+  --border: rgba(0, 0, 0, 0.22);
+  --border-strong: rgba(0, 0, 0, 0.35);
+  --shadow: rgba(0, 0, 0, 0.15);
+  --glass: rgba(0, 0, 0, 0.04);
+}
+
+* { box-sizing: border-box; }
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  background: var(--surface);
+  color: var(--ink);
+  line-height: 1.6;
+  min-height: 100vh;
+  margin: 0;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  overscroll-behavior: none;
+  touch-action: pan-x pan-y;
+  transition: background-color 0.2s ease, color 0.2s ease;
+}
+
+/* Radial/blurred tint used behind a light's card, colored per-light via an
+   inline custom property at render time. Shared here rather than duplicated
+   between lights.html (per-light cards) and sync.html (zone preview cards). */
+.light-card-gradient {
+  position: absolute;
+  inset: 0;
+  opacity: 0.32;
+  transition: opacity 0.3s ease;
+  pointer-events: none;
+  z-index: 0;
+  filter: blur(50px);
+}
+.light-card { position: relative; }
+.light-card > *:not(.light-card-gradient) { position: relative; z-index: 1; }
+.light-card:hover .light-card-gradient { opacity: 0.44; }
+.light-card.off .light-card-gradient { opacity: 0.12; }
+
+.brightness-slider {
+  -webkit-appearance: none;
+  appearance: none;
+  touch-action: none;
+  width: 100%;
+  background: transparent;
+}
+.brightness-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: var(--card);
+  border: 2px solid var(--ink);
+  cursor: grab;
+  transition: transform 0.15s cubic-bezier(0.4, 0, 0.2, 1), border-color 0.15s ease;
+  box-shadow: 0 2px 4px var(--shadow);
+}
+.brightness-slider::-webkit-slider-thumb:hover { transform: scale(1.15); }
+.brightness-slider::-webkit-slider-thumb:active { cursor: grabbing; transform: scale(1.05); }
+.brightness-slider::-moz-range-thumb {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: var(--card);
+  cursor: grab;
+  border: 2px solid var(--ink);
+  transition: transform 0.15s cubic-bezier(0.4, 0, 0.2, 1), border-color 0.15s ease;
+  box-shadow: 0 2px 4px var(--shadow);
+}
+.brightness-slider::-moz-range-thumb:hover { transform: scale(1.15); }
+
+.color-picker-btn {
+  touch-action: none; /* gestures handled entirely in JS */
+}
