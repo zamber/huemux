@@ -1,5 +1,5 @@
 {
-  "app": { "name": "lightsync" },
+  "app": { "name": "HueMux" },
   "nav": { "lights": "Lights", "sync": "Sync" },
   "theme": {
     "titleSystem": "Theme: system (click to change)",

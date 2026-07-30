@@ -314,7 +314,7 @@ function renderGrid() {
   }
 
   if (!list.length && !showAllTile) {
-    html += `<p class="hint lights-empty">${escapeHtml(LightsyncI18n.t('lights.empty'))}</p>`;
+    html += `<p class="hint lights-empty">${escapeHtml(HueMuxI18n.t('lights.empty'))}</p>`;
   }
   els.grid.innerHTML = html;
 }
@@ -348,9 +348,9 @@ function renderLightCard(l) {
       <div class="light-card-head">
         <h3 title="${escapeHtml(l.name)}">${escapeHtml(l.name)}</h3>
         <div class="light-card-actions">
-          ${showFavBtn ? `<button type="button" class="icon-btn ${l.favorite ? 'active' : ''}" data-action="favorite" data-id="${escapeHtml(l.id)}" title="${escapeHtml(LightsyncI18n.t('lights.toggleFavorite'))}">${l.favorite ? ICONS.star : ICONS.starOutline}</button>` : ''}
-          ${l.colorable ? `<button type="button" class="icon-btn" data-action="color" data-id="${escapeHtml(l.id)}" title="${escapeHtml(LightsyncI18n.t('lights.chooseColor'))}">${ICONS.palette}</button>` : ''}
-          <button type="button" class="icon-btn ${l.on ? 'active' : ''}" data-action="toggle" data-id="${escapeHtml(l.id)}" title="${escapeHtml(LightsyncI18n.t(l.on ? 'lights.turnOff' : 'lights.turnOn'))}">${l.on ? ICONS.powerOn : ICONS.powerOff}</button>
+          ${showFavBtn ? `<button type="button" class="icon-btn ${l.favorite ? 'active' : ''}" data-action="favorite" data-id="${escapeHtml(l.id)}" title="${escapeHtml(HueMuxI18n.t('lights.toggleFavorite'))}">${l.favorite ? ICONS.star : ICONS.starOutline}</button>` : ''}
+          ${l.colorable ? `<button type="button" class="icon-btn" data-action="color" data-id="${escapeHtml(l.id)}" title="${escapeHtml(HueMuxI18n.t('lights.chooseColor'))}">${ICONS.palette}</button>` : ''}
+          <button type="button" class="icon-btn ${l.on ? 'active' : ''}" data-action="toggle" data-id="${escapeHtml(l.id)}" title="${escapeHtml(HueMuxI18n.t(l.on ? 'lights.turnOff' : 'lights.turnOn'))}">${l.on ? ICONS.powerOn : ICONS.powerOff}</button>
         </div>
       </div>
       ${l.dimmable ? `<input type="range" class="brightness-slider" min="0" max="100" value="${brightnessPct}" data-action="brightness" data-id="${escapeHtml(l.id)}">` : ''}
@@ -370,11 +370,11 @@ function renderAllLightsTile() {
   return `
     <div class="light-card all-lights-tile" data-id="__all__">
       <div class="light-card-head">
-        <h3>${ICONS.lightbulb}<span>${escapeHtml(LightsyncI18n.t('lights.allLights'))}</span></h3>
+        <h3>${ICONS.lightbulb}<span>${escapeHtml(HueMuxI18n.t('lights.allLights'))}</span></h3>
         <div class="light-card-actions">
-          ${showFavBtn ? `<button type="button" class="icon-btn ${allFav ? 'active' : ''}" data-action="favorite" data-id="all" title="${escapeHtml(LightsyncI18n.t('lights.toggleFavorite'))}">${allFav ? ICONS.star : ICONS.starOutline}</button>` : ''}
-          ${hasColor ? `<button type="button" class="icon-btn" data-action="color-all" title="${escapeHtml(LightsyncI18n.t('lights.chooseColorAll'))}">${ICONS.palette}</button>` : ''}
-          <button type="button" class="icon-btn ${anyOn ? 'active' : ''}" data-action="toggle-all" title="${escapeHtml(LightsyncI18n.t(anyOn ? 'lights.turnAllOff' : 'lights.turnAllOn'))}">${anyOn ? ICONS.powerOn : ICONS.powerOff}</button>
+          ${showFavBtn ? `<button type="button" class="icon-btn ${allFav ? 'active' : ''}" data-action="favorite" data-id="all" title="${escapeHtml(HueMuxI18n.t('lights.toggleFavorite'))}">${allFav ? ICONS.star : ICONS.starOutline}</button>` : ''}
+          ${hasColor ? `<button type="button" class="icon-btn" data-action="color-all" title="${escapeHtml(HueMuxI18n.t('lights.chooseColorAll'))}">${ICONS.palette}</button>` : ''}
+          <button type="button" class="icon-btn ${anyOn ? 'active' : ''}" data-action="toggle-all" title="${escapeHtml(HueMuxI18n.t(anyOn ? 'lights.turnAllOff' : 'lights.turnAllOn'))}">${anyOn ? ICONS.powerOn : ICONS.powerOff}</button>
         </div>
       </div>
       ${hasBrightness ? `<input type="range" class="brightness-slider" min="0" max="100" value="${avgBrightness}" data-action="brightness-all">` : ''}
@@ -401,10 +401,10 @@ function renderRoomTile(room, roomLights) {
   return `
     <div class="light-card all-lights-tile" data-room-id="${escapeHtml(room.id)}">
       <div class="light-card-head">
-        <h3>${ICONS.lightbulb}<span>${escapeHtml(LightsyncI18n.t('lights.allInRoom'))}</span></h3>
+        <h3>${ICONS.lightbulb}<span>${escapeHtml(HueMuxI18n.t('lights.allInRoom'))}</span></h3>
         <div class="light-card-actions">
-          ${hasColor ? `<button type="button" class="icon-btn" data-action="color-room" data-room-id="${escapeHtml(room.id)}" title="${escapeHtml(LightsyncI18n.t('lights.chooseColorAll'))}">${ICONS.palette}</button>` : ''}
-          <button type="button" class="icon-btn ${anyOn ? 'active' : ''}" data-action="toggle-room" data-room-id="${escapeHtml(room.id)}" data-id="${escapeHtml(room.grouped_light_id)}" title="${escapeHtml(LightsyncI18n.t(anyOn ? 'lights.turnAllOff' : 'lights.turnAllOn'))}">${anyOn ? ICONS.powerOn : ICONS.powerOff}</button>
+          ${hasColor ? `<button type="button" class="icon-btn" data-action="color-room" data-room-id="${escapeHtml(room.id)}" title="${escapeHtml(HueMuxI18n.t('lights.chooseColorAll'))}">${ICONS.palette}</button>` : ''}
+          <button type="button" class="icon-btn ${anyOn ? 'active' : ''}" data-action="toggle-room" data-room-id="${escapeHtml(room.id)}" data-id="${escapeHtml(room.grouped_light_id)}" title="${escapeHtml(HueMuxI18n.t(anyOn ? 'lights.turnAllOff' : 'lights.turnAllOn'))}">${anyOn ? ICONS.powerOn : ICONS.powerOff}</button>
         </div>
       </div>
       ${hasBrightness ? `<input type="range" class="brightness-slider" min="0" max="100" value="${avgBrightness}" data-action="brightness-room" data-id="room:${escapeHtml(room.grouped_light_id)}">` : ''}
@@ -446,9 +446,9 @@ function renderSceneChip(sc) {
       <span class="scene-chip-main" data-action="recall" data-scene-id="${escapeHtml(sc.id)}">
         <span class="scene-swatches">${swatches}</span>
         <span class="scene-name">${escapeHtml(sc.name)}</span>
-        ${sc.auto_dynamic ? `<span class="scene-dynamic-badge" title="${escapeHtml(LightsyncI18n.t('lights.sceneDynamic'))}">&#10022;</span>` : ''}
+        ${sc.auto_dynamic ? `<span class="scene-dynamic-badge" title="${escapeHtml(HueMuxI18n.t('lights.sceneDynamic'))}">&#10022;</span>` : ''}
       </span>
-      ${showFavBtn ? `<span class="scene-chip-star ${fav ? 'active' : ''}" data-action="favorite" data-id="${escapeHtml(sc.id)}" title="${escapeHtml(LightsyncI18n.t('lights.toggleFavorite'))}">${fav ? ICONS.star : ICONS.starOutline}</span>` : ''}
+      ${showFavBtn ? `<span class="scene-chip-star ${fav ? 'active' : ''}" data-action="favorite" data-id="${escapeHtml(sc.id)}" title="${escapeHtml(HueMuxI18n.t('lights.toggleFavorite'))}">${fav ? ICONS.star : ICONS.starOutline}</span>` : ''}
     </div>`;
 }
 
@@ -487,8 +487,8 @@ function renderZoneScenes() {
 
 function renderFilterMenu() {
   const items = [
-    { key: 'favorites', label: LightsyncI18n.t('lights.filterFavorites') },
-    { key: 'all', label: LightsyncI18n.t('lights.filterAll') },
+    { key: 'favorites', label: HueMuxI18n.t('lights.filterFavorites') },
+    { key: 'all', label: HueMuxI18n.t('lights.filterAll') },
   ].concat(rooms.map((r) => ({ key: 'room:' + r.id, label: r.name })));
 
   els.filterList.innerHTML = items.map((it) => {
@@ -503,9 +503,9 @@ function renderFilterMenu() {
 }
 
 function updateFilterSummary() {
-  let label = LightsyncI18n.t('lights.filterCategories');
-  if (filter === 'favorites') label = LightsyncI18n.t('lights.filterFavorites');
-  else if (filter === 'all') label = LightsyncI18n.t('lights.filterAll');
+  let label = HueMuxI18n.t('lights.filterCategories');
+  if (filter === 'favorites') label = HueMuxI18n.t('lights.filterFavorites');
+  else if (filter === 'all') label = HueMuxI18n.t('lights.filterAll');
   else if (filter === 'room' && filterRoomId) {
     const r = rooms.find((x) => x.id === filterRoomId);
     if (r) label = r.name;
@@ -568,13 +568,13 @@ function openColorPicker(targetId) {
   const overlay = document.createElement('div');
   overlay.className = 'color-picker-overlay';
   overlay.setAttribute('role', 'application');
-  let name = LightsyncI18n.t('lights.allLights');
+  let name = HueMuxI18n.t('lights.allLights');
   if (targetId && targetId.indexOf('room:') === 0) {
     name = (rooms.find((r) => r.id === targetId.slice(5)) || {}).name || '';
   } else if (targetId) {
     name = (lights.find((l) => l.id === targetId) || {}).name || '';
   }
-  overlay.setAttribute('aria-label', LightsyncI18n.t('lights.colorPickerTitle', { name }));
+  overlay.setAttribute('aria-label', HueMuxI18n.t('lights.colorPickerTitle', { name }));
   overlay.innerHTML =
     `<div class="color-picker-head"><h2>${escapeHtml(name)}</h2></div>` +
     `<canvas class="color-picker-canvas"></canvas>` +
@@ -779,7 +779,7 @@ els.scenesStrip.addEventListener('click', (e) => {
   send({ type: 'scene_recall', rid: main.dataset.sceneId });
 });
 
-document.addEventListener('lightsync:langchange', () => {
+document.addEventListener('huemux:langchange', () => {
   renderFilterMenu();
   renderGrid();
   renderZoneScenes();
@@ -805,7 +805,7 @@ function restoreFilterFromURL() {
 // ---------- init ----------
 
 restoreFilterFromURL();
-LightsyncI18n.init().then(() => {
+HueMuxI18n.init().then(() => {
   renderFilterMenu();
   renderGrid();
 });

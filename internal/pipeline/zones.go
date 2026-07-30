@@ -3,7 +3,7 @@ package pipeline
 import (
 	"sort"
 
-	"lights.lan/lightsync/internal/hue"
+	"github.com/zamber/huemux/internal/hue"
 )
 
 // SampleMode mirrors the ways Hue's own sync products treat an area.

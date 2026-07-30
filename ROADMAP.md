@@ -1,4 +1,4 @@
-# lightsync — Implementation Roadmap
+# HueMux — Implementation Roadmap
 
 A single-binary localhost service that serves a plain-JS web UI, captures the screen
 in the browser, and streams the resulting colors to a Philips Hue Entertainment area
@@ -31,7 +31,7 @@ the requirement collapse into one binary.
  │                                zone averages (N×RGB)│
  └───────────────────────────────────┼────────────────┘
                                       │ WebSocket, binary, ~25 Hz
- ┌─ lightsync (Go, single binary) ────▼───────────────┐
+ ┌─ huemux (Go, single binary) ────▼───────────────┐
  │ smoothing ▶ gains ▶ gamut ▶ HueStream encoder       │
  │ DTLS/PSK session ─────────────────┼──▶ bridge:2100/udp
  │ CLIP v2 REST (pair, list areas, start/stop)         │
@@ -55,7 +55,7 @@ non-Hue outputs (WLED/DDP), remote access from other machines, HDR tone mapping.
    endpoint `https://discovery.meethue.com`, and always allow a manual IP entry.
    Manual entry is not a fallback nicety — it is the path that works on segmented
    VLANs, which is exactly where a self-hoster's IoT devices live.
-2. Pairing: `POST /api` with `{"devicetype":"lightsync#<hostname>","generateclientkey":true}`.
+2. Pairing: `POST /api` with `{"devicetype":"huemux#<hostname>","generateclientkey":true}`.
    Poll every 2 s while the user presses the link button. Give up after 60 s.
 3. Persist `{bridge_ip, bridge_id, username, clientkey}` to the config file with
    mode `0600`.
@@ -76,8 +76,8 @@ non-Hue outputs (WLED/DDP), remote access from other machines, HDR tone mapping.
   `/api/config` `modelid` and fail loudly with an explanation rather than timing out
   in the handshake.
 
-**Exit test:** `lightsync pair` writes a config file containing a 32-hex-char
-clientkey, and `lightsync areas` lists your entertainment areas by name.
+**Exit test:** `huemux pair` writes a config file containing a 32-hex-char
+clientkey, and `huemux areas` lists your entertainment areas by name.
 
 ## Milestone 2 — DTLS session and a static color
 
@@ -134,7 +134,7 @@ offset size  contents
   for write errors and by re-polling the configuration's status every few seconds.
   Rebuild the session with exponential backoff, capped at 30 s.
 
-**Exit test:** a `lightsync test` subcommand cycles every channel through red, green,
+**Exit test:** a `huemux test` subcommand cycles every channel through red, green,
 blue, white for two seconds each, holds the stream for 60 seconds with no traffic
 other than keepalive, and the lights do not fall back. If they fall back, your
 keepalive or your rate is wrong.
@@ -162,7 +162,7 @@ keepalive or your rate is wrong.
   but designate exactly one as the frame source and reject or demote the rest.
   Two tabs both capturing produces a hard-to-diagnose strobe.
 
-**Exit test:** `lightsync` with no arguments opens a browser tab showing the UI, and
+**Exit test:** `huemux` with no arguments opens a browser tab showing the UI, and
 the CLI prints a live status line including the WebSocket client count.
 
 ## Milestone 4 — Capture in the browser
@@ -450,7 +450,7 @@ The binary is started by a person who wants to see that it works. A single
 repainting status block, no scrollback spam:
 
 ```
-lightsync 0.1.0                                    http://127.0.0.1:7654
+huemux 0.1.0                                    http://127.0.0.1:7654
  bridge     192.168.1.42        connected           handshake 41 ms
  area       Living room         screen · 5 channels
  stream     active              20.0 Hz out          seq 148213
@@ -471,7 +471,7 @@ is alive and that zone mapping is sane, without opening the browser.
 
 ## Milestone 10 — Packaging
 
-- `CGO_ENABLED=0` for static binaries: `lightsync-linux-amd64`, `lightsync-windows-amd64.exe`,
+- `CGO_ENABLED=0` for static binaries: `huemux-linux-amd64`, `huemux-windows-amd64.exe`,
   plus `linux-arm64` since a home server is a plausible host.
 - Build with `-ldflags "-s -w -X main.version=..."`.
 - Windows: build with `-H=windowsgui` **only** if you drop the CLI readout — otherwise

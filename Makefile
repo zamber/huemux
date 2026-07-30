@@ -5,31 +5,35 @@ DIST := dist
 .PHONY: dev dist dev-desktop dist-desktop clean fmt vet test
 
 dev:
-	go build -o lightsync ./cmd/lightsync
+	go build -o huemux ./cmd/huemux
 
 dist:
 	mkdir -p $(DIST)
-	CGO_ENABLED=0 GOOS=linux   GOARCH=amd64 go build -ldflags "$(LDFLAGS)" -o $(DIST)/lightsync-linux-amd64     ./cmd/lightsync
-	CGO_ENABLED=0 GOOS=linux   GOARCH=arm64 go build -ldflags "$(LDFLAGS)" -o $(DIST)/lightsync-linux-arm64     ./cmd/lightsync
-	CGO_ENABLED=0 GOOS=windows GOARCH=amd64 go build -ldflags "$(LDFLAGS)" -o $(DIST)/lightsync-windows-amd64.exe ./cmd/lightsync
-	cd $(DIST) && sha256sum lightsync-* > SHA256SUMS
+	CGO_ENABLED=0 GOOS=linux   GOARCH=amd64 go build -ldflags "$(LDFLAGS)" -o $(DIST)/huemux-linux-amd64     ./cmd/huemux
+	CGO_ENABLED=0 GOOS=linux   GOARCH=arm64 go build -ldflags "$(LDFLAGS)" -o $(DIST)/huemux-linux-arm64     ./cmd/huemux
+	CGO_ENABLED=0 GOOS=windows GOARCH=amd64 go build -ldflags "$(LDFLAGS)" -o $(DIST)/huemux-windows-amd64.exe ./cmd/huemux
+	CGO_ENABLED=0 GOOS=darwin  GOARCH=amd64 go build -ldflags "$(LDFLAGS)" -o $(DIST)/huemux-darwin-amd64    ./cmd/huemux
+	CGO_ENABLED=0 GOOS=darwin  GOARCH=arm64 go build -ldflags "$(LDFLAGS)" -o $(DIST)/huemux-darwin-arm64    ./cmd/huemux
+	cd $(DIST) && sha256sum huemux-* > SHA256SUMS
 
-# lightsync-desktop (feature/astilectron-wrapper branch only): wraps the same
+# huemux-desktop (feature/astilectron-wrapper branch only): wraps the same
 # core in an Electron shell via go-astilectron, for capture without browser
-# variability. --headless reproduces plain `lightsync` exactly. First launch
+# variability. --headless reproduces plain `huemux` exactly. First launch
 # (non-headless) downloads Electron at runtime — needs internet access.
 dev-desktop:
-	go build -o lightsync-desktop ./cmd/lightsync-desktop
+	go build -o huemux-desktop ./cmd/huemux-desktop
 
 dist-desktop:
 	mkdir -p $(DIST)
-	CGO_ENABLED=0 GOOS=linux   GOARCH=amd64 go build -ldflags "$(LDFLAGS)" -o $(DIST)/lightsync-desktop-linux-amd64     ./cmd/lightsync-desktop
-	CGO_ENABLED=0 GOOS=linux   GOARCH=arm64 go build -ldflags "$(LDFLAGS)" -o $(DIST)/lightsync-desktop-linux-arm64     ./cmd/lightsync-desktop
-	CGO_ENABLED=0 GOOS=windows GOARCH=amd64 go build -ldflags "$(LDFLAGS)" -o $(DIST)/lightsync-desktop-windows-amd64.exe ./cmd/lightsync-desktop
-	cd $(DIST) && sha256sum lightsync-desktop-* >> SHA256SUMS
+	CGO_ENABLED=0 GOOS=linux   GOARCH=amd64 go build -ldflags "$(LDFLAGS)" -o $(DIST)/huemux-desktop-linux-amd64     ./cmd/huemux-desktop
+	CGO_ENABLED=0 GOOS=linux   GOARCH=arm64 go build -ldflags "$(LDFLAGS)" -o $(DIST)/huemux-desktop-linux-arm64     ./cmd/huemux-desktop
+	CGO_ENABLED=0 GOOS=windows GOARCH=amd64 go build -ldflags "$(LDFLAGS)" -o $(DIST)/huemux-desktop-windows-amd64.exe ./cmd/huemux-desktop
+	CGO_ENABLED=0 GOOS=darwin  GOARCH=amd64 go build -ldflags "$(LDFLAGS)" -o $(DIST)/huemux-desktop-darwin-amd64    ./cmd/huemux-desktop
+	CGO_ENABLED=0 GOOS=darwin  GOARCH=arm64 go build -ldflags "$(LDFLAGS)" -o $(DIST)/huemux-desktop-darwin-arm64    ./cmd/huemux-desktop
+	cd $(DIST) && sha256sum huemux-desktop-* >> SHA256SUMS
 
 clean:
-	rm -rf $(DIST) lightsync lightsync-desktop
+	rm -rf $(DIST) huemux huemux-desktop
 
 fmt:
 	gofmt -l -w .

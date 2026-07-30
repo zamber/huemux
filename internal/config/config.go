@@ -1,4 +1,4 @@
-// Package config handles lightsync's on-disk state: bridge credentials and
+// Package config handles huemux's on-disk state: bridge credentials and
 // per-entertainment-area tuning.
 package config
 
@@ -18,7 +18,7 @@ type Bridge struct {
 	ClientKey string `json:"clientkey"`
 }
 
-// Dir returns lightsync's config directory, creating it if necessary.
+// Dir returns huemux's config directory, creating it if necessary.
 func Dir() (string, error) {
 	base, err := os.UserConfigDir()
 	if err != nil {
@@ -28,7 +28,7 @@ func Dir() (string, error) {
 		}
 		base = filepath.Join(home, ".config")
 	}
-	dir := filepath.Join(base, "lightsync")
+	dir := filepath.Join(base, "huemux")
 	if err := os.MkdirAll(dir, 0o700); err != nil {
 		return "", fmt.Errorf("create config dir %s: %w", dir, err)
 	}

@@ -1,4 +1,4 @@
-// Command lightsync-desktop wraps the same core (internal/config,
+// Command huemux-desktop wraps the same core (internal/config,
 // internal/engine, internal/server — all completely unmodified) in an
 // Electron shell via go-astilectron, to sidestep browser-variability
 // concerns in Milestone 4 (getDisplayMedia() quirks, the
@@ -7,7 +7,7 @@
 // of "whatever browser the user has."
 //
 // This is deliberately a separate binary/entry point rather than a change
-// to cmd/lightsync: the plain binary is unaffected in every way — same
+// to cmd/huemux: the plain binary is unaffected in every way — same
 // size, same zero-Electron-dependency story, same behavior — and this one
 // adds a --headless flag that reproduces it exactly, for running the core
 // alone (e.g. on a headless server) without paying for a GUI dependency at
@@ -31,11 +31,11 @@ import (
 	"github.com/asticode/go-astikit"
 	"github.com/asticode/go-astilectron"
 
-	"lights.lan/lightsync/internal/config"
-	"lights.lan/lightsync/internal/engine"
-	"lights.lan/lightsync/internal/lightctl"
-	"lights.lan/lightsync/internal/server"
-	"lights.lan/lightsync/internal/ui"
+	"github.com/zamber/huemux/internal/config"
+	"github.com/zamber/huemux/internal/engine"
+	"github.com/zamber/huemux/internal/lightctl"
+	"github.com/zamber/huemux/internal/server"
+	"github.com/zamber/huemux/internal/ui"
 )
 
 var version = "dev"
@@ -49,7 +49,7 @@ var version = "dev"
 const electronVersion = "43.2.0"
 
 func main() {
-	headless := flag.Bool("headless", false, "run the core service only, no desktop window — identical to plain `lightsync`")
+	headless := flag.Bool("headless", false, "run the core service only, no desktop window — identical to plain `huemux`")
 	verbose := flag.Bool("verbose", false, "verbose CLI status log (headless mode only)")
 	flag.Parse()
 
@@ -73,7 +73,7 @@ func main() {
 	if err != nil {
 		fatalf("starting server: %v", err)
 	}
-	fmt.Println("lightsync-desktop " + version + "  " + url)
+	fmt.Println("huemux-desktop " + version + "  " + url)
 
 	if *headless {
 		runHeadless(srv, store, url, *verbose)
@@ -97,11 +97,11 @@ func runDesktop(url string) error {
 	if err != nil {
 		cacheDir = os.TempDir()
 	}
-	dataDir := filepath.Join(cacheDir, "lightsync", "astilectron")
+	dataDir := filepath.Join(cacheDir, "huemux", "astilectron")
 
 	l := log.New(os.Stdout, "[electron] ", log.LstdFlags)
 	a, err := astilectron.New(l, astilectron.Options{
-		AppName:           "lightsync",
+		AppName:           "huemux",
 		BaseDirectoryPath: dataDir,
 		VersionElectron:   electronVersion,
 		SingleInstance:    true,
@@ -118,7 +118,7 @@ func runDesktop(url string) error {
 	}
 
 	w, err := a.NewWindow(url, &astilectron.WindowOptions{
-		Title:  astikit.StrPtr("lightsync"),
+		Title:  astikit.StrPtr("HueMux"),
 		Width:  astikit.IntPtr(1000),
 		Height: astikit.IntPtr(860),
 		Center: astikit.BoolPtr(true),
@@ -129,7 +129,7 @@ func runDesktop(url string) error {
 	if err := w.Create(); err != nil {
 		return fmt.Errorf("open window: %w", err)
 	}
-	if os.Getenv("LIGHTSYNC_DEVTOOLS") != "" {
+	if os.Getenv("HUEMUX_DEVTOOLS") != "" {
 		_ = w.OpenDevTools()
 	}
 
@@ -137,7 +137,7 @@ func runDesktop(url string) error {
 	return nil
 }
 
-// --- headless mode: byte-for-byte the same loop cmd/lightsync/main.go runs,
+// --- headless mode: byte-for-byte the same loop cmd/huemux/main.go runs,
 // duplicated rather than shared so that binary is never touched by this one
 // existing. ---
 
@@ -214,7 +214,7 @@ func shutdown(eng *engine.Engine, store *config.Store) {
 
 func readStdinCommands(out chan<- string) {
 	// Line-buffered "q"/"r"/"b" rather than raw single-keypress input — see
-	// the identical comment in cmd/lightsync/main.go.
+	// the identical comment in cmd/huemux/main.go.
 	scanner := bufio.NewScanner(os.Stdin)
 	for scanner.Scan() {
 		line := scanner.Text()
@@ -238,6 +238,6 @@ func openBrowser(url string) {
 }
 
 func fatalf(format string, args ...any) {
-	fmt.Fprintf(os.Stderr, "lightsync-desktop: "+format+"\n", args...)
+	fmt.Fprintf(os.Stderr, "huemux-desktop: "+format+"\n", args...)
 	os.Exit(1)
 }

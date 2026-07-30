@@ -5,7 +5,7 @@
 // no CORS concerns). "system" mode follows navigator.language, same three-
 // state idea as theme.js's system/light/dark cycle.
 
-const LightsyncI18n = (() => {
+const HueMuxI18n = (() => {
   const SUPPORTED = ['en', 'pl'];
   let dict = {};
   let lang = 'en';
@@ -13,7 +13,7 @@ const LightsyncI18n = (() => {
 
   // /api/locale reflects the *server process's* environment (LANG etc.),
   // not the browser's — needed because under the Electron wrapper
-  // (cmd/lightsync-desktop), the bundled Chromium's navigator.language
+  // (cmd/huemux-desktop), the bundled Chromium's navigator.language
   // often doesn't track the host OS locale at all, while the Go process's
   // environment (inherited from whatever launched it) usually does.
   // Preferred over navigator.language/navigator.languages when present.
@@ -88,7 +88,7 @@ const LightsyncI18n = (() => {
     await load(lang);
     document.documentElement.setAttribute('lang', lang);
     applyTo(document);
-    document.dispatchEvent(new CustomEvent('lightsync:langchange', { detail: { lang, choice: current() || 'system' } }));
+    document.dispatchEvent(new CustomEvent('huemux:langchange', { detail: { lang, choice: current() || 'system' } }));
   }
 
   function cycle() {

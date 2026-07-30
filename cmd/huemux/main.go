@@ -1,4 +1,4 @@
-// Command lightsync is the entry point: pairing/areas/test subcommands and
+// Command huemux is the entry point: pairing/areas/test subcommands and
 // the default run mode that serves the UI and drives the output loop.
 package main
 
@@ -14,12 +14,12 @@ import (
 	"syscall"
 	"time"
 
-	"lights.lan/lightsync/internal/config"
-	"lights.lan/lightsync/internal/engine"
-	"lights.lan/lightsync/internal/hue"
-	"lights.lan/lightsync/internal/lightctl"
-	"lights.lan/lightsync/internal/server"
-	"lights.lan/lightsync/internal/ui"
+	"github.com/zamber/huemux/internal/config"
+	"github.com/zamber/huemux/internal/engine"
+	"github.com/zamber/huemux/internal/hue"
+	"github.com/zamber/huemux/internal/lightctl"
+	"github.com/zamber/huemux/internal/server"
+	"github.com/zamber/huemux/internal/ui"
 )
 
 var version = "dev"
@@ -43,7 +43,7 @@ func main() {
 	case "-h", "--help":
 		usage()
 	case "version", "--version":
-		fmt.Println("lightsync " + version)
+		fmt.Println("huemux " + version)
 	default:
 		usage()
 		os.Exit(1)
@@ -51,13 +51,13 @@ func main() {
 }
 
 func usage() {
-	fmt.Println(`lightsync — screen colour sync for Philips Hue Entertainment areas
+	fmt.Println(`huemux — screen colour sync for Philips Hue Entertainment areas
 
 Usage:
-  lightsync pair <bridge-ip>        Register with the bridge (press the link button when prompted)
-  lightsync areas                   List entertainment areas on the paired bridge
-  lightsync test <area-id>          Prove the DTLS path works: cycles colors, then a 60s keepalive-only hold
-  lightsync [--verbose]             Run the service (default: http://127.0.0.1:7654)`)
+  huemux pair <bridge-ip>        Register with the bridge (press the link button when prompted)
+  huemux areas                   List entertainment areas on the paired bridge
+  huemux test <area-id>          Prove the DTLS path works: cycles colors, then a 60s keepalive-only hold
+  huemux [--verbose]             Run the service (default: http://127.0.0.1:7654)`)
 }
 
 // --- pair ------------------------------------------------------------------
@@ -71,14 +71,14 @@ func cmdPair(args []string) {
 		candidates := hue.Discover(ctx)
 		if len(candidates) == 0 {
 			fmt.Println("no bridge found automatically. Find its IP in the Hue app (Settings → My Bridge) and run:")
-			fmt.Println("  lightsync pair <bridge-ip>")
+			fmt.Println("  huemux pair <bridge-ip>")
 			os.Exit(1)
 		}
 		fmt.Println("found candidate bridge(s):")
 		for _, ip := range candidates {
 			fmt.Println("  " + ip)
 		}
-		fmt.Println("run: lightsync pair <bridge-ip>")
+		fmt.Println("run: huemux pair <bridge-ip>")
 		os.Exit(1)
 	}
 	bridgeIP := args[0]
@@ -93,7 +93,7 @@ func cmdPair(args []string) {
 
 	fmt.Printf("found bridge %q (id %s). Press the link button on the bridge now — waiting up to 60s...\n", info.Name, info.BridgeID)
 
-	username, clientkey, err := hue.Pair(ctx, bridgeIP, fmt.Sprintf("lightsync#%s", hostname()), 60*time.Second)
+	username, clientkey, err := hue.Pair(ctx, bridgeIP, fmt.Sprintf("huemux#%s", hostname()), 60*time.Second)
 	if err != nil {
 		fatalf("pairing failed: %v", err)
 	}
@@ -110,7 +110,7 @@ func cmdPair(args []string) {
 		fatalf("saving config: %v", err)
 	}
 
-	fmt.Println("paired. Run `lightsync areas` to see your entertainment areas.")
+	fmt.Println("paired. Run `huemux areas` to see your entertainment areas.")
 }
 
 // --- areas -------------------------------------------------------------------
@@ -143,7 +143,7 @@ func cmdAreas(args []string) {
 
 func cmdTest(args []string) {
 	if len(args) == 0 {
-		fatalf("usage: lightsync test <area-id>")
+		fatalf("usage: huemux test <area-id>")
 	}
 	areaID := args[0]
 	bridge := mustLoadBridge()
@@ -290,7 +290,7 @@ func cmdRun(verbose bool) {
 	// No pairing required up front: if config.LoadBridge fails (not paired
 	// yet, or the file is missing/unreadable), the server still starts and
 	// serves a web-driven pairing flow over the same /ws connection
-	// everything else uses. `lightsync pair <ip>` on the command line still
+	// everything else uses. `huemux pair <ip>` on the command line still
 	// works too, for scripting.
 	var eng *engine.Engine
 	var lights *lightctl.Service
@@ -304,7 +304,7 @@ func cmdRun(verbose bool) {
 		fatalf("starting server: %v", err)
 	}
 
-	fmt.Println("lightsync " + version + "  " + url)
+	fmt.Println("huemux " + version + "  " + url)
 	if eng == nil {
 		fmt.Println("not paired yet — open the URL above to pair with your bridge")
 	}
@@ -405,7 +405,7 @@ func openBrowser(url string) {
 func mustLoadBridge() config.Bridge {
 	b, err := config.LoadBridge()
 	if err != nil {
-		fatalf("not paired yet (or config unreadable: %v). Run: lightsync pair <bridge-ip>", err)
+		fatalf("not paired yet (or config unreadable: %v). Run: huemux pair <bridge-ip>", err)
 	}
 	return b
 }
@@ -419,6 +419,6 @@ func hostname() string {
 }
 
 func fatalf(format string, args ...any) {
-	fmt.Fprintf(os.Stderr, "lightsync: "+format+"\n", args...)
+	fmt.Fprintf(os.Stderr, "huemux: "+format+"\n", args...)
 	os.Exit(1)
 }

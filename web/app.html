@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <meta name="color-scheme" content="light dark">
 <meta name="theme-color" content="#000000" id="theme-color-meta">
-<title>lightsync</title>
+<title>HueMux</title>
 <script>
 (function() {
   var DARK = '#000000', LIGHT = '#f7f3ea';
@@ -26,7 +26,7 @@
 <link rel="stylesheet" href="/shared/shell.css">
 </head>
 <body>
-<lightsync-header active="sync"></lightsync-header>
+<huemux-header active="sync"></huemux-header>
 <div class="shell-frames">
   <iframe id="frame-sync" class="shell-frame active" src="/sync.html" title="Sync"></iframe>
   <iframe id="frame-lights" class="shell-frame" src="/lights.html" title="Lights"></iframe>
@@ -40,7 +40,7 @@
   // sets document.title — unlike data-i18n DOM text, which init()'s own
   // concluding applyTo(document) sweep re-corrects a moment later, a title
   // set once from a still-empty dictionary would just stick as a raw key.
-  LightsyncI18n.init().then(function () {
+  HueMuxI18n.init().then(function () {
     var s = document.createElement('script');
     s.src = '/shared/shell.js';
     document.body.appendChild(s);

@@ -8,7 +8,7 @@
 // inline snippet each of lights.html/sync.html carries; keep it in sync with
 // THEME_COLOR below if either changes.
 
-const LightsyncTheme = (() => {
+const HueMuxTheme = (() => {
   const THEME_COLOR = { dark: '#000000', light: '#f7f3ea' };
   const CYCLE = { system: 'light', light: 'dark', dark: 'system' };
 
@@ -37,7 +37,7 @@ const LightsyncTheme = (() => {
       document.documentElement.setAttribute('data-theme', choice);
     }
     updateThemeColorMeta(choice);
-    document.dispatchEvent(new CustomEvent('lightsync:themechange', { detail: { choice } }));
+    document.dispatchEvent(new CustomEvent('huemux:themechange', { detail: { choice } }));
   }
 
   function apply(choice) {

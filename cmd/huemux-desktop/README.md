@@ -1,4 +1,4 @@
-# lightsync-desktop (experimental, `feature/astilectron-wrapper` branch)
+# huemux-desktop (experimental, `feature/astilectron-wrapper` branch)
 
 Wraps the exact same core (`internal/config`, `internal/engine`,
 `internal/server` — genuinely unmodified, `git diff main -- internal/` is
@@ -16,12 +16,12 @@ browser's `getDisplayMedia()` delivery).
 
 ```bash
 make dev-desktop        # local binary
-./lightsync-desktop             # opens an Electron window
-./lightsync-desktop --headless  # identical to plain `lightsync` — no Electron, no GUI dependency paid at runtime
+./huemux-desktop             # opens an Electron window
+./huemux-desktop --headless  # identical to plain `huemux` — no Electron, no GUI dependency paid at runtime
 ```
 
 First non-headless launch downloads Electron (~150MB) into
-`$XDG_CACHE_HOME/lightsync/astilectron` (or the OS equivalent) — needs
+`$XDG_CACHE_HOME/huemux/astilectron` (or the OS equivalent) — needs
 internet access once; cached after that.
 
 ## The one non-obvious part: `desktopCapturer` is main-process-only
@@ -80,7 +80,7 @@ This host has no real display. Verified for real anyway, not just
 compiled-and-assumed-to-work: `Xvfb` (already present on this box from an
 unrelated Playwright/Chrome setup) provided a virtual X11 display, `xdotool`
 drove real clicks against the real rendered window, `import` (ImageMagick)
-screenshotted it, and Electron's own devtools (`LIGHTSYNC_DEVTOOLS=1` env
+screenshotted it, and Electron's own devtools (`HUEMUX_DEVTOOLS=1` env
 var, see `runDesktop`) confirmed the `desktopCapturer`-undefined finding
 directly rather than guessing from an error message.
 

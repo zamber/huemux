@@ -1,5 +1,5 @@
 // Package hue implements the pieces of the Philips Hue CLIP v2 REST API and
-// the Entertainment DTLS streaming API that lightsync needs: pairing,
+// the Entertainment DTLS streaming API that huemux needs: pairing,
 // reading entertainment configurations, and streaming colors.
 package hue
 
@@ -45,7 +45,7 @@ type ServiceLocation struct {
 }
 
 // EntertainmentConfiguration is the GET
-// /clip/v2/resource/entertainment_configuration/{id} shape lightsync reads.
+// /clip/v2/resource/entertainment_configuration/{id} shape huemux reads.
 type EntertainmentConfiguration struct {
 	ID                string   `json:"id"`
 	IDV1              string   `json:"id_v1,omitempty"`

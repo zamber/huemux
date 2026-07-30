@@ -3,7 +3,7 @@ package pipeline
 import (
 	"testing"
 
-	"lights.lan/lightsync/internal/hue"
+	"github.com/zamber/huemux/internal/hue"
 )
 
 func solidGrid(w, h int, r, g, b byte) *Grid {

@@ -3,7 +3,7 @@ package pipeline
 import (
 	"math"
 
-	"lights.lan/lightsync/internal/hue"
+	"github.com/zamber/huemux/internal/hue"
 )
 
 // Grid is the reduced screen capture the browser sends: RGB, row-major,

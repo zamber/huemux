@@ -1,6 +1,6 @@
 // Package engine wires the bridge client, zone mapping, color pipeline and
 // smoother together and owns the output loop. It is the runtime core that
-// both the CLI (cmd/lightsync) and the localhost server (internal/server)
+// both the CLI (cmd/huemux) and the localhost server (internal/server)
 // drive.
 package engine
 
@@ -11,9 +11,9 @@ import (
 	"sync"
 	"time"
 
-	"lights.lan/lightsync/internal/config"
-	"lights.lan/lightsync/internal/hue"
-	"lights.lan/lightsync/internal/pipeline"
+	"github.com/zamber/huemux/internal/config"
+	"github.com/zamber/huemux/internal/hue"
+	"github.com/zamber/huemux/internal/pipeline"
 )
 
 // ZoneStatus is a zone plus the color currently being sent for it — enough
@@ -131,7 +131,7 @@ func (e *Engine) SelectArea(ctx context.Context, areaID string) error {
 		}
 		lightRID, err := e.client.ResolveLightForService(ctx, z.LightRID)
 		if err != nil {
-			log.Printf("lightsync: resolve light for channel %d: %v", z.ChannelID, err)
+			log.Printf("huemux: resolve light for channel %d: %v", z.ChannelID, err)
 			continue
 		}
 		zones[i].LightRID = lightRID
@@ -143,7 +143,7 @@ func (e *Engine) SelectArea(ctx context.Context, areaID string) error {
 			// on/off — a physically-off bulb would sit dark through a
 			// perfectly working stream with nothing anywhere to explain why.
 			if err := e.client.SetOn(ctx, lightRID, true); err != nil {
-				log.Printf("lightsync: turn on light %s: %v", lightRID, err)
+				log.Printf("huemux: turn on light %s: %v", lightRID, err)
 			}
 		}
 	}
@@ -187,7 +187,7 @@ func (e *Engine) SelectArea(ctx context.Context, areaID string) error {
 
 	go func() {
 		if err := stream.Run(runCtx); err != nil && runCtx.Err() == nil {
-			log.Printf("lightsync: stream ended: %v", err)
+			log.Printf("huemux: stream ended: %v", err)
 		}
 	}()
 	go e.outputLoop(runCtx)

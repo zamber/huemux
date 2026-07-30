@@ -3,7 +3,7 @@ package pipeline
 import (
 	"testing"
 
-	"lights.lan/lightsync/internal/hue"
+	"github.com/zamber/huemux/internal/hue"
 )
 
 // Real channel positions from a live "Living room pc" screen entertainment

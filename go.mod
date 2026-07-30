@@ -1,4 +1,4 @@
-module lights.lan/lightsync
+module github.com/zamber/huemux
 
 go 1.24.0
 

@@ -7,7 +7,7 @@ import (
 	"os"
 	"strings"
 
-	"lights.lan/lightsync/internal/engine"
+	"github.com/zamber/huemux/internal/engine"
 )
 
 // Printer renders engine.Status to stdout, repainting in place on a real
@@ -47,7 +47,7 @@ func (p *Printer) Render(s engine.Status) {
 // than Render with a zero-valued Status (which would print a bridge IP of
 // "" and other nonsense fields with nothing to explain them).
 func (p *Printer) RenderUnpaired(url string) {
-	line := "lightsync " + url + " — not paired yet. Open the URL above in a browser to pair with your bridge."
+	line := "huemux " + url + " — not paired yet. Open the URL above in a browser to pair with your bridge."
 	if !p.isTTY || p.Verbose {
 		fmt.Println(line)
 		return
@@ -68,7 +68,7 @@ func (p *Printer) repaint(block string) {
 
 func (p *Printer) block(s engine.Status) string {
 	var b strings.Builder
-	fmt.Fprintf(&b, "lightsync                                          %s\n", p.url)
+	fmt.Fprintf(&b, "huemux                                          %s\n", p.url)
 
 	bridgeState := "disconnected"
 	if s.BridgeConnected {
@@ -117,6 +117,6 @@ func (p *Printer) block(s engine.Status) string {
 }
 
 func (p *Printer) flatLine(s engine.Status) string {
-	return fmt.Sprintf("lightsync bridge=%s area=%q stream=%v out_hz=%d sent=%d capture_fps=%.1f clients=%d err=%q",
+	return fmt.Sprintf("huemux bridge=%s area=%q stream=%v out_hz=%d sent=%d capture_fps=%.1f clients=%d err=%q",
 		s.BridgeIP, s.AreaName, s.StreamActive, s.OutputHz, s.Sent, s.InboundFPS, s.CaptureClients, s.LastError)
 }

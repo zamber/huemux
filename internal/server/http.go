@@ -1,4 +1,4 @@
-// Package server is lightsync's loopback HTTP + WebSocket front end: the
+// Package server is huemux's loopback HTTP + WebSocket front end: the
 // embedded UI, a small JSON API, and the /ws endpoint the browser's capture
 // pipeline talks to.
 package server
@@ -16,12 +16,12 @@ import (
 	"sync"
 	"time"
 
-	lightsync "lights.lan/lightsync"
-	"lights.lan/lightsync/internal/config"
-	"lights.lan/lightsync/internal/engine"
-	"lights.lan/lightsync/internal/hue"
-	"lights.lan/lightsync/internal/lightctl"
-	"lights.lan/lightsync/internal/pipeline"
+	"github.com/zamber/huemux"
+	"github.com/zamber/huemux/internal/config"
+	"github.com/zamber/huemux/internal/engine"
+	"github.com/zamber/huemux/internal/hue"
+	"github.com/zamber/huemux/internal/lightctl"
+	"github.com/zamber/huemux/internal/pipeline"
 )
 
 // Server is the loopback HTTP server. It binds 127.0.0.1 only — never
@@ -89,7 +89,7 @@ func (s *Server) lights() *lightctl.Service {
 }
 
 // Engine returns the current engine, or nil if the bridge has not been
-// paired yet. Exported so cmd/lightsync's CLI status readout and stdin
+// paired yet. Exported so cmd/huemux's CLI status readout and stdin
 // commands can pick up an engine constructed later by a web-driven pairing
 // flow, since that happens inside the server, not the process's original
 // startup path.
@@ -155,7 +155,7 @@ type favoriteEventWire struct {
 }
 
 func (s *Server) routes() {
-	webFS, err := fs.Sub(lightsync.WebFS, "web")
+	webFS, err := fs.Sub(huemux.WebFS, "web")
 	if err != nil {
 		panic("embedded web/ directory missing: " + err.Error()) // programmer error, not a runtime condition
 	}
@@ -201,7 +201,7 @@ func (s *Server) ListenAndServe() (string, error) {
 	s.Addr = fmt.Sprintf("127.0.0.1:%d", port)
 	go func() {
 		if err := http.Serve(ln, s.mux); err != nil {
-			log.Printf("lightsync: http server stopped: %v", err)
+			log.Printf("huemux: http server stopped: %v", err)
 		}
 	}()
 	return "http://" + s.Addr, nil
@@ -291,7 +291,7 @@ func (s *Server) handleFavorites(w http.ResponseWriter, r *http.Request) {
 // handleLocale exposes a locale hint derived from this *process's*
 // environment, which i18n.js prefers over navigator.language when present.
 // That's not redundant with the browser's own locale: under the Electron
-// wrapper (cmd/lightsync-desktop), the bundled Chromium's reported
+// wrapper (cmd/huemux-desktop), the bundled Chromium's reported
 // navigator.language often doesn't reflect the host OS locale at all (it
 // depends on how Electron itself was launched/packaged), while this
 // process's environment — inherited from whatever shell, systemd unit, or
@@ -392,7 +392,7 @@ type controlMessage struct {
 func (s *Server) handleWS(w http.ResponseWriter, r *http.Request) {
 	conn, err := Upgrade(w, r)
 	if err != nil {
-		log.Printf("lightsync: websocket upgrade: %v", err)
+		log.Printf("huemux: websocket upgrade: %v", err)
 		return
 	}
 	defer conn.Close()
@@ -508,7 +508,7 @@ func (s *Server) notifyStreamStopped(previous, exceptConn *Conn) {
 func (s *Server) handleControlMessage(conn *Conn, payload []byte) {
 	var msg controlMessage
 	if err := json.Unmarshal(payload, &msg); err != nil {
-		log.Printf("lightsync: bad control message: %v", err)
+		log.Printf("huemux: bad control message: %v", err)
 		return
 	}
 
@@ -530,17 +530,17 @@ func (s *Server) handleControlMessage(conn *Conn, payload []byte) {
 		switch msg.Type {
 		case "light_toggle":
 			if err := lights.SetLightOn(ctx, msg.RID, msg.On); err != nil {
-				log.Printf("lightsync: light_toggle %s: %v", msg.RID, err)
+				log.Printf("huemux: light_toggle %s: %v", msg.RID, err)
 			}
 			return
 		case "light_brightness":
 			if err := lights.SetLightBrightness(ctx, msg.RID, msg.Brightness); err != nil {
-				log.Printf("lightsync: light_brightness %s: %v", msg.RID, err)
+				log.Printf("huemux: light_brightness %s: %v", msg.RID, err)
 			}
 			return
 		case "light_color":
 			if err := lights.SetLightColorRGB(ctx, msg.RID, msg.R, msg.G, msg.B); err != nil {
-				log.Printf("lightsync: light_color %s: %v", msg.RID, err)
+				log.Printf("huemux: light_color %s: %v", msg.RID, err)
 			}
 			return
 		case "light_favorite":
@@ -551,17 +551,17 @@ func (s *Server) handleControlMessage(conn *Conn, payload []byte) {
 			return
 		case "room_toggle":
 			if err := lights.SetRoomOn(ctx, msg.RID, msg.On); err != nil {
-				log.Printf("lightsync: room_toggle %s: %v", msg.RID, err)
+				log.Printf("huemux: room_toggle %s: %v", msg.RID, err)
 			}
 			return
 		case "room_brightness":
 			if err := lights.SetRoomBrightness(ctx, msg.RID, msg.Brightness); err != nil {
-				log.Printf("lightsync: room_brightness %s: %v", msg.RID, err)
+				log.Printf("huemux: room_brightness %s: %v", msg.RID, err)
 			}
 			return
 		case "scene_recall":
 			if err := lights.RecallScene(ctx, msg.RID); err != nil {
-				log.Printf("lightsync: scene_recall %s: %v", msg.RID, err)
+				log.Printf("huemux: scene_recall %s: %v", msg.RID, err)
 			}
 			return
 		}
@@ -576,7 +576,7 @@ func (s *Server) handleControlMessage(conn *Conn, payload []byte) {
 	case "select_area":
 		s.claimFrameSource(conn)
 		if err := eng.SelectArea(ctx, msg.AreaID); err != nil {
-			log.Printf("lightsync: select_area %s: %v", msg.AreaID, err)
+			log.Printf("huemux: select_area %s: %v", msg.AreaID, err)
 		}
 	case "stop":
 		eng.Stop(ctx)
@@ -584,14 +584,14 @@ func (s *Server) handleControlMessage(conn *Conn, payload []byte) {
 	case "settings":
 		var settings config.AreaSettings
 		if err := json.Unmarshal(msg.Settings, &settings); err != nil {
-			log.Printf("lightsync: bad settings payload: %v", err)
+			log.Printf("huemux: bad settings payload: %v", err)
 			return
 		}
 		eng.UpdateSettings(settings)
 	case "identify":
 		if msg.LightRID != "" {
 			if err := eng.Identify(ctx, msg.LightRID); err != nil {
-				log.Printf("lightsync: identify %s: %v", msg.LightRID, err)
+				log.Printf("huemux: identify %s: %v", msg.LightRID, err)
 			}
 		}
 	}
@@ -682,7 +682,7 @@ func (s *Server) runPair(bridgeIP string) {
 	s.pairMu.Unlock()
 
 	hostname, _ := os.Hostname()
-	username, clientkey, err := hue.Pair(ctx, bridgeIP, "lightsync#"+hostname, 60*time.Second)
+	username, clientkey, err := hue.Pair(ctx, bridgeIP, "huemux#"+hostname, 60*time.Second)
 	if err != nil {
 		s.pairFail(err.Error())
 		return

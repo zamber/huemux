@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <meta name="color-scheme" content="light dark">
 <meta name="theme-color" content="#000000" id="theme-color-meta">
-<title>lightsync — Sync</title>
+<title>HueMux — Sync</title>
 <script>
 (function() {
   var DARK = '#000000', LIGHT = '#f7f3ea';
@@ -26,7 +26,7 @@
 <link rel="stylesheet" href="/style.css">
 </head>
 <body>
-<lightsync-header active="sync"></lightsync-header>
+<huemux-header active="sync"></huemux-header>
 
 <main id="app-main">
   <section id="pairing-panel" hidden>
@@ -59,7 +59,7 @@
     <button id="start-btn" disabled data-i18n="sync.start">Start sync</button>
     <button id="stop-btn" disabled data-i18n="sync.stop">Stop</button>
     <button id="change-source-btn" disabled data-i18n="sync.changeSource">Change source</button>
-    <span id="conn-dot" class="dot" title="connection to lightsync"></span>
+    <span id="conn-dot" class="dot" title="connection to HueMux"></span>
     <p id="area-warning" class="warning" hidden></p>
   </section>
 
@@ -233,7 +233,7 @@
 <script src="/shared/i18n.js"></script>
 <script src="/shared/header.js"></script>
 <script src="/shared/color.js"></script>
-<script>LightsyncI18n.init();</script>
+<script>HueMuxI18n.init();</script>
 <script src="/app.js"></script>
 </body>
 </html>

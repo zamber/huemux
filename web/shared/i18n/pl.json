@@ -1,5 +1,5 @@
 {
-  "app": { "name": "lightsync" },
+  "app": { "name": "HueMux" },
   "nav": { "lights": "Światła", "sync": "Synchronizacja" },
   "theme": {
     "titleSystem": "Motyw: systemowy (kliknij, aby zmienić)",

@@ -30,10 +30,16 @@ import (
 // v1 always returns the primary screen — see the matching note in
 // web/app.js. A real source picker is a natural follow-up.
 const displayMediaPatch = `function onReady () {
-    // lightsync: patched in by cmd/lightsync-desktop's custom provisioner
+    // lightsync: patched in by cmd/huemux-desktop's custom provisioner
     // (see provisioner.go) so getDisplayMedia() works with no picker UI.
     // desktopCapturer is main-process-only; this is the only place it can
     // be wired up to what a page's getDisplayMedia() call receives.
+    //
+    // NOTE the "lightsync:" prefix on this comment (and the pipeWireCapturePatch
+    // one below) is an idempotency marker patchIndexJS checks for literally —
+    // kept as-is across the HueMux rename specifically so it keeps matching
+    // installs already patched before the rename, rather than double-patching
+    // them. Not a leftover, not a bug: see pipeWireCapturePatchMarker's comment.
     try {
         electron.session.defaultSession.setDisplayMediaRequestHandler(function (request, callback) {
             electron.desktopCapturer.getSources({ types: ['screen'] }).then(function (sources) {
@@ -41,7 +47,7 @@ const displayMediaPatch = `function onReady () {
             }).catch(function () { callback({}) })
         }, { useSystemPicker: false })
     } catch (e) {
-        console.error('lightsync: setDisplayMediaRequestHandler failed:', e)
+        console.error('huemux: setDisplayMediaRequestHandler failed:', e)
     }
 `
 
@@ -71,7 +77,7 @@ const electronDestructureMarker = "const {app, BrowserWindow, ipcMain, Menu, Men
 // programmatically. That's a platform constraint, not something fixable
 // from this side.
 const pipeWireCapturePatch = `const {app, BrowserWindow, ipcMain, Menu, MenuItem, Tray, dialog, Notification} = electron
-// lightsync: pipewire capture switch, patched in by cmd/lightsync-desktop's
+// lightsync: pipewire capture switch, patched in by cmd/huemux-desktop's
 // custom provisioner (see provisioner.go's pipeWireCapturePatch).
 app.commandLine.appendSwitch('enable-features', 'WebRTCPipeWireCapturer')
 app.commandLine.appendSwitch('ozone-platform-hint', 'auto')
@@ -81,7 +87,13 @@ app.commandLine.appendSwitch('ozone-platform-hint', 'auto')
 // patch's own "lightsync: patched in by" marker text below — reusing the
 // same substring in both would make patchIndexJS unable to tell the two
 // patches apart (caught by a throwaway idempotency test against a real,
-// already-once-patched cache file before this constant existed).
+// already-once-patched cache file before this constant existed). Both
+// markers keep their pre-rename "lightsync:" prefix on purpose — renaming
+// either to "huemux:" would make this program unable to recognize an
+// install already patched under the old name, and re-patch (not
+// double-patch, thanks to the bytes.Contains checks below, but there's no
+// upside to forcing that) on every HueMux user's very first post-rename
+// launch for zero visible benefit, since nothing here is ever user-facing.
 const pipeWireCapturePatchMarker = "lightsync: pipewire capture switch"
 
 // patchIndexJS splices both the PipeWire-capture and display-media patches

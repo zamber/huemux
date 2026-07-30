@@ -16,7 +16,7 @@ type LinearColor struct{ R, G, B float64 }
 const deadband = 1.0 / 512
 
 // sceneCutThreshold: mean absolute change across all zones' luma, in a
-// single tick, above which lightsync treats it as a hard cut and snaps
+// single tick, above which huemux treats it as a hard cut and snaps
 // instead of easing. Without this a hard cut from dark to bright arrives
 // visibly late, softened by the averaging window meant for ordinary motion.
 const sceneCutThreshold = 0.35

@@ -10,8 +10,8 @@ import (
 	"context"
 	"sync"
 
-	"lights.lan/lightsync/internal/config"
-	"lights.lan/lightsync/internal/hue"
+	"github.com/zamber/huemux/internal/config"
+	"github.com/zamber/huemux/internal/hue"
 )
 
 // Light is the UI-facing shape of a light — flattened and enriched (room

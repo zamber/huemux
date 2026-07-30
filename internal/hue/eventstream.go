@@ -47,7 +47,7 @@ func (c *Client) SubscribeEvents(ctx context.Context) <-chan Event {
 				backoff = time.Second
 			}
 			if err != nil {
-				log.Printf("lightsync: eventstream disconnected: %v; retrying in %s", err, backoff)
+				log.Printf("huemux: eventstream disconnected: %v; retrying in %s", err, backoff)
 			}
 			select {
 			case <-ctx.Done():
@@ -105,7 +105,7 @@ func (c *Client) streamEventsOnce(ctx context.Context, out chan<- Event) error {
 			var events []Event
 			payload := strings.TrimSpace(strings.TrimPrefix(line, "data:"))
 			if err := json.Unmarshal([]byte(payload), &events); err != nil {
-				log.Printf("lightsync: eventstream: bad event payload: %v", err)
+				log.Printf("huemux: eventstream: bad event payload: %v", err)
 				continue
 			}
 			for _, e := range events {

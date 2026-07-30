@@ -89,7 +89,7 @@ func (c *Client) doV2(ctx context.Context, method, path string, body any, out an
 }
 
 // BridgeInfo is the subset of the unauthenticated /api/config endpoint
-// lightsync needs, mainly to reject bridges too old to support Entertainment.
+// huemux needs, mainly to reject bridges too old to support Entertainment.
 type BridgeInfo struct {
 	Name       string `json:"name"`
 	ModelID    string `json:"modelid"`
@@ -144,7 +144,7 @@ type pairResult struct {
 // requested but the link button has not been pressed yet."
 const linkButtonNotPressed = 101
 
-// Pair registers lightsync with the bridge, polling every 2s while the user
+// Pair registers huemux with the bridge, polling every 2s while the user
 // presses the physical link button, and gives up after timeout.
 //
 // generateclientkey is mandatory: without it the bridge issues a username

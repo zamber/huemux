@@ -205,22 +205,22 @@ async function loadAreas() {
   if (!areas || areas.length === 0) {
     const opt = document.createElement('option');
     opt.value = '';
-    opt.textContent = LightsyncI18n.t('sync.noAreasFound');
+    opt.textContent = HueMuxI18n.t('sync.noAreasFound');
     els.areaSelect.appendChild(opt);
     return;
   }
   for (const a of areas) {
     const opt = document.createElement('option');
     opt.value = a.id;
-    const busy = a.active_streamer ? LightsyncI18n.t('sync.areaInUse') : '';
-    const typeLabel = LightsyncI18n.t(AREA_TYPE_KEYS[a.configuration_type] || 'sync.configTypeOther');
-    opt.textContent = `${a.metadata.name} — ${typeLabel} · ${LightsyncI18n.t('sync.status.channels', { n: a.channels.length })}${busy}`;
+    const busy = a.active_streamer ? HueMuxI18n.t('sync.areaInUse') : '';
+    const typeLabel = HueMuxI18n.t(AREA_TYPE_KEYS[a.configuration_type] || 'sync.configTypeOther');
+    opt.textContent = `${a.metadata.name} — ${typeLabel} · ${HueMuxI18n.t('sync.status.channels', { n: a.channels.length })}${busy}`;
     els.areaSelect.appendChild(opt);
   }
   if (!syncing) els.startBtn.disabled = false;
 }
 
-document.addEventListener('lightsync:langchange', loadAreas);
+document.addEventListener('huemux:langchange', loadAreas);
 
 // --- Scenes ------------------------------------------------------------
 // Compact, collapsed-by-default disclosure near the calibration preview —
@@ -266,7 +266,7 @@ els.scenesStrip.addEventListener('click', (e) => {
   send({ type: 'scene_recall', rid: chip.dataset.sceneId });
 });
 
-document.addEventListener('lightsync:langchange', () => {
+document.addEventListener('huemux:langchange', () => {
   renderScenesStrip();
   if (latestStatus) renderStatus(latestStatus);
 });
@@ -315,9 +315,9 @@ els.changeSourceBtn.addEventListener('click', async () => {
 });
 
 // getDisplayMedia() unconditionally, in the browser and under the optional
-// Electron wrapper (cmd/lightsync-desktop) alike. This is the whole payoff
+// Electron wrapper (cmd/huemux-desktop) alike. This is the whole payoff
 // of that wrapper: Electron's main process registers a
-// setDisplayMediaRequestHandler (see cmd/lightsync-desktop/provisioner.go)
+// setDisplayMediaRequestHandler (see cmd/huemux-desktop/provisioner.go)
 // that intercepts this exact call and hands back the primary screen with no
 // picker UI, no desktopCapturer plumbing needed here — desktopCapturer
 // itself is main-process-only in modern Electron and simply isn't reachable
@@ -502,7 +502,7 @@ els.preview.addEventListener('click', (ev) => {
 // --- Status readout ---------------------------------------------------------
 
 function renderStatus(s) {
-  const t = LightsyncI18n.t;
+  const t = HueMuxI18n.t;
   els.liveBadge.hidden = !s.snapshot.StreamActive;
   const rows = [
     [t('sync.status.bridge'), `${s.snapshot.BridgeIP} ${t(s.snapshot.BridgeConnected ? 'sync.status.connected' : 'sync.status.disconnected')} · ${t('sync.status.handshake', { ms: s.snapshot.HandshakeMS })}`],

@@ -12,7 +12,7 @@ import (
 // config.json/settings.json, same debounced-flush idiom as Store in
 // settings.go. Room favourites use the "room:<rid>" prefix convention
 // already established by lights-ui, so importing its existing favourites
-// data (a handful of rows, hand-copied — see cmd/lightsync-desktop/README.md-
+// data (a handful of rows, hand-copied — see cmd/huemux-desktop/README.md-
 // style notes for the migration story) is a straight copy, not a transform.
 //
 // JSON, not SQLite: CGO_ENABLED=0 static builds rule out cgo-based SQLite
