@@ -1,0 +1,36 @@
+name: Release
+
+# Triggered by pushing a tag like v1.0.0 (git tag v1.0.0 && git push origin v1.0.0).
+# Builds both binaries (huemux, huemux-desktop) for every supported platform
+# from a single Linux runner — CGO_ENABLED=0 and pure-Go dependencies
+# (pion/dtls, go-astilectron) make that cross-compilation actually work,
+# no per-OS runner matrix needed. Frontend is plain HTML/CSS/JS embedded via
+# go:embed, so there's no separate JS build step either.
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write
+
+jobs:
+  build-and-release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+
+      - name: Build all platform binaries
+        run: |
+          make dist
+          make dist-desktop
+
+      - name: Create GitHub release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: dist/*
+          generate_release_notes: true
