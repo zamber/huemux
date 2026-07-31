@@ -24,8 +24,12 @@
     "manualHint": "Potrzebne, jeśli mostek znajduje się w innym segmencie sieci niż ten komputer (częste w izolowanych sieciach VLAN dla IoT) — adres IP znajdziesz w aplikacji Hue w Ustawienia → Mój mostek.",
     "manualPlaceholder": "192.168.1.42",
     "manualButton": "Połącz z tym adresem IP",
-    "hintLights": "Ten most nie został jeszcze sparowany — parowanie odbywa się na stronie <a href=\"/sync.html\">Synchronizacja</a>.",
-    "goToSync": "Przejdź do Synchronizacji"
+    "found": "Znaleziono mostek:",
+    "notFound": "Nie znaleziono mostka automatycznie — wpisz jego adres IP poniżej.",
+    "inProgress": "Parowanie…",
+    "pairAction": "Połącz",
+    "bridgeFallbackName": "Mostek Hue",
+    "tooOld": "zbyt stary, aby obsługiwać strefy rozrywki"
   },
   "sync": {
     "area": "Strefa rozrywki",

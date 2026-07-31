@@ -1,0 +1,53 @@
+/* <huemux-pairing> — shared by sync.html and lights.html.
+   Moved out of style.css (which is sync-only) when pairing became a
+   precondition both pages have to be able to satisfy. Selectors are scoped to
+   the element rather than to #pairing-panel, so a page can mount it under any
+   id, or more than once, without the styling depending on that choice. */
+
+huemux-pairing {
+  display: block;
+  max-width: 480px;
+  margin: 2rem auto;
+  text-align: left;
+}
+huemux-pairing[hidden] { display: none; }
+
+huemux-pairing h2 {
+  margin-top: 0;
+  font-size: 1rem;
+  text-transform: none;
+  letter-spacing: normal;
+  color: var(--ink);
+}
+
+huemux-pairing .bridge-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.6rem;
+  padding: 0.6rem 0.8rem;
+  background: var(--surface-alt);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  margin-bottom: 0.5rem;
+}
+huemux-pairing .bridge-info { display: flex; flex-direction: column; gap: 0.15rem; }
+huemux-pairing .bridge-name { font-weight: 600; }
+huemux-pairing .bridge-ip { color: var(--ink-muted); font-size: 0.8rem; }
+huemux-pairing .bridge-card.unsupported { opacity: 0.5; }
+
+huemux-pairing details { margin-top: 1rem; }
+huemux-pairing summary { cursor: pointer; color: var(--ink-muted); font-size: 0.85rem; }
+
+huemux-pairing .manual-ip-row { display: flex; gap: 0.5rem; margin-top: 0.6rem; }
+huemux-pairing .manual-ip-row input {
+  flex: 1;
+  padding: 0.4rem;
+  background: var(--surface-alt);
+  color: var(--ink);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  /* 16px stops iOS Safari zooming the viewport on focus; the panel is the
+     first thing a phone user touches, so a zoom lurch here is a bad opener. */
+  font-size: 16px;
+}

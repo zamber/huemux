@@ -62,24 +62,12 @@ button:disabled { background: var(--surface-alt); color: var(--ink-muted); curso
 #stop-btn, #change-source-btn { background: var(--surface-alt); color: var(--ink); }
 #stop-btn:hover, #change-source-btn:hover { background: var(--card-hover); }
 
-#pairing-panel { grid-column: 1 / -1; max-width: 480px; margin: 2rem auto; text-align: left; }
-#pairing-panel h2 { margin-top: 0; font-size: 1rem; text-transform: none; letter-spacing: normal; color: var(--ink); }
-.bridge-card {
-  display: flex; align-items: center; justify-content: space-between; gap: 0.6rem;
-  padding: 0.6rem 0.8rem; background: var(--surface-alt); border: 1px solid var(--border);
-  border-radius: 6px; margin-bottom: 0.5rem;
-}
-.bridge-card .bridge-info { display: flex; flex-direction: column; gap: 0.15rem; }
-.bridge-card .bridge-name { font-weight: 600; }
-.bridge-card .bridge-ip { color: var(--ink-muted); font-size: 0.8rem; }
-.bridge-card.unsupported { opacity: 0.5; }
-#pairing-manual { margin-top: 1rem; }
-#pairing-manual summary { cursor: pointer; color: var(--ink-muted); font-size: 0.85rem; }
-.manual-ip-row { display: flex; gap: 0.5rem; margin-top: 0.6rem; }
-.manual-ip-row input {
-  flex: 1; padding: 0.4rem; background: var(--surface-alt); color: var(--ink);
-  border: 1px solid var(--border); border-radius: 4px;
-}
+/* Pairing panel styling lives in shared/pairing.css now that <huemux-pairing>
+   is shared with lights.html. This one rule stays here because it is about
+   *this page's* two-column grid, not about the panel: without it the element
+   lands in the first column instead of spanning both, which left it wedged
+   against the left edge rather than centred. */
+huemux-pairing { grid-column: 1 / -1; }
 
 #area-panel { grid-column: 1 / -1; display: flex; align-items: center; gap: 0.6rem; flex-wrap: wrap; }
 #area-panel label { margin: 0; }

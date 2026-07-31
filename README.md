@@ -242,9 +242,29 @@ make dist-desktop    # same, for the desktop wrapper
 
 One external dependency for the core: `pion/dtls`. The desktop wrapper adds
 `go-astilectron`. The WebSocket server, colour pipeline, and UI are all
-stdlib and plain JavaScript — no build step for the frontend.
+stdlib and plain JavaScript — no bundler, no transpiler, no `package.json`.
 
-See [PACKAGING.md](PACKAGING.md) for release signing, semver, and
+**But there is still a build step for frontend changes.** `web/` is compiled
+into the binary with `go:embed` (see `assets.go`), so the running server keeps
+serving whatever HTML/CSS/JS existed when it was *built*. Editing a file under
+`web/` and reloading the browser changes nothing — which reads exactly like
+"my fix didn't work" rather than "you're testing an old binary".
+
+Rebuild and restart after every frontend edit:
+
+```bash
+make dev && ./huemux
+```
+
+To confirm you are actually testing what you just wrote, ask the server rather
+than the filesystem:
+
+```bash
+curl -s localhost:7654/shared/pairing.js | grep somethingYouJustAdded
+```
+
+See [AGENTS.md](AGENTS.md) for the full development and verification workflow,
+and [PACKAGING.md](PACKAGING.md) for release signing, semver, and
 Homebrew/Flatpak/AppImage packaging.
 
 ## Layout

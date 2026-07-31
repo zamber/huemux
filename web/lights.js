@@ -89,6 +89,11 @@ function send(obj) {
   if (wsReady) ws.send(JSON.stringify(obj));
 }
 
+// <huemux-pairing> is transport-agnostic — it emits the message it wants sent
+// and each host page puts it on its own WebSocket. See shared/pairing.js.
+let discoveryStarted = false;
+els.unpaired.addEventListener('huemux:pair-send', (ev) => send(ev.detail));
+
 function handleMessage(msg) {
   switch (msg.type) {
     case 'status':
@@ -96,6 +101,14 @@ function handleMessage(msg) {
         ready = false;
         els.unpaired.hidden = false;
         els.app.hidden = true;
+        // Kick off discovery once, the same way sync.html does. Without this
+        // the panel would sit on "no bridge found" until the user pressed
+        // Search again, since discovery is client-initiated.
+        if (!discoveryStarted) {
+          discoveryStarted = true;
+          send({ type: 'discover_bridges' });
+        }
+        els.unpaired.update(msg.pairing || {});
         break;
       }
       if (!ready) {

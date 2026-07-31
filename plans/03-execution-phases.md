@@ -11,7 +11,7 @@ reviewable commit or small series, and to leave `main` working.
 |---|---|---|
 | 1 | `internal/appconfig` — schema, file, flags | **done** |
 | 2 | Profiles, server side | **done** |
-| 3 | Extract pairing UI into `web/shared/` | not started |
+| 3 | Extract pairing UI into `web/shared/` | **done** |
 | 4 | Profile-aware UI + settings screen | not started |
 | 5 | Listen address, Origin, auth | not started |
 | 6 | TLS modes | not started |
@@ -93,8 +93,28 @@ Pairing currently exists **only** in `sync.html` + `app.js`
 `--profile=lights` there is no Sync page, so a fresh install cannot pair at
 all.
 
-**Done when** a fresh, unpaired `--profile=lights` install can discover, pair,
-and control lights without ever loading `sync.html`.
+**Done.** `<huemux-pairing>` (`web/shared/pairing.js` + `pairing.css`) is now
+mounted by both pages. It is transport-agnostic — it emits a
+`huemux:pair-send` event carrying the message to put on the wire, and each
+page forwards that to its own WebSocket, since sync.html and lights.html each
+open one and a callback property would have depended on mount ordering.
+
+Verified in a browser against a real bridge with an unpaired
+`--profile=lights` server: the lights page discovers the bridge, renders the
+card, and the full event contract works (rescan, manual IP with whitespace
+trimming, correctly *not* sending on a blank IP, and the per-bridge Pair
+button). Sync page unchanged, zero console errors.
+
+Two bugs caught by actually exercising it rather than eyeballing:
+
+- Six pairing strings were hardcoded English in `app.js` and never
+  translated — including one where a `pairing.searching` key already existed
+  and simply wasn't used. All six now have `en`/`pl` entries.
+- The component guarded on `window.HueMuxI18n`, which is **always undefined**:
+  `i18n.js` declares `const HueMuxI18n` at the top level of a classic script,
+  and a top-level `const` is not a property of `window`. Every dynamic string
+  silently fell through to its English fallback. Invisible unless you actually
+  switch language, which is exactly why it got switched.
 
 ## Phase 4 — Profile-aware UI + settings screen
 
