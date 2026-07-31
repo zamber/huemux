@@ -107,3 +107,19 @@ class HueMuxHeader extends HTMLElement {
 }
 
 customElements.define('huemux-header', HueMuxHeader);
+
+// Any other in-page link to /sync.html or /lights.html (e.g. lights.html's
+// unpaired-panel "Go to Sync" links) needs the same shell-aware handling as
+// the nav links above, or clicking it navigates only the iframe itself —
+// leaving the shell's own top-level header/URL pointing at the tab you
+// clicked away from while the iframe you're looking at shows the other
+// page's content. Same-origin iframe, so a direct window.top reference
+// works without postMessage.
+if (window.self !== window.top) {
+  document.addEventListener('click', (e) => {
+    const a = e.target.closest('a[href="/lights.html"], a[href="/sync.html"]');
+    if (!a || !window.top.HueMuxShell) return;
+    e.preventDefault();
+    window.top.HueMuxShell.switchTab(a.getAttribute('href').indexOf('lights') !== -1 ? 'lights' : 'sync');
+  });
+}

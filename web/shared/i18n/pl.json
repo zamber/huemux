@@ -1,6 +1,11 @@
 {
-  "app": { "name": "HueMux" },
-  "nav": { "lights": "Światła", "sync": "Synchronizacja" },
+  "app": {
+    "name": "HueMux"
+  },
+  "nav": {
+    "lights": "Światła",
+    "sync": "Synchronizacja"
+  },
   "theme": {
     "titleSystem": "Motyw: systemowy (kliknij, aby zmienić)",
     "titleLight": "Motyw: jasny (kliknij, aby zmienić)",
@@ -18,7 +23,9 @@
     "manualSummary": "Wpisz adres IP mostka ręcznie",
     "manualHint": "Potrzebne, jeśli mostek znajduje się w innym segmencie sieci niż ten komputer (częste w izolowanych sieciach VLAN dla IoT) — adres IP znajdziesz w aplikacji Hue w Ustawienia → Mój mostek.",
     "manualPlaceholder": "192.168.1.42",
-    "manualButton": "Połącz z tym adresem IP"
+    "manualButton": "Połącz z tym adresem IP",
+    "hintLights": "Ten most nie został jeszcze sparowany — parowanie odbywa się na stronie <a href=\"/sync.html\">Synchronizacja</a>.",
+    "goToSync": "Przejdź do Synchronizacji"
   },
   "sync": {
     "area": "Strefa rozrywki",

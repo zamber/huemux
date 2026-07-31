@@ -66,6 +66,12 @@ const HueMuxI18n = (() => {
     root.querySelectorAll('[data-i18n]').forEach((el) => {
       el.textContent = t(el.getAttribute('data-i18n'));
     });
+    // Like data-i18n, but for strings that need embedded markup (e.g. a link
+    // in the middle of a sentence) — the dictionary value is trusted, static
+    // HTML from our own JSON files, not user input, so innerHTML is safe here.
+    root.querySelectorAll('[data-i18n-html]').forEach((el) => {
+      el.innerHTML = t(el.getAttribute('data-i18n-html'));
+    });
     root.querySelectorAll('[data-i18n-attr]').forEach((el) => {
       el.getAttribute('data-i18n-attr').split(',').forEach((pair) => {
         const parts = pair.split(':');

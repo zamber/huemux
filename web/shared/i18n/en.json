@@ -1,6 +1,11 @@
 {
-  "app": { "name": "HueMux" },
-  "nav": { "lights": "Lights", "sync": "Sync" },
+  "app": {
+    "name": "HueMux"
+  },
+  "nav": {
+    "lights": "Lights",
+    "sync": "Sync"
+  },
   "theme": {
     "titleSystem": "Theme: system (click to change)",
     "titleLight": "Theme: light (click to change)",
@@ -18,7 +23,9 @@
     "manualSummary": "Enter bridge IP manually",
     "manualHint": "Needed if your bridge is on a different network segment than this computer (common for isolated IoT VLANs) — find the IP in the Hue app under Settings → My Bridge.",
     "manualPlaceholder": "192.168.1.42",
-    "manualButton": "Pair with this IP"
+    "manualButton": "Pair with this IP",
+    "hintLights": "This bridge hasn't been paired yet — pairing lives on the <a href=\"/sync.html\">Sync</a> page.",
+    "goToSync": "Go to Sync"
   },
   "sync": {
     "area": "Entertainment zone",
