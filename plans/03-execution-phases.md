@@ -9,7 +9,7 @@ reviewable commit or small series, and to leave `main` working.
 
 | # | Phase | Status |
 |---|---|---|
-| 1 | `internal/appconfig` — schema, file, flags | **in progress** |
+| 1 | `internal/appconfig` — schema, file, flags | **done** |
 | 2 | Profiles, server side | not started |
 | 3 | Extract pairing UI into `web/shared/` | not started |
 | 4 | Profile-aware UI + settings screen | not started |

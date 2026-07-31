@@ -6,7 +6,9 @@ import (
 	"bufio"
 	"context"
 	"encoding/hex"
+	"flag"
 	"fmt"
+	"log"
 	"os"
 	"os/exec"
 	"os/signal"
@@ -14,6 +16,7 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/zamber/huemux/internal/appconfig"
 	"github.com/zamber/huemux/internal/config"
 	"github.com/zamber/huemux/internal/debuglog"
 	"github.com/zamber/huemux/internal/engine"
@@ -51,7 +54,7 @@ func main() {
 	}
 
 	if len(args) == 0 {
-		cmdRun(false)
+		runWithFlags(nil)
 		return
 	}
 
@@ -62,16 +65,54 @@ func main() {
 		cmdAreas(args[1:])
 	case "test":
 		cmdTest(args[1:])
-	case "-v", "--verbose":
-		cmdRun(true)
 	case "-h", "--help":
 		usage()
 	case "version", "--version":
 		fmt.Println("huemux " + version)
 	default:
+		// Not a subcommand, so this is the run path with flags — including
+		// the long-standing -v/--verbose, which is now a registered flag
+		// rather than its own switch case so it can be combined with the
+		// configuration flags below.
+		runWithFlags(args)
+	}
+}
+
+// runWithFlags parses the run-mode flags, resolves the effective
+// configuration (defaults, then app.json, then whichever flags were actually
+// passed), and starts the service.
+func runWithFlags(args []string) {
+	fs := flag.NewFlagSet("huemux", flag.ContinueOnError)
+	fs.Usage = usage
+	verbose := fs.Bool("verbose", false, "flat one-line status output instead of a repainting block")
+	verboseShort := fs.Bool("v", false, "alias for --verbose")
+	cfgFlags := appconfig.RegisterFlags(fs)
+
+	if err := fs.Parse(args); err != nil {
+		os.Exit(1) // fs already printed the error and usage
+	}
+	// A leftover positional argument means an unrecognised subcommand. Without
+	// this the flag package would happily ignore it and start the server,
+	// turning a typo like "huemux aeras" into a silent surprise.
+	if fs.NArg() > 0 {
+		fmt.Fprintf(os.Stderr, "huemux: unknown command %q\n\n", fs.Arg(0))
 		usage()
 		os.Exit(1)
 	}
+
+	dir, err := config.Dir()
+	if err != nil {
+		fatalf("resolving config dir: %v", err)
+	}
+	cfg, err := appconfig.Resolve(dir, cfgFlags)
+	if err != nil {
+		fatalf("%v", err)
+	}
+	for _, w := range cfg.Warnings() {
+		fmt.Fprintln(os.Stderr, "huemux: warning: "+w)
+	}
+
+	cmdRun(cfg, *verbose || *verboseShort)
 }
 
 func usage() {
@@ -84,7 +125,13 @@ Usage:
   huemux [--verbose]             Run the service (default: http://127.0.0.1:7654)
   huemux -debug ...              Also write a detailed debug log to a file (path printed on startup;
                                   see KNOWN_ISSUES.md for the exact location per OS) — combine with any
-                                  of the above, e.g. "huemux -debug -v"`)
+                                  of the above, e.g. "huemux -debug -v"
+
+Configuration flags (run mode; override ~/.config/huemux/app.json):
+  --profile=full|lights|sync     Which half of the app to run (default full)
+  --listen-host, --listen-port   Bind address (default 127.0.0.1:7654)
+  --auth=none|token, --token     Authentication for non-loopback callers
+  --tls=off|selfsigned|files     TLS, with --tls-cert / --tls-key for "files"`)
 }
 
 // --- pair ------------------------------------------------------------------
@@ -304,7 +351,16 @@ func turnOnChannelLights(ctx context.Context, client *hue.Client, channels []hue
 
 // --- run -----------------------------------------------------------------
 
-func cmdRun(verbose bool) {
+func cmdRun(cfg appconfig.Config, verbose bool) {
+	// Resolved but not yet acted on: profile gating and the non-loopback
+	// listen/auth/TLS paths land in later phases (see plans/03). Logged under
+	// -debug so a bug report shows what the process actually resolved, rather
+	// than what the reporter believes their config file says.
+	if debuglog.Enabled {
+		log.Printf("huemux: config profile=%s listen=%s:%d auth=%s tls=%s",
+			cfg.Profile, cfg.Listen.Host, cfg.Listen.Port, cfg.Auth.Mode, cfg.TLS.Mode)
+	}
+
 	store, err := config.NewStore()
 	if err != nil {
 		fatalf("loading settings: %v", err)

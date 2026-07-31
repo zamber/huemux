@@ -13,7 +13,7 @@ page.
 |---|---|---|
 | [01 — Deployment profiles, config, and access](01-config-profiles-and-access.md) | proposed | Run only the half you need (`--profile=lights\|sync\|full`), a centralized config schema shared by CLI/file/runtime API/settings UI, and the listen-address, auth, and TLS work needed to expose HueMux beyond loopback. |
 | [02 — Standalone Android app](02-android-standalone.md) | proposed | Ship the Go core on the phone via `gomobile bind` with a WebView front end — the same trick `huemux-desktop` plays with Electron. Lights control first, `MediaProjection` screen sync as a later milestone. |
-| [03 — Execution phases](03-execution-phases.md) | **phase 1 in progress** | The sequenced work breakdown across 01 and 02, with acceptance criteria and running status. Start here to see what's actually being worked on. |
+| [03 — Execution phases](03-execution-phases.md) | **phase 1 done** | The sequenced work breakdown across 01 and 02, with acceptance criteria and running status. Start here to see what's actually being worked on. |
 
 ## Order
 
