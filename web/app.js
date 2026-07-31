@@ -16,12 +16,6 @@ const els = {
   statusGrid: document.getElementById('status-grid'),
   app: document.getElementById('app'),
   pairingPanel: document.getElementById('pairing-panel'),
-  pairingMessage: document.getElementById('pairing-message'),
-  pairingError: document.getElementById('pairing-error'),
-  pairingDiscovered: document.getElementById('pairing-discovered'),
-  pairingRescanBtn: document.getElementById('pairing-rescan-btn'),
-  pairingManualIP: document.getElementById('pairing-manual-ip'),
-  pairingManualBtn: document.getElementById('pairing-manual-btn'),
   scenesDetails: document.getElementById('scenes-details'),
   scenesStrip: document.getElementById('sync-scenes-strip'),
 };
@@ -103,7 +97,7 @@ function handleControlMessage(msg) {
       discoveryStarted = true;
       send({ type: 'discover_bridges' });
     }
-    renderPairing(msg.pairing || {});
+    els.pairingPanel.update(msg.pairing || {});
     return;
   }
 
@@ -126,65 +120,11 @@ function handleControlMessage(msg) {
 
 // --- Pairing ---------------------------------------------------------------
 
-function renderPairing(p) {
-  if (p.error) {
-    els.pairingError.textContent = p.error;
-    els.pairingError.hidden = false;
-  } else {
-    els.pairingError.hidden = true;
-  }
-
-  if (p.pairing) {
-    els.pairingMessage.textContent = p.message || 'Pairing…';
-  } else if (p.discovering) {
-    els.pairingMessage.textContent = 'Searching for a bridge on your network…';
-  } else if (p.discovered && p.discovered.length > 0) {
-    els.pairingMessage.textContent = 'Found a bridge:';
-  } else {
-    els.pairingMessage.textContent = 'No bridge found automatically — enter its IP manually below.';
-  }
-
-  els.pairingDiscovered.innerHTML = '';
-  for (const b of p.discovered || []) {
-    const card = document.createElement('div');
-    card.className = 'bridge-card' + (b.supported ? '' : ' unsupported');
-
-    const info = document.createElement('div');
-    info.className = 'bridge-info';
-    const name = document.createElement('span');
-    name.className = 'bridge-name';
-    name.textContent = b.name || 'Hue Bridge';
-    const ip = document.createElement('span');
-    ip.className = 'bridge-ip';
-    ip.textContent = b.ip + (b.supported ? '' : ' — too old for Entertainment areas');
-    info.appendChild(name);
-    info.appendChild(ip);
-    card.appendChild(info);
-
-    if (b.supported) {
-      const btn = document.createElement('button');
-      btn.textContent = p.pairing ? 'Pairing…' : 'Pair';
-      btn.disabled = !!p.pairing;
-      btn.addEventListener('click', () => send({ type: 'pair', bridge_ip: b.ip }));
-      card.appendChild(btn);
-    }
-    els.pairingDiscovered.appendChild(card);
-  }
-
-  els.pairingRescanBtn.disabled = !!p.discovering || !!p.pairing;
-  els.pairingManualBtn.disabled = !!p.pairing;
-}
-
-els.pairingRescanBtn.addEventListener('click', () => send({ type: 'discover_bridges' }));
-
-els.pairingManualBtn.addEventListener('click', () => {
-  const ip = els.pairingManualIP.value.trim();
-  if (!ip) return;
-  send({ type: 'pair', bridge_ip: ip });
-});
-els.pairingManualIP.addEventListener('keydown', (ev) => {
-  if (ev.key === 'Enter') els.pairingManualBtn.click();
-});
+// The panel itself is <huemux-pairing> (shared/pairing.js), shared with
+// lights.html so a lights-only profile can still pair. This page only has to
+// forward the element's outbound messages onto its own WebSocket and hand it
+// each status update.
+els.pairingPanel.addEventListener('huemux:pair-send', (ev) => send(ev.detail));
 
 // --- Areas ---------------------------------------------------------------
 

@@ -24,8 +24,12 @@
     "manualHint": "Needed if your bridge is on a different network segment than this computer (common for isolated IoT VLANs) — find the IP in the Hue app under Settings → My Bridge.",
     "manualPlaceholder": "192.168.1.42",
     "manualButton": "Pair with this IP",
-    "hintLights": "This bridge hasn't been paired yet — pairing lives on the <a href=\"/sync.html\">Sync</a> page.",
-    "goToSync": "Go to Sync"
+    "found": "Found a bridge:",
+    "notFound": "No bridge found automatically — enter its IP manually below.",
+    "inProgress": "Pairing…",
+    "pairAction": "Pair",
+    "bridgeFallbackName": "Hue Bridge",
+    "tooOld": "too old for Entertainment areas"
   },
   "sync": {
     "area": "Entertainment zone",
