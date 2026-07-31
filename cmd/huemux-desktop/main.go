@@ -94,10 +94,9 @@ func main() {
 	var eng *engine.Engine
 	var lights *lightctl.Service
 	if bridge, err := config.LoadBridge(); err == nil {
-		eng = engine.New(bridge, store)
-		lights = lightctl.New(bridge, favorites)
+		eng, lights = server.BuildPaired(cfg, bridge, store, favorites)
 	}
-	srv := server.New(store, favorites, eng, lights)
+	srv := server.New(cfg, store, favorites, eng, lights)
 	url, err := srv.ListenAndServe()
 	if err != nil {
 		fatalf("starting server: %v", err)
@@ -178,7 +177,7 @@ func runDesktop(url string) error {
 // existing. ---
 
 func runHeadless(srv *server.Server, store *config.Store, url string, verbose bool) {
-	if srv.Engine() == nil {
+	if !srv.Paired() {
 		fmt.Println("not paired yet — open the URL above to pair with your bridge")
 	}
 	openBrowser(url)
@@ -227,7 +226,12 @@ func runHeadless(srv *server.Server, store *config.Store, url string, verbose bo
 		case <-renderTick.C:
 			eng := srv.Engine()
 			if eng == nil {
-				printer.RenderUnpaired(url)
+				cfg := srv.Config()
+				if cfg.NeedsEngine() {
+					printer.RenderUnpaired(url)
+				} else {
+					printer.RenderNoEngine(url, string(cfg.Profile), srv.Paired())
+				}
 				continue
 			}
 			st := eng.Snapshot()

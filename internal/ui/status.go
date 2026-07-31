@@ -55,6 +55,26 @@ func (p *Printer) RenderUnpaired(url string) {
 	p.repaint(line)
 }
 
+// RenderNoEngine is the readout for a profile that deliberately runs without
+// the screen-sync engine. Distinct from RenderUnpaired because the absence of
+// an engine means two completely different things: on a sync-capable profile
+// it means "pair your bridge", but here it means "working as configured".
+// Reusing RenderUnpaired would have told an already-paired lights-only server
+// to go and pair itself, forever.
+func (p *Printer) RenderNoEngine(url string, profile string, paired bool) {
+	line := "huemux " + url + "  profile=" + profile
+	if paired {
+		line += " — light control ready (screen sync disabled by profile)"
+	} else {
+		line += " — not paired yet. Open the URL above in a browser to pair with your bridge."
+	}
+	if !p.isTTY || p.Verbose {
+		fmt.Println(line)
+		return
+	}
+	p.repaint(line)
+}
+
 func (p *Printer) repaint(block string) {
 	if p.lastLines > 0 {
 		fmt.Printf("\x1b[%dA", p.lastLines) // cursor up, so we repaint instead of scrolling
