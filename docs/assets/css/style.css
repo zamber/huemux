@@ -250,6 +250,29 @@ figure.shot figcaption {
 #releases .release-notes hr { margin: 1.2em 0; }
 #releases .release-notes p { margin: 0 0 0.8em; }
 
+/* Pre-releases: badged and visually demoted, so an untested alpha can never
+   be mistaken for the build a casual visitor should download. */
+#releases .release-badge {
+  font-size: 0.68rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  padding: 0.15em 0.5em;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  color: var(--ink-muted);
+  white-space: nowrap;
+}
+#releases .prereleases { margin-top: 1.5rem; }
+#releases .prereleases > summary {
+  cursor: pointer;
+  font-size: 0.9rem;
+  color: var(--ink-muted);
+  padding: 0.6rem 0;
+}
+#releases .prereleases > summary:hover { color: var(--ink); }
+#releases .release-pre { opacity: 0.92; }
+
 footer.site-footer {
   border-top: 1px solid var(--border);
   padding: 1.5rem clamp(1rem, 4vw, 3rem);

@@ -138,20 +138,41 @@ fetch('https://api.github.com/repos/zamber/huemux/releases')
       el.textContent = 'No releases published yet — check back soon, or build from source in the meantime.';
       return;
     }
-    el.innerHTML = releases.map((rel) => {
+    // Pre-releases are built and tested in CI but not exercised on real
+    // hardware, so they must never look like the thing to download. The
+    // newest stable is promoted above them; alphas are listed after, badged,
+    // and collapsed.
+    const stable = releases.filter((r) => !r.prerelease && !r.draft);
+    const pre = releases.filter((r) => r.prerelease && !r.draft);
+
+    const render = (rel) => {
       const date = new Date(rel.published_at).toLocaleDateString(undefined, { year: 'numeric', month: 'long', day: 'numeric' });
       const assets = (rel.assets || []).map((a) => {
         const mb = (a.size / 1024 / 1024).toFixed(1);
         return `<li><a href="${a.browser_download_url}">${a.name}</a> <span class="asset-size">${mb} MB</span></li>`;
       }).join('');
       const notes = rel.body ? `<div class="release-notes">${mdToHtml(rel.body)}</div>` : '';
+      const badge = rel.prerelease ? ' <span class="release-badge">pre-release</span>' : '';
       return `
-        <div class="release">
-          <h3>${rel.name || rel.tag_name} <span class="release-date">${date}</span></h3>
+        <div class="release${rel.prerelease ? ' release-pre' : ''}">
+          <h3>${rel.name || rel.tag_name}${badge} <span class="release-date">${date}</span></h3>
           <ul class="assets">${assets}</ul>
           ${notes}
         </div>`;
-    }).join('');
+    };
+
+    let html = stable.length
+      ? stable.map(render).join('')
+      : '<p>No stable release yet — build from source, or try a pre-release below.</p>';
+
+    if (pre.length) {
+      html += `
+        <details class="prereleases">
+          <summary>Pre-releases (${pre.length}) — built in CI, not tested on real hardware</summary>
+          ${pre.map(render).join('')}
+        </details>`;
+    }
+    el.innerHTML = html;
   })
   .catch(() => {
     document.getElementById('releases').innerHTML =
