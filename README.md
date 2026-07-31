@@ -79,6 +79,46 @@ version tries to capture your screen (System Settings → Privacy & Security
 → Screen Recording) — grant it to your terminal (browser version) or to
 HueMux.app (desktop version), then retry.
 
+## Command-line reference
+
+### `huemux`
+
+| Command / flag | What it does |
+|---|---|
+| `huemux` | Default mode: serves the UI at `http://127.0.0.1:7654` (or the next free port if that one's taken — the exact URL is always printed), opens it in your default browser, and runs the output loop. If you haven't paired yet, it serves a web-based pairing flow over the same connection instead of failing — no subcommand required. |
+| `huemux -v` / `huemux --verbose` | Same as the default mode, but the CLI status readout prints one flat, timestamp-free line per tick instead of repainting a live block in place with cursor-movement escapes. Use this when redirecting to a file or running under a service manager/systemd unit that doesn't handle those escapes. |
+| `huemux pair <bridge-ip>` | Register with a Hue bridge from the command line, for scripting or a headless box with no browser. Press the bridge's physical link button when prompted — you have 60s. Fails if the bridge is too old to support Entertainment areas (needs a square/v2 bridge). |
+| `huemux pair` (no IP) | Same, but auto-discovers candidate bridges on the local network first and lists their IPs rather than pairing immediately — run `huemux pair <ip>` again with one of them. |
+| `huemux areas` | Lists entertainment areas configured on the already-paired bridge: ID, name, configuration type, channel count, and `[in use]` if something (possibly another app) is already streaming to it. Requires pairing first. |
+| `huemux test <area-id>` | Proves the DTLS path to one entertainment area works, independent of any browser or capture: turns on every light behind that area's channels, cycles red/green/blue/white for 2s each, then holds for 60s sending only keepalive frames (no color commands) so you can confirm the bridge doesn't silently revert without constant traffic, then fades out cleanly. Use this to isolate "is the DTLS session itself broken" from "is screen capture broken." |
+| `huemux -debug` (combine with anything, e.g. `huemux -debug -v` or `huemux -debug pair 192.168.1.42`) | Writes a full debug log to a timestamped file — not just app-level log lines, but everything the process would otherwise print to its terminal, plus an unrecovered panic if one happens. See [Known issues](#known-issues) below for the exact path per OS and what to attach when reporting a bug. |
+| `huemux -h` / `huemux --help` | Prints the usage summary. |
+| `huemux version` / `huemux --version` | Prints the build version, baked in at release time by the Makefile from `git describe --tags` — matches the git tag a release binary was built from. |
+
+### `huemux-desktop`
+
+Every `huemux` flag/subcommand above works identically here — `--headless`
+(below) makes it *be* `huemux` for all practical purposes. Three flags are
+desktop-specific:
+
+| Flag | What it does |
+|---|---|
+| `huemux-desktop` | Opens a real desktop window (Electron) around the same core server as the browser version: real screen capture with no `getDisplayMedia()` picker dialog on X11/Windows/macOS, and a native app icon/window instead of a browser tab. First non-headless launch downloads Electron (~150MB) into your OS cache directory — needs internet access once, cached after that. |
+| `huemux-desktop --headless` | Skips the Electron window entirely and runs byte-for-byte the same loop as plain `huemux`, including its subcommands. For a headless server where you don't want to pay Electron's download size or GUI dependency for a build you'll never actually put a window on screen. |
+| `huemux-desktop --verbose` | Same flat-line-vs-repaint distinction as `huemux -v`. Only has a visible effect combined with `--headless` — the non-headless desktop window has its own UI, no CLI status block to render. |
+
+### Environment variables
+
+These are diagnostic escape hatches, not everyday configuration — most
+people never need any of them:
+
+| Variable | Applies to | Effect |
+|---|---|---|
+| `XDG_STATE_HOME` | both binaries, Linux/BSD only | Overrides where the `-debug` log directory lives (default `~/.local/state/huemux`). Standard XDG Base Directory variable, not HueMux-specific. |
+| `HUEMUX_DEVTOOLS=1` | `huemux-desktop`, non-headless | Opens Chrome DevTools on the app window at launch — for inspecting the page itself, separate from the `-debug` log's main-process output. |
+| `HUEMUX_OZONE_PLATFORM=x11` | `huemux-desktop`, Wayland sessions | Forces Chromium's ozone platform, routing screen capture through XWayland instead of native Wayland/PipeWire. A diagnostic for the green-preview bug in [Known issues](#known-issues) below — try it if you hit that symptom, since it isolates whether the bug is in Wayland's native capture path specifically. |
+| `HUEMUX_DISABLE_VULKAN=1` | `huemux-desktop`, Wayland sessions | Forces Chromium's ANGLE GL backend instead of Vulkan, while staying on native Wayland. The other diagnostic for the same bug — see Known issues for what each combination tells you. |
+
 ## Controls
 
 | Control | What it does |
