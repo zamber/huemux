@@ -1,4 +1,9 @@
 title: HueMux
 description: Lightweight, cross-platform frontend for Philips Hue — screen sync and full light control in one binary.
-theme: jekyll-theme-minimal
-show_downloads: false
+github_username: zamber
+
+# No `theme:` — this site uses its own _layouts/assets (see docs/README.md
+# in this folder, or just docs/_layouts/default.html + assets/css/style.css)
+# so it can be a fluid width on wide monitors, follow the app's own dark
+# mode instead of always-light, and support click-to-zoom on screenshots —
+# none of which jekyll-theme-minimal (the previous theme here) supports.

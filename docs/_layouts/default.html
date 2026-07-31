@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{{ page.title | default: site.title }}</title>
+  <meta name="description" content="{{ page.description | default: site.description }}">
+  <meta name="theme-color" content="#f7f3ea" media="(prefers-color-scheme: light)">
+  <meta name="theme-color" content="#000000" media="(prefers-color-scheme: dark)">
+  <link rel="stylesheet" href="{{ '/assets/css/style.css' | relative_url }}">
+</head>
+<body>
+  <header class="site-header">
+    <a class="brand" href="{{ '/' | relative_url }}">HueMux</a>
+    <nav>
+      <a href="https://github.com/{{ site.github_username | default: 'zamber' }}/huemux">GitHub</a>
+      <a href="#screenshots">Screenshots</a>
+      <a href="#downloads">Downloads</a>
+    </nav>
+  </header>
+
+  <main{% if page.wide %} class="wide"{% endif %}>
+    {{ content }}
+  </main>
+
+  <footer class="site-footer">
+    HueMux is open source (MIT + OFL font) —
+    <a href="https://github.com/zamber/huemux">source on GitHub</a>
+  </footer>
+
+  <script src="{{ '/assets/js/lightbox.js' | relative_url }}"></script>
+</body>
+</html>

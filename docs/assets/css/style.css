@@ -1,0 +1,263 @@
+/* Design tokens ported from web/shared/theme.css (the app's own UI) so this
+   page reads as the same product, not a generic docs template bolted on
+   next to it. Values are not to be "improved" independently of that source
+   — if it changes there, port the change here too. */
+
+@font-face {
+  font-family: 'Fira Code';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url('../fonts/fira-code-400-latin-ext.woff2') format('woff2');
+  unicode-range: U+0100-024F, U+0259, U+1E00-1EFF, U+2020, U+20A0-20AB, U+20AD-20CF, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+@font-face {
+  font-family: 'Fira Code';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url('../fonts/fira-code-400-latin.woff2') format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+2000-206F, U+2074, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+@font-face {
+  font-family: 'Fira Code';
+  font-style: normal;
+  font-weight: 600;
+  font-display: swap;
+  src: url('../fonts/fira-code-600-latin-ext.woff2') format('woff2');
+  unicode-range: U+0100-024F, U+0259, U+1E00-1EFF, U+2020, U+20A0-20AB, U+20AD-20CF, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+@font-face {
+  font-family: 'Fira Code';
+  font-style: normal;
+  font-weight: 600;
+  font-display: swap;
+  src: url('../fonts/fira-code-600-latin.woff2') format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+2000-206F, U+2074, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
+:root {
+  color-scheme: light dark;
+  --surface: #f7f3ea;
+  --surface-alt: #efe8d8;
+  --card: #fffdf7;
+  --card-hover: #f2ecdd;
+  --ink: #1c1a14;
+  --ink-muted: #6f6a5a;
+  --accent: #2c56b8;
+  --accent-hover: #1f4291;
+  --border: rgba(0, 0, 0, 0.16);
+  --border-strong: rgba(0, 0, 0, 0.3);
+  --shadow: rgba(0, 0, 0, 0.15);
+  --max-width: 1100px;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --surface: #000000;
+    --surface-alt: #0a0a0a;
+    --card: #0f0f0f;
+    --card-hover: #161616;
+    --ink: #f5f5f0;
+    --ink-muted: #9a9a92;
+    --accent: #7AA5F2;
+    --accent-hover: #9dbdf5;
+    --border: rgba(255, 255, 255, 0.16);
+    --border-strong: rgba(255, 255, 255, 0.32);
+    --shadow: rgba(0, 0, 0, 0.6);
+  }
+}
+
+* { box-sizing: border-box; }
+
+html { scrollbar-color: var(--border-strong) var(--surface-alt); scrollbar-width: thin; }
+
+body {
+  font-family: 'Fira Code', ui-monospace, 'Cascadia Code', 'SF Mono', Menlo, Consolas, monospace;
+  background: var(--surface);
+  color: var(--ink);
+  line-height: 1.65;
+  margin: 0;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+a { color: var(--accent); text-decoration: none; }
+a:hover, a:focus { color: var(--accent-hover); text-decoration: underline; }
+
+code, pre {
+  font-family: inherit;
+  background: var(--surface-alt);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+}
+code { padding: 0.1em 0.4em; font-size: 0.9em; }
+pre { padding: 1rem; overflow-x: auto; }
+pre code { border: none; padding: 0; background: none; }
+
+hr { border: 0; border-top: 1px solid var(--border); margin: 2rem 0; }
+
+/* ---------- page chrome ---------- */
+
+.site-header {
+  border-bottom: 1px solid var(--border);
+  padding: 1.1rem clamp(1rem, 4vw, 3rem);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+.site-header .brand {
+  font-weight: 600;
+  font-size: 1.15rem;
+  color: var(--ink);
+}
+.site-header nav { display: flex; gap: 1.4rem; }
+.site-header nav a { color: var(--ink-muted); }
+.site-header nav a:hover { color: var(--accent); }
+
+main {
+  max-width: var(--max-width);
+  margin: 0 auto;
+  padding: clamp(1.5rem, 4vw, 3rem) clamp(1rem, 4vw, 3rem) 4rem;
+}
+
+main.wide { max-width: 1400px; }
+
+h1, h2, h3 { color: var(--ink); line-height: 1.25; }
+h1 { font-size: clamp(1.7rem, 2.4vw, 2.3rem); margin: 0 0 0.6rem; }
+h2 { font-size: 1.4rem; margin: 2.6rem 0 1rem; padding-top: 0.4rem; border-top: 1px solid var(--border); }
+h2:first-of-type { border-top: none; padding-top: 0; margin-top: 1.6rem; }
+h3 { font-size: 1.1rem; margin: 1.6rem 0 0.8rem; }
+
+.tagline { color: var(--ink-muted); font-size: 1.05rem; max-width: 62ch; }
+
+.pill-links { display: flex; gap: 0.9rem; flex-wrap: wrap; margin: 1.2rem 0 0; }
+.pill-links a {
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  padding: 0.4rem 0.9rem;
+  color: var(--ink);
+}
+.pill-links a:hover { border-color: var(--accent); color: var(--accent); text-decoration: none; }
+
+ul.feature-list { list-style: none; margin: 1.2rem 0; padding: 0; display: grid; gap: 0.6rem; }
+ul.feature-list li {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 0.8rem 1rem;
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 1rem 0;
+  font-size: 0.92rem;
+}
+th, td { text-align: left; padding: 0.55rem 0.8rem; border-bottom: 1px solid var(--border); vertical-align: top; }
+th { color: var(--ink-muted); font-weight: 600; white-space: nowrap; }
+.table-scroll { overflow-x: auto; border: 1px solid var(--border); border-radius: 10px; }
+.table-scroll table { margin: 0; }
+.table-scroll th:first-child, .table-scroll td:first-child { padding-left: 1rem; }
+
+/* ---------- screenshots ---------- */
+
+.shot-group { margin: 1.4rem 0 2.2rem; }
+.shot-pair {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+  gap: 1.2rem;
+  align-items: start;
+}
+figure.shot { margin: 0; }
+figure.shot img {
+  display: block;
+  width: 100%;
+  height: auto;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  box-shadow: 0 2px 10px var(--shadow);
+  cursor: zoom-in;
+  transition: transform 0.15s ease, border-color 0.15s ease;
+}
+figure.shot img:hover { border-color: var(--border-strong); transform: translateY(-2px); }
+figure.shot figcaption {
+  margin-top: 0.5rem;
+  text-align: center;
+  font-size: 0.85rem;
+  color: var(--ink-muted);
+}
+
+#lightbox {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.82);
+  display: none;
+  align-items: center;
+  justify-content: center;
+  padding: 4vh 4vw;
+  z-index: 1000;
+  cursor: zoom-out;
+}
+#lightbox.open { display: flex; }
+#lightbox img {
+  max-width: 100%;
+  max-height: 92vh;
+  border-radius: 8px;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5);
+}
+#lightbox .lightbox-hint {
+  position: fixed;
+  bottom: 2vh;
+  left: 50%;
+  transform: translateX(-50%);
+  color: #eee;
+  font-size: 0.8rem;
+  opacity: 0.75;
+}
+
+/* ---------- downloads ---------- */
+
+#releases .release {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 1.3rem 1.5rem;
+  margin-bottom: 1.4rem;
+}
+#releases .release h3 { margin: 0 0 0.6rem; display: flex; align-items: baseline; gap: 0.6rem; flex-wrap: wrap; }
+#releases .release-date { font-weight: 400; font-size: 0.78rem; color: var(--ink-muted); }
+#releases .assets { list-style: none; padding: 0; margin: 0 0 1rem; display: grid; gap: 0.4rem; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); }
+#releases .assets li {
+  background: var(--surface-alt);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 0.45rem 0.7rem;
+  font-size: 0.85rem;
+  display: flex;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+#releases .asset-size { color: var(--ink-muted); font-size: 0.8em; white-space: nowrap; }
+#releases .release-notes { font-size: 0.94rem; color: var(--ink); border-top: 1px solid var(--border); padding-top: 1rem; margin-top: 0.5rem; }
+#releases .release-notes h2 { font-size: 1.15em; margin: 1em 0 0.4em; border: none; padding: 0; }
+#releases .release-notes h2:first-child { margin-top: 0; }
+#releases .release-notes h3 { font-size: 1em; margin: 0.9em 0 0.35em; }
+#releases .release-notes table { font-size: 0.9em; }
+#releases .release-notes ul { margin: 0 0 0.9em; padding-left: 1.3em; }
+#releases .release-notes hr { margin: 1.2em 0; }
+#releases .release-notes p { margin: 0 0 0.8em; }
+
+footer.site-footer {
+  border-top: 1px solid var(--border);
+  padding: 1.5rem clamp(1rem, 4vw, 3rem);
+  color: var(--ink-muted);
+  font-size: 0.85rem;
+  text-align: center;
+}
+
+@media (max-width: 640px) {
+  .site-header nav { gap: 1rem; }
+}
