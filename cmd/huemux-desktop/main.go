@@ -31,6 +31,7 @@ import (
 	"github.com/asticode/go-astikit"
 	"github.com/asticode/go-astilectron"
 
+	"github.com/zamber/huemux/internal/appconfig"
 	"github.com/zamber/huemux/internal/config"
 	"github.com/zamber/huemux/internal/debuglog"
 	"github.com/zamber/huemux/internal/engine"
@@ -53,6 +54,7 @@ func main() {
 	headless := flag.Bool("headless", false, "run the core service only, no desktop window — identical to plain `huemux`")
 	verbose := flag.Bool("verbose", false, "verbose CLI status log (headless mode only)")
 	debug := flag.Bool("debug", false, "write a detailed debug log to a file, including Electron's own main-process output — see KNOWN_ISSUES.md for the exact path per OS")
+	cfgFlags := appconfig.RegisterFlags(flag.CommandLine)
 	flag.Parse()
 
 	if *debug {
@@ -61,6 +63,23 @@ func main() {
 		} else {
 			fmt.Println("huemux-desktop: debug logging enabled, writing to " + path)
 		}
+	}
+
+	configDir, err := config.Dir()
+	if err != nil {
+		fatalf("resolving config dir: %v", err)
+	}
+	cfg, err := appconfig.Resolve(configDir, cfgFlags)
+	if err != nil {
+		fatalf("%v", err)
+	}
+	for _, w := range cfg.Warnings() {
+		fmt.Fprintln(os.Stderr, "huemux-desktop: warning: "+w)
+	}
+	// Resolved but not yet acted on — see the matching note in cmd/huemux.
+	if debuglog.Enabled {
+		log.Printf("huemux-desktop: config profile=%s listen=%s:%d auth=%s tls=%s",
+			cfg.Profile, cfg.Listen.Host, cfg.Listen.Port, cfg.Auth.Mode, cfg.TLS.Mode)
 	}
 
 	store, err := config.NewStore()
