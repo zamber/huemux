@@ -20,6 +20,24 @@ Wayland, X11, Windows, and macOS.
 [View source on GitHub](https://github.com/zamber/huemux) ·
 [Read the docs](https://github.com/zamber/huemux#readme)
 
+## Screenshots
+
+<p align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="screenshots/huemux-lights-dark.png">
+    <img src="screenshots/huemux-lights-light.png" alt="Light control panel, grouped by room, with entertainment-area scenes and favorites" width="820">
+  </picture>
+  <br><sub>Light control</sub>
+</p>
+
+<p align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="screenshots/huemux-sync-dark.png">
+    <img src="screenshots/huemux-sync-light.png" alt="Screen sync panel, showing entertainment zone selection and the reactivity/sampling controls" width="820">
+  </picture>
+  <br><sub>Screen sync</sub>
+</p>
+
 ## Downloads
 
 <div id="releases">Loading releases…</div>

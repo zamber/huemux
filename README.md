@@ -16,6 +16,27 @@ Wayland, X11, Windows, and macOS.
 browser (127.0.0.1) ──grid──▶ huemux ──DTLS/UDP──▶ Hue bridge ──Zigbee──▶ lights
 ```
 
+## Screenshots
+
+Both pages follow the system theme by default (or a manual light/dark
+override via the header toggle) — shown here in both.
+
+<p align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="docs/screenshots/huemux-lights-dark.png">
+    <img src="docs/screenshots/huemux-lights-light.png" alt="Light control panel, grouped by room, with entertainment-area scenes and favorites" width="820">
+  </picture>
+  <br><sub>Light control</sub>
+</p>
+
+<p align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="docs/screenshots/huemux-sync-dark.png">
+    <img src="docs/screenshots/huemux-sync-light.png" alt="Screen sync panel, showing entertainment zone selection and the reactivity/sampling controls" width="820">
+  </picture>
+  <br><sub>Screen sync</sub>
+</p>
+
 ## Why it runs on localhost
 
 `getDisplayMedia()` — the browser screen capture API — only works in a
