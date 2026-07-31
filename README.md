@@ -140,6 +140,9 @@ One external dependency for the core: `pion/dtls`. The desktop wrapper adds
 `go-astilectron`. The WebSocket server, colour pipeline, and UI are all
 stdlib and plain JavaScript — no build step for the frontend.
 
+See [PACKAGING.md](PACKAGING.md) for release signing, semver, and
+Homebrew/Flatpak/AppImage packaging.
+
 ## Layout
 
 ```
