@@ -6,6 +6,10 @@ name: Release
 # (pion/dtls, go-astilectron) make that cross-compilation actually work,
 # no per-OS runner matrix needed. Frontend is plain HTML/CSS/JS embedded via
 # go:embed, so there's no separate JS build step either.
+#
+# A tag containing a hyphen (v0.1.0-alpha.1, v1.0.0-rc.2) is published as a
+# GitHub pre-release, per the semver convention that everything after the
+# hyphen is a pre-release identifier.
 on:
   push:
     tags:
@@ -18,19 +22,44 @@ jobs:
   build-and-release:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
-      - uses: actions/setup-go@v5
+      - uses: actions/setup-go@v7
         with:
           go-version-file: go.mod
+
+      # Cheap relative to the build, and the alternative is discovering a
+      # broken release after the artifacts are already published.
+      - name: Vet and test
+        run: |
+          go vet ./...
+          go test ./...
 
       - name: Build all platform binaries
         run: |
           make dist
           make dist-desktop
 
+      # A curated .github/release-notes/<tag>.md is used as the release body
+      # when one exists; otherwise the body is left to the auto-generated
+      # commit list. Keeps a hand-written release from needing a manual edit
+      # after every publish.
+      - name: Locate curated release notes
+        id: notes
+        run: |
+          f=".github/release-notes/${GITHUB_REF_NAME}.md"
+          if [ -f "$f" ]; then
+            echo "using curated notes: $f"
+            echo "path=$f" >> "$GITHUB_OUTPUT"
+          else
+            echo "no curated notes at $f — falling back to generated notes"
+            echo "path=" >> "$GITHUB_OUTPUT"
+          fi
+
       - name: Create GitHub release
-        uses: softprops/action-gh-release@v2
+        uses: softprops/action-gh-release@v3
         with:
           files: dist/*
+          body_path: ${{ steps.notes.outputs.path }}
           generate_release_notes: true
+          prerelease: ${{ contains(github.ref_name, '-') }}

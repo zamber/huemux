@@ -45,6 +45,49 @@ The same process also owns the DTLS socket to the bridge, which a browser
 can never open itself: Hue Entertainment is DTLS 1.2 with a pre-shared key
 over UDP, and no browser API exposes that. One binary solves both problems.
 
+## Releases and stability
+
+Pre-1.0 and young. Two release streams on the
+[releases page](https://github.com/zamber/huemux/releases):
+
+- **Stable** (`v0.0.1`, …) — what has actually been used against real
+  hardware. Start here.
+- **Alpha** (`v0.0.2-alpha.1`, …) — tagged from `main` as work lands, built
+  and tested in CI but **not exercised on real hardware**. Marked as
+  pre-releases on GitHub. Fine for following along or testing a fix; not what
+  to hand someone who just wants working lights.
+
+Work in progress, and the design docs behind it, live in
+[`plans/`](plans/) — see
+[`plans/03-execution-phases.md`](plans/03-execution-phases.md) for what is
+actually being built right now.
+
+## Configuration
+
+Optional. With no configuration at all, HueMux runs exactly as it always has:
+both features, bound to `127.0.0.1`, no authentication.
+
+Settings are read from `~/.config/huemux/app.json` (`%APPDATA%\huemux\` on
+Windows, `~/Library/Application Support/huemux/` on macOS) and can be
+overridden per-run by the flags in the
+[command-line reference](#command-line-reference) below. Precedence is
+defaults, then the file, then any flag you actually pass. A missing file is
+normal — nothing creates one for you.
+
+```jsonc
+{
+  "profile": "full",                 // full | lights | sync
+  "listen":  { "host": "127.0.0.1", "port": 7654 },
+  "auth":    { "mode": "none" },     // none | token
+  "tls":     { "mode": "off" }       // off | selfsigned | files
+}
+```
+
+> **Not wired up yet.** As of `v0.0.2-alpha.1` these settings are parsed,
+> validated, and reported — but do not yet change what the server does. The
+> behavior lands over the phases in [`plans/`](plans/). Until then, treat this
+> section as a preview of the shape, not a feature.
+
 ## Running
 
 ### Browser version
