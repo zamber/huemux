@@ -104,6 +104,63 @@ frame goes straight to `engine.SetFrame` (`internal/engine/engine.go:251`).
 `os.UserConfigDir()`, which is wrong on Android — it needs to accept an
 injected base path. Small change, but it touches all three existing stores.
 
+## How the page reaches MediaProjection
+
+The core has no knowledge of its wrapper, but the *page* unavoidably does —
+something in JS has to decide to call MediaProjection instead of
+`getDisplayMedia()`. Three ways to make that decision, and the choice matters:
+
+**Chosen: a native object injected into the WebView.** Android's
+`WebView.addJavascriptInterface(obj, "HueMuxNative")` puts a Kotlin object
+into JS global scope, so the page asks a capability question:
+
+```js
+if (window.HueMuxNative && window.HueMuxNative.startCapture) { … }
+```
+
+This is exactly the pattern `web/app.js:367-392` already uses — a three-tier
+ladder feature-detecting `MediaStreamTrackProcessor` before falling back. The
+native path becomes tier 0 of that same ladder, which keeps it idiomatic
+rather than bolted on.
+
+**Rejected: try `getDisplayMedia()` and fall back on failure.** It does not
+fail *cleanly* on Android WebView — depending on version it may be
+`undefined` (TypeError), reject with `NotAllowedError`, or hang awaiting a
+permission prompt that never appears. Racing an unreliable failure is strictly
+worse than asking a reliable question, and it would put a guaranteed error in
+the console on every phone launch.
+
+**Partially adopted: the server announces its platform.** Useful, but for a
+different job. "What OS is the server on" and "can *this client* capture
+natively" are different questions — a desktop browser pointed at a
+phone-hosted server would get the wrong answer from the first. So platform is
+a UI-adaptation hint from `/api/config` (hide capture width/height inputs that
+are meaningless when the compositor does the scaling), while
+`window.HueMuxNative` remains the authority on capture capability.
+
+### Frame-source arbitration does not apply on-device
+
+`handleGridFrame` (`internal/server/http.go:442`) only accepts frames from
+`s.frameSource`, a specific WebSocket connection claimed via `select_area`
+(`claimFrameSource`, `:510`). That machinery exists to arbitrate between
+multiple browser clients fighting over one stream. `PushFrame` has no
+connection and, on a phone, there is exactly one capture source by
+construction — so the mobile facade calls `engine.SelectArea` and
+`engine.SetFrame` directly and skips arbitration entirely. The WebSocket stays
+open for status and light control; it just isn't the frame path.
+
+### The preview canvas needs a different source
+
+Today the preview draws the frames JS captured. With native capture JS has no
+frames, and shipping them back across the bridge purely to draw a picture of
+the screen the user is already holding would be wasteful.
+
+Resolution: on the native path, hide the video preview and keep the zone
+swatches. `statusWire` already carries `Zones` with their live colours
+(`internal/server/http.go:336-354`) and `drawZoneOverlays`
+(`web/app.js:473-487`) already renders from `latestStatus.zones`, so the
+useful half of the preview keeps working with no new plumbing.
+
 ## Streaming from the phone (M3)
 
 `MediaProjection` → `VirtualDisplay` → `ImageReader`, with the virtual display
@@ -111,6 +168,15 @@ created at low resolution directly (~320×180) so the compositor does the
 scaling — the same trick the desktop path uses via track constraints
 (`web/app.js:349-361`), and far cheaper than downsampling full frames.
 `ImageReader` gives `RGBA_8888`; pack to RGB and hand off.
+
+```
+JS   window.HueMuxNative.startCapture(areaID)
+Kotlin  ├─ startForeground(type=mediaProjection)   ← must precede the next line on A14+
+        ├─ getMediaProjection()  (system consent dialog)
+        ├─ createVirtualDisplay(320×180) → ImageReader
+        └─ per frame: RGBA→RGB → Huemux.pushFrame(w, h, bytes)
+Go        └─ engine.SetFrame(...) → pipeline → DTLS → bridge
+```
 
 Platform requirements that will bite if not planned for:
 
@@ -171,6 +237,43 @@ Also worth revisiting on mobile: `app.html` loads **both** iframes eagerly
 (`web/app.html:30-33`), so two independent WebSocket connections open on
 launch, each receiving a 1 Hz status push. On a phone, in a `lights` profile,
 only one is needed — Plan 01's profile-aware shell handles this.
+
+## How this gets tested
+
+The testing burden is smaller than it first looks, because most of the work
+isn't Android-specific. Ordered cheapest-first:
+
+| Layer | How it's verified | Needs a device? |
+|---|---|---|
+| `internal/appconfig`, profiles (Plan 01) | Go unit tests | no |
+| `mobile/` facade logic | Go unit tests against the facade directly | no |
+| Cross-compilation to `android/arm64` | `gomobile bind` succeeding is itself a strong signal | no |
+| Lights UI at phone viewport | Playwright at 390×844 against a desktop build | no |
+| WebView glue, native bridge, MediaProjection | real device or emulator | **yes** |
+
+Only the last row genuinely needs Android — and it is the last milestone.
+
+### Emulator vs. real phone
+
+**A real phone over `adb` wins, and it isn't close.** The emulator's NAT
+(10.0.2.x) does not pass multicast, so **mDNS/SSDP bridge discovery cannot
+work there** — every emulator test would use manual IP entry, which means the
+discovery path (the one most likely to have Android-specific problems) never
+gets exercised. A phone on the real LAN tests the real thing. `adb tcpip 5555`
+plus `adb connect <phone>:5555` makes it drivable remotely, and the `adb`
+client is a few MB.
+
+**The build cannot happen on a constrained host.** Android SDK + NDK is
+roughly 8–12 GB. Two workable options, and CI is the better one: GitHub
+Actions runners ship the Android SDK preinstalled, so `gomobile bind` + Gradle
+in CI producing a downloadable APK, then `adb install` it onto the phone, is a
+loop that needs almost nothing installed locally. A desktop with the SDK works
+too and iterates faster.
+
+**An emulator is the fallback, not the plan.** It needs KVM to be usable
+(without it, software emulation is unusably slow), 4–8 GB RAM, and ~10 GB
+disk. If one is wanted anyway, it belongs on a desktop, and `adb connect` to
+it works the same way as to a phone.
 
 ## Phasing
 
