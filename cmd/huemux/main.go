@@ -15,6 +15,7 @@ import (
 	"time"
 
 	"github.com/zamber/huemux/internal/config"
+	"github.com/zamber/huemux/internal/debuglog"
 	"github.com/zamber/huemux/internal/engine"
 	"github.com/zamber/huemux/internal/hue"
 	"github.com/zamber/huemux/internal/lightctl"
@@ -26,6 +27,29 @@ var version = "dev"
 
 func main() {
 	args := os.Args[1:]
+
+	// -debug is stripped out here rather than added as its own switch case
+	// below, so it can be combined with any subcommand or with -v/--verbose
+	// (e.g. `huemux -debug -v`) instead of being mutually exclusive with them.
+	debug := false
+	filtered := args[:0]
+	for _, a := range args {
+		if a == "-debug" || a == "--debug" {
+			debug = true
+			continue
+		}
+		filtered = append(filtered, a)
+	}
+	args = filtered
+
+	if debug {
+		if path, err := debuglog.Enable(); err != nil {
+			fmt.Fprintf(os.Stderr, "huemux: could not enable debug log: %v\n", err)
+		} else {
+			fmt.Println("huemux: debug logging enabled, writing to " + path)
+		}
+	}
+
 	if len(args) == 0 {
 		cmdRun(false)
 		return
@@ -57,7 +81,10 @@ Usage:
   huemux pair <bridge-ip>        Register with the bridge (press the link button when prompted)
   huemux areas                   List entertainment areas on the paired bridge
   huemux test <area-id>          Prove the DTLS path works: cycles colors, then a 60s keepalive-only hold
-  huemux [--verbose]             Run the service (default: http://127.0.0.1:7654)`)
+  huemux [--verbose]             Run the service (default: http://127.0.0.1:7654)
+  huemux -debug ...              Also write a detailed debug log to a file (path printed on startup;
+                                  see KNOWN_ISSUES.md for the exact location per OS) — combine with any
+                                  of the above, e.g. "huemux -debug -v"`)
 }
 
 // --- pair ------------------------------------------------------------------

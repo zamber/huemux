@@ -18,6 +18,7 @@ import (
 
 	"github.com/zamber/huemux"
 	"github.com/zamber/huemux/internal/config"
+	"github.com/zamber/huemux/internal/debuglog"
 	"github.com/zamber/huemux/internal/engine"
 	"github.com/zamber/huemux/internal/hue"
 	"github.com/zamber/huemux/internal/lightctl"
@@ -45,9 +46,10 @@ type Server struct {
 	pairMu    sync.Mutex
 	pairState pairingState
 
-	mu          sync.Mutex
-	frameSource *Conn
-	uiConns     map[*Conn]struct{}
+	mu           sync.Mutex
+	frameSource  *Conn
+	uiConns      map[*Conn]struct{}
+	lastFrameLog time.Time // throttles logFrameStats to at most once/second
 
 	Addr string
 }
@@ -460,6 +462,43 @@ func (s *Server) handleGridFrame(conn *Conn, payload []byte) {
 	}
 	grid := &pipeline.Grid{W: w, H: h, Pix: append([]byte(nil), payload[3:want]...)}
 	eng.SetFrame(grid)
+
+	if debuglog.Enabled {
+		s.logFrameStats(conn, grid)
+	}
+}
+
+// logFrameStats logs a throttled (at most once/second) average-color summary
+// of incoming grid frames when -debug is on. This is the one signal this
+// server ever had zero visibility into: whether "grid frames are arriving"
+// actually means real, varying capture data, or a capture path silently
+// handing back a fixed placeholder (e.g. the solid-green frame observed when
+// Wayland screen capture runs without the PipeWire feature switch — see
+// cmd/huemux-desktop/provisioner.go's pipeWireCapturePatch). An unchanging
+// average across many logged frames is the tell.
+func (s *Server) logFrameStats(conn *Conn, grid *pipeline.Grid) {
+	s.mu.Lock()
+	skip := time.Since(s.lastFrameLog) < time.Second
+	if !skip {
+		s.lastFrameLog = time.Now()
+	}
+	s.mu.Unlock()
+	if skip {
+		return
+	}
+
+	var sumR, sumG, sumB int
+	n := len(grid.Pix) / 3
+	for i := 0; i < n; i++ {
+		sumR += int(grid.Pix[i*3])
+		sumG += int(grid.Pix[i*3+1])
+		sumB += int(grid.Pix[i*3+2])
+	}
+	if n == 0 {
+		n = 1
+	}
+	log.Printf("huemux debug: frame from %s: %dx%d grid, avg rgb=(%d,%d,%d)",
+		connAddr(conn), grid.W, grid.H, sumR/n, sumG/n, sumB/n)
 }
 
 // claimFrameSource makes conn the frame source, evicting whoever held it
@@ -473,6 +512,9 @@ func (s *Server) claimFrameSource(conn *Conn) {
 	previous := s.frameSource
 	s.frameSource = conn
 	s.mu.Unlock()
+	if debuglog.Enabled {
+		log.Printf("huemux debug: claimFrameSource: %s becomes source (was %s)", connAddr(conn), connAddr(previous))
+	}
 	s.notifyStreamStopped(previous, conn)
 }
 
@@ -486,7 +528,20 @@ func (s *Server) stopStreamAndNotifySource(caller *Conn) {
 	previous := s.frameSource
 	s.frameSource = nil
 	s.mu.Unlock()
+	if debuglog.Enabled {
+		log.Printf("huemux debug: stopStreamAndNotifySource: called by %s, was source %s", connAddr(caller), connAddr(previous))
+	}
 	s.notifyStreamStopped(previous, caller)
+}
+
+// connAddr is a nil-safe, human-readable identifier for a *Conn in debug
+// logs — remote port is enough to tell two loopback WS clients (e.g. a
+// browser tab and the desktop app) apart from each other.
+func connAddr(c *Conn) string {
+	if c == nil {
+		return "<none>"
+	}
+	return c.rwc.RemoteAddr().String()
 }
 
 // notifyStreamStopped tells previous (if it exists and isn't exceptConn,

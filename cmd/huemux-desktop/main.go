@@ -32,6 +32,7 @@ import (
 	"github.com/asticode/go-astilectron"
 
 	"github.com/zamber/huemux/internal/config"
+	"github.com/zamber/huemux/internal/debuglog"
 	"github.com/zamber/huemux/internal/engine"
 	"github.com/zamber/huemux/internal/lightctl"
 	"github.com/zamber/huemux/internal/server"
@@ -51,7 +52,16 @@ const electronVersion = "43.2.0"
 func main() {
 	headless := flag.Bool("headless", false, "run the core service only, no desktop window — identical to plain `huemux`")
 	verbose := flag.Bool("verbose", false, "verbose CLI status log (headless mode only)")
+	debug := flag.Bool("debug", false, "write a detailed debug log to a file, including Electron's own main-process output — see KNOWN_ISSUES.md for the exact path per OS")
 	flag.Parse()
+
+	if *debug {
+		if path, err := debuglog.Enable(); err != nil {
+			fmt.Fprintf(os.Stderr, "huemux-desktop: could not enable debug log: %v\n", err)
+		} else {
+			fmt.Println("huemux-desktop: debug logging enabled, writing to " + path)
+		}
+	}
 
 	store, err := config.NewStore()
 	if err != nil {
@@ -98,6 +108,13 @@ func runDesktop(url string) error {
 		cacheDir = os.TempDir()
 	}
 	dataDir := filepath.Join(cacheDir, "huemux", "astilectron")
+
+	// Logged unconditionally (cheap, one line) rather than gated behind
+	// -debug: session-type/display-server mismatches are exactly the class
+	// of bug (see provisioner.go's pipeWireCapturePatch) that's otherwise
+	// invisible until someone thinks to ask for `env | grep -i session`.
+	log.Printf("huemux-desktop: platform=%s session_type=%q wayland_display=%q x11_display=%q electron=%s cache_dir=%s",
+		runtime.GOOS, os.Getenv("XDG_SESSION_TYPE"), os.Getenv("WAYLAND_DISPLAY"), os.Getenv("DISPLAY"), electronVersion, dataDir)
 
 	l := log.New(os.Stdout, "[electron] ", log.LstdFlags)
 	a, err := astilectron.New(l, astilectron.Options{
