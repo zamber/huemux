@@ -371,7 +371,7 @@ Reactivity is the user-facing name for the length of the temporal averaging
 window. One slider, 0–100, mapped to an exponential moving average time constant:
 
 ```
-tau_ms = lerp(60, 1200, (100 - reactivity) / 100)
+tau_ms = lerp(0, 1200, (100 - reactivity) / 100)
 alpha  = 1 - exp(-dt_ms / tau_ms)
 ```
 
@@ -504,7 +504,7 @@ is alive and that zone mapping is sane, without opening the browser.
 | Compositor capture | 16–33 ms |
 | Reduce + zone average | 1–3 ms |
 | WebSocket over loopback | < 1 ms |
-| Smoothing (by design) | 60–1200 ms |
+| Smoothing (by design) | 0–1200 ms |
 | DTLS + UDP to bridge | ~2 ms |
 | Bridge → Zigbee → bulb | 50–100 ms |
 

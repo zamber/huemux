@@ -61,7 +61,7 @@ func (s *Smoother) Step(targets map[uint8]LinearColor, now time.Time, reactivity
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
-	tauMs := lerp(60, 1200, (100-clampf(reactivity, 0, 100))/100)
+	tauMs := lerp(0, 1200, (100-clampf(reactivity, 0, 100))/100)
 
 	// Scene-cut detection: mean absolute luma change across all channels
 	// that already have state.
