@@ -177,4 +177,12 @@ network.
 
 ## Licence
 
-MIT.
+Code: MIT.
+
+The bundled UI font, [Fira Code](https://github.com/tonsky/FiraCode)
+(`web/shared/fonts/`), is under a separate license — the
+[SIL Open Font License 1.1](web/shared/fonts/LICENSE-OFL.txt), not MIT. The
+OFL permits embedding/bundling the font with software under any license
+(including MIT) at no cost; it only restricts selling the font *by itself*
+and requires renamed derivatives. Bundling it here doesn't relicense it —
+the font files remain OFL, the app's own code remains MIT.
