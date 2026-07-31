@@ -10,7 +10,7 @@ reviewable commit or small series, and to leave `main` working.
 | # | Phase | Status |
 |---|---|---|
 | 1 | `internal/appconfig` — schema, file, flags | **done** |
-| 2 | Profiles, server side | not started |
+| 2 | Profiles, server side | **done** |
 | 3 | Extract pairing UI into `web/shared/` | not started |
 | 4 | Profile-aware UI + settings screen | not started |
 | 5 | Listen address, Origin, auth | not started |
@@ -53,16 +53,28 @@ reproduce today exactly, so this can land and be verified in isolation.
 
 ## Phase 2 — Profiles, server side
 
-**Build**
-- Conditional construction of engine/lightctl in both `main.go` entry points.
-- **`runPair` (`internal/server/http.go:754`) must respect the profile** — it
-  currently constructs both unconditionally and would silently re-enable a
-  disabled feature on pairing.
-- Gate route registration by profile.
-- `handleWS` (`:402`) — stop counting lights-only clients as capture clients.
-- Lazy eventstream in `lightctl` (`service.go:258`).
-- `internal/ui/status.go` — a lights-only readout that doesn't need
-  `engine.Status`.
+**Built**
+- `server.BuildPaired` is the single place a profile decides what gets
+  constructed. Both the startup path and `runPair` call it, so the two cannot
+  disagree — this is the fix for `runPair` silently re-enabling a disabled
+  half on pairing.
+- `/api/areas` is registered only when the Sync tab exists. The light-control
+  routes stay registered under every profile, since the sync page's scene
+  strip depends on them.
+- The light-event broadcast is gated on `ShowsLightsTab()` rather than made
+  lazy: under a sync-only profile there is no light-control UI for those
+  events to reach, so gating achieves the same saving with no new machinery.
+- `Server.Paired()` plus `ui.Printer.RenderNoEngine`, for a bug found while
+  wiring this: a lights profile has a nil engine forever, and the render loop
+  inferred "not paired" from that — telling an already-paired, correctly
+  working server to go and pair itself on every tick.
+
+**Not done, deliberately** — the plan called for `handleWS` to stop counting
+lights-only clients as capture clients. Reading `engine.go:306` shows the
+count is documented as deliberately tracking connected tabs "independent of
+which one (if any) is the frame source", so the original item was a misreading
+of the `CaptureClients` field name rather than a real defect. The field name
+is the misleading part; the behavior is intended. Left alone.
 
 **Done when**
 - `--profile=lights` opens no DTLS socket (verify with `ss`), `/api/areas`

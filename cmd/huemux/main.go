@@ -378,17 +378,19 @@ func cmdRun(cfg appconfig.Config, verbose bool) {
 	var eng *engine.Engine
 	var lights *lightctl.Service
 	if bridge, err := config.LoadBridge(); err == nil {
-		eng = engine.New(bridge, store)
-		lights = lightctl.New(bridge, favorites)
+		eng, lights = server.BuildPaired(cfg, bridge, store, favorites)
 	}
-	srv := server.New(store, favorites, eng, lights)
+	srv := server.New(cfg, store, favorites, eng, lights)
 	url, err := srv.ListenAndServe()
 	if err != nil {
 		fatalf("starting server: %v", err)
 	}
 
 	fmt.Println("huemux " + version + "  " + url)
-	if eng == nil {
+	if cfg.Profile != appconfig.ProfileFull {
+		fmt.Printf("profile %s — %s\n", cfg.Profile, profileSummary(cfg))
+	}
+	if !srv.Paired() {
 		fmt.Println("not paired yet — open the URL above to pair with your bridge")
 	}
 	openBrowser(url)
@@ -437,7 +439,13 @@ func cmdRun(cfg appconfig.Config, verbose bool) {
 		case <-renderTick.C:
 			eng := srv.Engine()
 			if eng == nil {
-				printer.RenderUnpaired(url)
+				// A nil engine means "go and pair" only when the profile
+				// wanted one; otherwise it is the configured steady state.
+				if cfg.NeedsEngine() {
+					printer.RenderUnpaired(url)
+				} else {
+					printer.RenderNoEngine(url, string(cfg.Profile), srv.Paired())
+				}
 				continue
 			}
 			st := eng.Snapshot()
@@ -446,6 +454,20 @@ func cmdRun(cfg appconfig.Config, verbose bool) {
 			}
 			printer.Render(st)
 		}
+	}
+}
+
+// profileSummary describes a non-default profile in one line, so the startup
+// output says what was actually switched off rather than leaving the operator
+// to infer it from a missing tab.
+func profileSummary(cfg appconfig.Config) string {
+	switch {
+	case !cfg.NeedsEngine():
+		return "light control only, screen sync disabled"
+	case !cfg.ShowsLightsTab():
+		return "screen sync only, light-control UI hidden"
+	default:
+		return "screen sync and light control"
 	}
 }
 

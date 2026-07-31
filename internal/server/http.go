@@ -17,6 +17,7 @@ import (
 	"time"
 
 	"github.com/zamber/huemux"
+	"github.com/zamber/huemux/internal/appconfig"
 	"github.com/zamber/huemux/internal/config"
 	"github.com/zamber/huemux/internal/debuglog"
 	"github.com/zamber/huemux/internal/engine"
@@ -29,6 +30,7 @@ import (
 // 0.0.0.0 — because there is no authentication and the WebSocket it serves
 // drives real lights.
 type Server struct {
+	cfg       appconfig.Config
 	store     *config.Store
 	favorites *config.FavoritesStore
 	mux       *http.ServeMux
@@ -63,9 +65,18 @@ type paired struct {
 // New builds a Server. eng may be nil if the bridge has not been paired
 // yet — the server still starts and serves a web-driven pairing flow over
 // the same /ws connection everything else uses, rather than requiring a
-// separate CLI step before the UI is even reachable.
-func New(store *config.Store, favorites *config.FavoritesStore, eng *engine.Engine, lights *lightctl.Service) *Server {
+// separate CLI step before the UI is even reachable. eng is also nil under a
+// profile that disables screen sync, which is why every handler that touches
+// it already nil-checks rather than assuming a paired bridge implies an
+// engine.
+//
+// cfg is retained because pairing happens *inside* the server: runPair
+// constructs the paired services itself, long after startup, and has to build
+// the same subset the profile asked for. Without it, pairing from the web UI
+// would silently switch a disabled half of the app back on.
+func New(cfg appconfig.Config, store *config.Store, favorites *config.FavoritesStore, eng *engine.Engine, lights *lightctl.Service) *Server {
 	s := &Server{
+		cfg:       cfg,
 		store:     store,
 		favorites: favorites,
 		mux:       http.NewServeMux(),
@@ -76,6 +87,33 @@ func New(store *config.Store, favorites *config.FavoritesStore, eng *engine.Engi
 	}
 	s.routes()
 	return s
+}
+
+// Config returns the effective application configuration.
+func (s *Server) Config() appconfig.Config { return s.cfg }
+
+// BuildPaired constructs the services the configured profile calls for from a
+// paired bridge. Exported so the process entry points build exactly the same
+// subset at startup that runPair builds after a web-driven pairing — one
+// function, so the two paths cannot disagree about what a profile means.
+//
+// A nil return for either service is normal and expected downstream: every
+// handler already nil-checks, since "not paired yet" produced the same shape
+// long before profiles existed.
+func BuildPaired(cfg appconfig.Config, bridge config.Bridge, store *config.Store, favorites *config.FavoritesStore) (*engine.Engine, *lightctl.Service) {
+	var eng *engine.Engine
+	if cfg.NeedsEngine() {
+		eng = engine.New(bridge, store)
+	}
+	var lights *lightctl.Service
+	if cfg.NeedsLightctl() {
+		lights = lightctl.New(bridge, favorites)
+	}
+	return eng, lights
+}
+
+func (s *Server) buildPaired(bridge config.Bridge) (*engine.Engine, *lightctl.Service) {
+	return BuildPaired(s.cfg, bridge, s.store, s.favorites)
 }
 
 func (s *Server) engine() *engine.Engine {
@@ -97,6 +135,18 @@ func (s *Server) lights() *lightctl.Service {
 // startup path.
 func (s *Server) Engine() *engine.Engine { return s.engine() }
 
+// Paired reports whether the bridge has been paired, independent of which
+// services the profile actually constructed. Callers need this to tell "no
+// engine because nothing is paired" apart from "no engine because the profile
+// disabled screen sync" — under a lights-only profile the engine is nil
+// forever, and treating that as unpaired would tell a working server to go
+// and pair itself.
+func (s *Server) Paired() bool {
+	s.pairedMu.RLock()
+	defer s.pairedMu.RUnlock()
+	return s.p.eng != nil || s.p.lights != nil
+}
+
 // setPaired swaps in the pairing-derived services and (re)starts the
 // light-event broadcast goroutine. Safe to call more than once — a second
 // pairing (shouldn't normally happen, but no reason to leak if it does)
@@ -111,7 +161,13 @@ func (s *Server) setPaired(eng *engine.Engine, lights *lightctl.Service) {
 	s.p = paired{eng: eng, lights: lights, cancel: cancel}
 	s.pairedMu.Unlock()
 
-	if lights != nil {
+	// Gated on the Lights tab existing, not merely on lights being non-nil.
+	// Subscribe opens a long-lived eventstream connection to the bridge, and
+	// under a sync-only profile lightctl exists solely to answer /api/scenes
+	// for the sync page's scene strip — there is no light-control UI for
+	// those events to reach, so the subscription would be pure background
+	// traffic nobody reads.
+	if lights != nil && s.cfg.ShowsLightsTab() {
 		go s.runLightEventBroadcast(ctx, lights)
 	}
 }
@@ -173,7 +229,13 @@ func (s *Server) routes() {
 		}
 		fileServer.ServeHTTP(w, r)
 	})
-	s.mux.HandleFunc("/api/areas", s.handleAreas)
+	// Entertainment areas are meaningless without the sync engine, so this
+	// one is profile-gated. The light-control routes below are not: the sync
+	// page renders its own scene strip from /api/scenes, so they stay
+	// reachable under every profile (see appconfig.Config.NeedsLightctl).
+	if s.cfg.ShowsSyncTab() {
+		s.mux.HandleFunc("/api/areas", s.handleAreas)
+	}
 	s.mux.HandleFunc("/api/status", s.handleStatusAPI)
 	s.mux.HandleFunc("/api/lights", s.handleLights)
 	s.mux.HandleFunc("/api/rooms", s.handleRooms)
@@ -749,9 +811,15 @@ func (s *Server) runPair(bridgeIP string) {
 		return
 	}
 
-	// No restart needed: swap both services in and every handler that was
+	// No restart needed: swap the services in and every handler that was
 	// checking for nil starts working on its very next call.
-	s.setPaired(engine.New(bridge, s.store), lightctl.New(bridge, s.favorites))
+	//
+	// Built through the profile rather than unconditionally: this used to
+	// construct both services regardless, which meant pairing from the web UI
+	// silently re-enabled whichever half the profile had disabled — a
+	// --profile=lights server would quietly acquire a screen-sync engine the
+	// moment someone completed pairing, and keep it until restart.
+	s.setPaired(s.buildPaired(bridge))
 
 	s.pairMu.Lock()
 	s.pairState = pairingState{Message: "Paired"}

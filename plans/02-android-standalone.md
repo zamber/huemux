@@ -263,12 +263,22 @@ gets exercised. A phone on the real LAN tests the real thing. `adb tcpip 5555`
 plus `adb connect <phone>:5555` makes it drivable remotely, and the `adb`
 client is a few MB.
 
-**The build cannot happen on a constrained host.** Android SDK + NDK is
-roughly 8–12 GB. Two workable options, and CI is the better one: GitHub
-Actions runners ship the Android SDK preinstalled, so `gomobile bind` + Gradle
-in CI producing a downloadable APK, then `adb install` it onto the phone, is a
-loop that needs almost nothing installed locally. A desktop with the SDK works
-too and iterates faster.
+**The build happens in CI. This is settled, not a preference.** GitHub Actions
+Ubuntu runners ship the Android SDK and NDK preinstalled (NDK 27 is the
+default as of the January 2026 image), so the release workflow needs
+`gomobile bind` + Gradle and nothing else — no SDK provisioning step. The loop
+is: CI builds the APK, `adb install` puts it on the phone.
+
+The alternative was ruled out on measurement, not taste: the host this project
+is developed on has **625 MB of free disk against an 8–12 GB SDK+NDK
+footprint**, and no `/dev/kvm`, which would also make any local emulator
+unusably slow. A desktop with the SDK installed would iterate faster than CI
+and remains an option for whoever has one, but nothing in the plan depends on
+it.
+
+Android artifacts follow the same alpha stream as everything else: a
+hyphenated tag publishes as a GitHub pre-release, so the first APKs are
+downloadable without being presented as ready to use.
 
 **An emulator is the fallback, not the plan.** It needs KVM to be usable
 (without it, software emulation is unusably slow), 4–8 GB RAM, and ~10 GB
