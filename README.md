@@ -162,6 +162,12 @@ web/app.html            shell that hosts both pages, each in its own iframe,
                         so switching between them doesn't interrupt either
 ```
 
+## Known issues
+
+See [KNOWN_ISSUES.md](KNOWN_ISSUES.md) — currently one open item (a
+Wayland/Electron-specific green preview on first sync), including how to
+capture a `-debug` log if you hit it.
+
 ## Security
 
 The server binds `127.0.0.1` only and checks the `Origin` header on
