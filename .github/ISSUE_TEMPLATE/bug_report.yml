@@ -1,0 +1,110 @@
+name: Bug report
+description: Report a problem with HueMux (screen sync or light control)
+title: "[Bug]: "
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for taking the time to report a bug. Before filing, check
+        [KNOWN_ISSUES.md](https://github.com/zamber/huemux/blob/main/KNOWN_ISSUES.md)
+        in case you've hit the one currently-open item (a Wayland/Electron
+        green preview on first sync) — if so, comment there instead of
+        filing a duplicate.
+
+        **The single most useful thing you can attach is a `-debug` log** —
+        see the last field below for exactly how to get one. As of v0.0.1 it
+        captures the whole process's output in one file (normal output,
+        error output, even a full crash trace on a panic), so it turns most
+        of the fields below from "please guess" into "we can just read the
+        log."
+
+  - type: dropdown
+    id: binary
+    attributes:
+      label: Which build are you running?
+      options:
+        - huemux (browser)
+        - huemux-desktop (Electron window)
+        - huemux-desktop --headless
+    validations:
+      required: true
+
+  - type: input
+    id: version
+    attributes:
+      label: Version
+      description: >-
+        Output of `huemux version` / `huemux-desktop --version`, or the
+        release tag you downloaded from the
+        [Releases page](https://github.com/zamber/huemux/releases).
+      placeholder: v0.0.1
+    validations:
+      required: true
+
+  - type: dropdown
+    id: os
+    attributes:
+      label: Operating system
+      options:
+        - Linux — Wayland
+        - Linux — X11
+        - Windows
+        - macOS
+    validations:
+      required: true
+
+  - type: input
+    id: os-detail
+    attributes:
+      label: OS / desktop environment detail
+      description: >-
+        e.g. "Fedora 42, GNOME 47", "Windows 11 23H2", "macOS 15 Sequoia".
+        For Wayland, please also name the compositor (GNOME/KDE/Sway/etc) —
+        screen-capture bugs are very often compositor-specific.
+      placeholder: Fedora 42, GNOME 47, Wayland
+    validations:
+      required: false
+
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened?
+      description: What did you do, what did you expect, and what happened instead?
+    validations:
+      required: true
+
+  - type: textarea
+    id: repro
+    attributes:
+      label: Steps to reproduce
+      placeholder: |
+        1. Ran `huemux-desktop`
+        2. Paired with the bridge
+        3. Opened Sync, clicked Start
+        4. ...
+    validations:
+      required: false
+
+  - type: textarea
+    id: debug-log
+    attributes:
+      label: Debug log
+      description: >-
+        Re-run the affected command with `-debug` added (e.g. `huemux
+        -debug` or `huemux-desktop -debug`, combinable with any other flag —
+        `huemux -debug -v` works), reproduce the problem, then quit. The
+        exact log path is printed to the terminal on startup, and is also
+        one of the paths below depending on your OS. **Drag the whole file
+        into this box** rather than pasting an excerpt — the point of
+        capturing everything into one file is that a full attachment beats
+        a hand-picked snippet that might be missing the one relevant line.
+
+
+        | OS | Path |
+        |---|---|
+        | Linux/BSD | `$XDG_STATE_HOME/huemux/debug-<timestamp>.log`, or `~/.local/state/huemux/` if `$XDG_STATE_HOME` is unset |
+        | macOS | `~/Library/Logs/HueMux/debug-<timestamp>.log` |
+        | Windows | `%LOCALAPPDATA%\HueMux\logs\debug-<timestamp>.log` |
+    validations:
+      required: false
