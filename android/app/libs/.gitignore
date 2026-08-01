@@ -1,0 +1,3 @@
+# The AAR is a build artifact staged here by CI (gomobile bind output).
+# ~6MB of Go runtime; not committed.
+*.aar

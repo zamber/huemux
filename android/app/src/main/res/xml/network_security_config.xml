@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Android 9+ blocks cleartext HTTP by default, which would block the entire
+  app: the WebView talks to the Go server over http://127.0.0.1:<port>.
+
+  Scoped to loopback rather than setting android:usesCleartextTraffic="true".
+  The blanket flag would also permit cleartext to anything on the network,
+  which is exactly the property the loopback-only design exists to avoid — and
+  it would silently keep working if the server were ever bound off-loopback
+  without TLS, hiding a real mistake.
+
+  Note the Hue bridge itself is reached over HTTPS from Go, not from the
+  WebView, so it needs nothing here. Its self-signed certificate is handled
+  inside internal/hue, not by Android's network security policy.
+-->
+<network-security-config>
+    <domain-config cleartextTrafficPermitted="true">
+        <domain includeSubdomains="false">127.0.0.1</domain>
+        <domain includeSubdomains="false">localhost</domain>
+    </domain-config>
+    <base-config cleartextTrafficPermitted="false" />
+</network-security-config>

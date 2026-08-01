@@ -114,3 +114,32 @@ jobs:
           name: huemux-aar
           path: dist/huemux.aar
           if-no-files-found: error
+
+      # Gradle picks the AAR up from app/libs/ — see android/app/build.gradle.kts.
+      # It is not committed: a 6MB build artifact containing the whole Go
+      # runtime does not belong in git.
+      - name: Stage the AAR for Gradle
+        run: cp dist/huemux.aar android/app/libs/huemux.aar
+
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Build debug APK
+        working-directory: android
+        run: |
+          # No Gradle wrapper is committed — a wrapper jar is a binary blob and
+          # the runner already has Gradle. `gradle wrapper` first so the build
+          # still uses a pinned Gradle version rather than whatever ships today.
+          gradle wrapper --gradle-version 8.11.1
+          ./gradlew --no-daemon assembleDebug
+
+      - name: Report APK size
+        run: ls -lh android/app/build/outputs/apk/debug/*.apk
+
+      - uses: actions/upload-artifact@v7
+        with:
+          name: huemux-apk-debug
+          path: android/app/build/outputs/apk/debug/*.apk
+          if-no-files-found: error
