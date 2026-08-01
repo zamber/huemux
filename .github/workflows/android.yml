@@ -82,6 +82,17 @@ jobs:
       - name: Initialise gomobile against the runner's NDK
         run: gomobile init
 
+      # gomobile bind now insists golang.org/x/mobile is in the module's own
+      # dependency graph. Added here rather than committed to go.mod because
+      # x/mobile requires Go >= 1.25 while this module targets 1.24 so it keeps
+      # building on the development host — committing it would force every
+      # contributor onto a newer toolchain for a dependency only the AAR needs.
+      # The runner's checkout is throwaway, so this never leaves CI.
+      - name: Add the gomobile tool dependency (CI-only, not committed)
+        run: |
+          go get -tool golang.org/x/mobile/cmd/gobind
+          git --no-pager diff --stat go.mod || true
+
       - name: Build AAR
         run: |
           mkdir -p dist
