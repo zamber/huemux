@@ -107,6 +107,16 @@ body { margin: 0; }
 .room-header {
   font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.04em;
   color: var(--ink-muted); margin: 0 0 0.6rem; font-weight: 600;
+  /* Sticky so the room a card belongs to stays visible while scrolling past
+     it — with several rooms of cards the heading otherwise scrolls away and
+     there is nothing on screen saying which room you are looking at. The
+     background is opaque because cards scroll underneath it. */
+  position: sticky;
+  top: 0;
+  z-index: 5;
+  padding: 0.45rem 0 0.35rem;
+  margin-top: -0.45rem;
+  background: var(--surface);
 }
 /* A room's own scenes sit right below that room's light cards, inside the
    same .room-group — needs its own top margin so it doesn't butt up

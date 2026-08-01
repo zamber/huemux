@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Base theme. values-v35 overrides this to opt out of Android 15's
+         forced edge-to-edge; see the comment there. -->
+    <style name="Theme.HueMux" parent="Theme.AppCompat.DayNight.NoActionBar" />
+</resources>

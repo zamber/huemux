@@ -150,7 +150,7 @@ function patchLightCard(l) {
   const rgb = l.colorable ? xyToRgb(l.x, l.y, brightnessPct || 40) : null;
 
   card.classList.toggle('off', !l.on);
-  if (rgb) card.style.setProperty('--card-accent', `rgb(${rgb.r},${rgb.g},${rgb.b})`);
+  if (rgb) card.style.setProperty('--card-accent', `rgb(${rgb[0]},${rgb[1]},${rgb[2]})`);
 
   const grad = card.querySelector('.light-card-gradient');
   if (grad && rgb) grad.setAttribute('style', gradientStyleFor(rgb, brightnessPct || 40));
@@ -196,6 +196,71 @@ function patchRoomTile(room) {
   return true;
 }
 
+// patchAllLightsTile updates the group tile in place. Without this it was the
+// only card that waited for a full re-render, which is why every real lamp
+// reacted instantly and the group one lagged by a second or two.
+function patchAllLightsTile() {
+  const tile = els.grid.querySelector('.all-lights-tile[data-id="__all__"]');
+  if (!tile) return false;
+  const anyOn = lights.some((l) => l.on);
+
+  const power = tile.querySelector('[data-action="toggle-all"]');
+  if (power) {
+    power.classList.toggle('active', anyOn);
+    power.innerHTML = anyOn ? ICONS.powerOn : ICONS.powerOff;
+    power.title = HueMuxI18n.t(anyOn ? 'lights.turnAllOff' : 'lights.turnAllOn');
+  }
+
+  const grad = tile.querySelector('.light-card-gradient');
+  const style = multiGradientStyle(lights);
+  if (grad) {
+    grad.setAttribute('style', style);
+  } else if (style) {
+    // The tile renders no gradient element while everything is off, so one
+    // has to be created the first time a light comes on.
+    const el = document.createElement('div');
+    el.className = 'light-card-gradient';
+    el.setAttribute('style', style);
+    tile.insertBefore(el, tile.firstChild);
+  }
+
+  const slider = tile.querySelector('.brightness-slider');
+  if (slider && !editingIds.has('__all__') && document.activeElement !== slider) {
+    const on = lights.filter((l) => l.on && l.dimmable);
+    if (on.length) {
+      slider.value = String(Math.round(on.reduce((t, l) => t + l.brightness, 0) / on.length));
+    }
+  }
+  return true;
+}
+
+// patchRoomTileFor refreshes the tile of whichever room a light belongs to,
+// since a room's aggregate state and colour wash both derive from its lights.
+function patchRoomTileFor(l) {
+  if (!l || !l.room_id) return;
+  const room = rooms.find((r) => r.id === l.room_id);
+  if (!room) return;
+  const tile = els.grid.querySelector(`.all-lights-tile[data-room-id="${cssEscape(room.id)}"]`);
+  if (!tile) return;
+  const roomLights = lights.filter((x) => x.room_id === room.id);
+  const anyOn = roomLights.some((x) => x.on);
+  const power = tile.querySelector('[data-action="toggle-room"]');
+  if (power) {
+    power.classList.toggle('active', anyOn);
+    power.innerHTML = anyOn ? ICONS.powerOn : ICONS.powerOff;
+    power.title = HueMuxI18n.t(anyOn ? 'lights.turnAllOff' : 'lights.turnAllOn');
+  }
+  const grad = tile.querySelector('.light-card-gradient');
+  const style = multiGradientStyle(roomLights);
+  if (grad) grad.setAttribute('style', style);
+  else if (style) {
+    const el = document.createElement('div');
+    el.className = 'light-card-gradient';
+    el.setAttribute('style', style);
+    tile.insertBefore(el, tile.firstChild);
+  }
+}
+
 // cssEscape — CSS.escape is absent on older WebViews, and light ids are
 // bridge-generated UUIDs, so a conservative fallback is enough.
 function cssEscape(v) {
@@ -228,7 +293,13 @@ function mergeLightEvent(ev) {
     // Patch just this card. A light_event cannot change the grid's structure
     // — no card appears, disappears or moves — so a full rebuild was always
     // doing ~745ms of work to change a class and an icon.
-    if (editingIds.size === 0 && patchLightCard(l)) return;
+    if (editingIds.size === 0 && patchLightCard(l)) {
+      // The group tile aggregates every light, so a single-light event
+      // changes it too — its power state and its colour wash.
+      patchAllLightsTile();
+      patchRoomTileFor(l);
+      return;
+    }
   } else if (ev.type === 'grouped_light') {
     const r = rooms.find((x) => x.grouped_light_id === ev.id);
     if (!r) return;
@@ -347,6 +418,27 @@ function gradientStyleFor(rgb, brightnessPct) {
   const inner = `rgb(${scale(r, innerFactor)}, ${scale(g, innerFactor)}, ${scale(b, innerFactor)})`;
   const outer = `rgb(${scale(r, outerFactor)}, ${scale(g, outerFactor)}, ${scale(b, outerFactor)})`;
   return `background: radial-gradient(circle at 30% 30%, ${inner} 0%, ${outer} 60%, transparent 100%);`;
+}
+
+// multiGradientStyle blends the colours of several lights into one wash, so
+// the all-lights and per-room tiles show what the room actually looks like
+// rather than being the only blank cards on screen. Falls back to nothing
+// when no colour-capable light is on, which reads correctly as "off".
+function multiGradientStyle(list) {
+  const on = list.filter((l) => l.on && l.colorable);
+  if (!on.length) return '';
+  // Cap the number of stops: past a handful they stop being distinguishable
+  // and every extra one costs gradient interpolation on a weak GPU.
+  const picked = on.slice(0, 5);
+  const stops = picked.map((l, i) => {
+    const c = xyToRgb(l.x, l.y, Math.max(20, Math.round(l.brightness) || 40));
+    const pct = picked.length === 1 ? 100 : Math.round((i / (picked.length - 1)) * 100);
+    return `rgb(${c[0]},${c[1]},${c[2]}) ${pct}%`;
+  });
+  if (stops.length === 1) {
+    return `background: radial-gradient(circle at 30% 30%, ${stops[0].split(' ')[0]} 0%, transparent 75%);`;
+  }
+  return `background: linear-gradient(120deg, ${stops.join(', ')});`;
 }
 
 // ---------- rendering ----------
@@ -476,7 +568,10 @@ function renderLightCard(l) {
   // blurred gradient layer conveys it in the full themes; the simple themes
   // drop that layer and use this for a tinted border instead, so the colour
   // survives as information rather than being lost with the decoration.
-  const accent = rgb ? `--card-accent:rgb(${rgb.r},${rgb.g},${rgb.b});` : '';
+  // xyToRgb returns [r,g,b]. Indexing it as .r/.g/.b produced
+  // "rgb(undefined,undefined,undefined)", which browsers drop as invalid — so
+  // the simple theme's tinted border silently never appeared.
+  const accent = rgb ? `--card-accent:rgb(${rgb[0]},${rgb[1]},${rgb[2]});` : '';
   // Hidden, not just disabled, in the Favorites view — lights-ui's own rule
   // (showFavoriteButton={currentFilter !== 'favorites'}): favorites are for
   // quick access, and a star sitting right there invites an accidental
@@ -507,8 +602,10 @@ function renderAllLightsTile() {
     : 50;
   const allFav = !!favoritesRaw.all;
   const showFavBtn = filter !== 'favorites';
+  const allGradient = multiGradientStyle(lights);
   return `
     <div class="light-card all-lights-tile" data-id="__all__">
+      ${allGradient ? `<div class="light-card-gradient" style="${allGradient}"></div>` : ''}
       <div class="light-card-head">
         <h3>${ICONS.lightbulb}<span>${escapeHtml(HueMuxI18n.t('lights.allLights'))}</span></h3>
         <div class="light-card-actions">
@@ -533,6 +630,7 @@ function renderAllLightsTile() {
 function renderRoomTile(room, roomLights) {
   const anyOn = roomLights.some((l) => l.on);
   const roomFav = !!favoritesRaw['room:' + room.id];
+  const roomGradient = multiGradientStyle(roomLights);
   // Same rule as light cards and scene chips: no star in the Favorites view,
   // where it would sit under the thumb inviting an accidental unfavourite.
   const showFavBtn = filter !== 'favorites';
@@ -544,6 +642,7 @@ function renderRoomTile(room, roomLights) {
     : 50;
   return `
     <div class="light-card all-lights-tile" data-room-id="${escapeHtml(room.id)}">
+      ${roomGradient ? `<div class="light-card-gradient" style="${roomGradient}"></div>` : ''}
       <div class="light-card-head">
         <h3>${ICONS.lightbulb}<span>${escapeHtml(HueMuxI18n.t('lights.allInRoom'))}</span></h3>
         <div class="light-card-actions">
@@ -667,6 +766,7 @@ function actionToggleAll() {
   // event per light. Reflect all of them immediately.
   for (const l of lights) { l.on = target; patchLightCard(l); }
   for (const r of rooms) { r.on = target; patchRoomTile(r); }
+  patchAllLightsTile();
 }
 
 function actionColorAll(r, g, b) {
@@ -881,6 +981,8 @@ els.grid.addEventListener('click', (e) => {
       if (l) {
         l.on = next;
         patchLightCard(l);
+        patchAllLightsTile();
+        patchRoomTileFor(l);
       }
       break;
     }
@@ -906,6 +1008,7 @@ els.grid.addEventListener('click', (e) => {
       for (const l of lights) {
         if (l.room_id === roomId) { l.on = next; patchLightCard(l); }
       }
+      patchAllLightsTile();
       break;
     }
     case 'color-room':

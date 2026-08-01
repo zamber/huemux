@@ -28,7 +28,12 @@ class HueMuxHeader extends HTMLElement {
     this._onClick = (e) => {
       const a = e.target.closest('a[data-tab]');
       if (!a) return;
-      if (window.HueMuxShell) {
+      // Only hijack tabs the shell actually hosts as a frame. Settings is a
+      // real page, not a shell tab, so preventing its navigation and then
+      // calling switchTab('settings') — which no-ops on an unknown tab — left
+      // the link completely dead. Anything the shell does not own falls
+      // through to being an ordinary link.
+      if (window.HueMuxShell && window.HueMuxShell.has && window.HueMuxShell.has(a.dataset.tab)) {
         e.preventDefault();
         window.HueMuxShell.switchTab(a.dataset.tab);
       }

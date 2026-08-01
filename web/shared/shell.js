@@ -52,5 +52,7 @@ window.HueMuxShell = (() => {
     document.title = titleFor(initial);
   }
 
-  return { switchTab, current: () => active };
+  // has() lets callers ask before preventing a link's default action, rather
+  // than discovering afterwards that switchTab silently did nothing.
+  return { switchTab, current: () => active, has: (tab) => !!frames[tab] };
 })();

@@ -73,7 +73,12 @@ class ScreenCaptureService : Service() {
             // Android 14+ requires a registered callback before createVirtualDisplay.
             p.registerCallback(object : MediaProjection.Callback() {
                 override fun onStop() {
+                    // Fires when the user stops sharing from the system UI.
+                    // Without telling the page, its Stop button stays enabled,
+                    // the Start button stays disabled and the UI claims to be
+                    // streaming long after the frames have stopped.
                     Log.i(TAG, "projection stopped by the system")
+                    onCaptureEnded?.invoke()
                     stopSelf()
                 }
             }, null)
@@ -86,11 +91,30 @@ class ScreenCaptureService : Service() {
     private fun startCapture() {
         val p = projection ?: return
 
-        // Capture directly at grid-ish resolution rather than full screen.
-        // The compositor does the downscale on the way out, which is far
-        // cheaper than pulling a 1080p buffer across and shrinking it here —
-        // the same reasoning behind the desktop path's track constraints.
-        reader = ImageReader.newInstance(CAP_W, CAP_H, PixelFormat.RGBA_8888, 2).apply {
+        // Match the display's aspect ratio and orientation. A fixed 320x180
+        // landscape buffer on a portrait phone squashed the whole screen into
+        // a letterbox, so the colour pipeline sampled a distorted image with
+        // huge black bands — the zones nearest the edges read as black
+        // regardless of what was actually on screen.
+        val metrics = resources.displayMetrics
+        val dispW = metrics.widthPixels.coerceAtLeast(1)
+        val dispH = metrics.heightPixels.coerceAtLeast(1)
+        val scale = captureScale.coerceIn(0.05f, 1.0f)
+
+        // Long edge capped at CAP_LONG_EDGE so a scale of 1.0 on a 1440p
+        // phone does not push a full-resolution buffer through the pipeline;
+        // the Go side reduces to a 64x36 grid regardless.
+        val longEdge = (maxOf(dispW, dispH) * scale).toInt().coerceIn(64, CAP_LONG_EDGE)
+        val ratio = longEdge.toFloat() / maxOf(dispW, dispH)
+        // Even dimensions: some encoders and the RGBA row stride behave badly
+        // on odd widths.
+        val w = ((dispW * ratio).toInt().coerceAtLeast(32)) and 1.inv()
+        val h = ((dispH * ratio).toInt().coerceAtLeast(32)) and 1.inv()
+        capturedW = w
+        capturedH = h
+        Log.i(TAG, "display ${dispW}x$dispH scale=$scale -> capture ${w}x$h")
+
+        reader = ImageReader.newInstance(w, h, PixelFormat.RGBA_8888, 2).apply {
             setOnImageAvailableListener({ r ->
                 val image = r.acquireLatestImage() ?: return@setOnImageAvailableListener
                 try {
@@ -108,11 +132,10 @@ class ScreenCaptureService : Service() {
 
         display = p.createVirtualDisplay(
             "huemux-capture",
-            CAP_W, CAP_H, resources.displayMetrics.densityDpi,
+            w, h, resources.displayMetrics.densityDpi,
             DisplayManager.VIRTUAL_DISPLAY_FLAG_AUTO_MIRROR,
             reader!!.surface, null, null,
         )
-        Log.i(TAG, "capturing at ${CAP_W}x$CAP_H")
     }
 
     /** Packs one RGBA image into tightly-packed RGB and hands it to Go. */
@@ -127,7 +150,12 @@ class ScreenCaptureService : Service() {
         // rowStride usually exceeds width*4: the surface is padded to a
         // hardware-friendly alignment. Copying row by row rather than assuming
         // a packed buffer is what keeps the image from shearing diagonally.
-        val out = rgbScratch ?: ByteArray(w * h * 3).also { rgbScratch = it }
+        val need = w * h * 3
+        var out = rgbScratch
+        if (out == null || out.size != need) {
+            out = ByteArray(need)
+            rgbScratch = out
+        }
         var o = 0
         for (y in 0 until h) {
             var rowStart = y * rowStride
@@ -163,6 +191,9 @@ class ScreenCaptureService : Service() {
     }
 
     override fun onDestroy() {
+        // Covers every other way this ends — stopSelf from the page, the
+        // system reclaiming the service, the activity going away.
+        onCaptureEnded?.invoke()
         display?.release()
         reader?.close()
         projection?.stop()
@@ -174,6 +205,14 @@ class ScreenCaptureService : Service() {
     private var rgbScratch: ByteArray? = null
 
     companion object {
+        /**
+         * Invoked whenever capture stops, for any reason. Set by MainActivity
+         * so the web UI can put its buttons back — the page has no other way
+         * to learn that the system ended the session.
+         */
+        @Volatile
+        var onCaptureEnded: (() -> Unit)? = null
+
         const val TAG = "HueMuxCapture"
         const val ACTION_STOP = "com.huemux.app.STOP_CAPTURE"
         const val EXTRA_RESULT_CODE = "resultCode"
@@ -181,10 +220,25 @@ class ScreenCaptureService : Service() {
         private const val CHANNEL_ID = "huemux-capture"
         private const val NOTIFICATION_ID = 1
 
-        // Matches the desktop default. The Go pipeline reduces to a 64x36 grid
-        // regardless, so capturing larger only costs bandwidth and battery.
-        const val CAP_W = 320
-        const val CAP_H = 180
+        // Upper bound on the captured long edge. The Go pipeline reduces to a
+        // 64x36 grid regardless, so anything beyond this is bandwidth and
+        // battery for no visible gain.
+        const val CAP_LONG_EDGE = 480
+
+        /**
+         * Fraction of the display resolution to capture, 0.05..1.0. Settable
+         * from the UI: higher is sharper input for the colour pipeline (and
+         * usable as a screen recording), lower is cheaper.
+         */
+        @Volatile
+        var captureScale: Float = 0.25f
+
+        /** Last negotiated capture size, for the settings UI to display. */
+        @Volatile
+        var capturedW: Int = 0
+
+        @Volatile
+        var capturedH: Int = 0
 
         fun startForegroundService(ctx: Context, resultCode: Int, data: Intent) {
             val i = Intent(ctx, ScreenCaptureService::class.java)

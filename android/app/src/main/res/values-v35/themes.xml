@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Android 15 forces edge-to-edge for targetSdk 35, which drew the web header
+  underneath the status bar: unreadable, and unclickable because the system
+  consumed the touches. The WebView is padded by the window insets in
+  MainActivity, which is the forward-looking fix — this opt-out is a safety
+  net for the case where an inset listener does not fire before first layout,
+  since the symptom is a header the user cannot reach at all.
+
+  Deprecated by Google and will stop being honoured eventually; the inset
+  handling is what has to keep working.
+-->
+<resources>
+    <style name="Theme.HueMux" parent="Theme.AppCompat.DayNight.NoActionBar">
+        <item name="android:windowOptOutEdgeToEdgeEnforcement">true</item>
+    </style>
+</resources>
