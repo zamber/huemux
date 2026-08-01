@@ -18,7 +18,7 @@ reviewable commit or small series, and to leave `main` working.
 | 7 | Android M1 — lights, standalone | **built, untested on a device** |
 | 8 | Android M2 — config + mobile polish | **done** |
 | 9 | Android M3 — MediaProjection sync | not started |
-| 10 | Android M4 — CI build, signing, distribution | not started |
+| 10 | Android M4 — CI build, signing, distribution | **done (signing awaits a keystore secret)** |
 
 ---
 
