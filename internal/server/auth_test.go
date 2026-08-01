@@ -135,3 +135,36 @@ func TestOriginStillRejectsForeignSitesWhenAuthEnabled(t *testing.T) {
 		t.Fatal("a foreign Origin must be rejected regardless of auth being configured")
 	}
 }
+
+// TestOriginAcceptsOwnAddressOnWildcardBind covers the bug that made LAN
+// access silently useless: with listen.host = "0.0.0.0" a browser's Origin is
+// a concrete address and can never equal the wildcard, so every WebSocket
+// upgrade was rejected while static assets still loaded — the page rendered
+// its header and then stayed empty.
+func TestOriginAcceptsOwnAddressOnWildcardBind(t *testing.T) {
+	own := localAddresses()
+	if len(own) == 0 {
+		t.Skip("no non-loopback address on this host")
+	}
+	mine := own[0].String()
+
+	for _, wildcard := range []string{"0.0.0.0", "::", ""} {
+		r := httptest.NewRequest(http.MethodGet, "/ws", nil)
+		r.Header.Set("Origin", "http://"+mine+":7654")
+		if !checkOrigin(r, wildcard) {
+			t.Errorf("wildcard %q must accept this machine's own address %s", wildcard, mine)
+		}
+	}
+
+	// Still bounded: an address this machine does not hold is rejected even
+	// under a wildcard bind.
+	r := httptest.NewRequest(http.MethodGet, "/ws", nil)
+	r.Header.Set("Origin", "http://203.0.113.9:7654")
+	if checkOrigin(r, "0.0.0.0") {
+		t.Error("a wildcard bind must not accept an arbitrary foreign address")
+	}
+	r.Header.Set("Origin", "https://attacker.example")
+	if checkOrigin(r, "0.0.0.0") {
+		t.Error("a wildcard bind must not accept an arbitrary foreign hostname")
+	}
+}
