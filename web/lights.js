@@ -486,7 +486,7 @@ function renderLightCard(l) {
     <div class="light-card ${off ? 'off' : ''}" data-id="${escapeHtml(l.id)}" style="${accent}">
       ${gradient ? `<div class="light-card-gradient" style="${gradient}"></div>` : ''}
       <div class="light-card-head">
-        <h3 title="${escapeHtml(l.name)}">${escapeHtml(l.name)}</h3>
+        <h3 title="${escapeHtml(l.name)}"><span>${escapeHtml(l.name)}</span></h3>
         <div class="light-card-actions">
           ${showFavBtn ? `<button type="button" class="icon-btn ${l.favorite ? 'active' : ''}" data-action="favorite" data-id="${escapeHtml(l.id)}" title="${escapeHtml(HueMuxI18n.t('lights.toggleFavorite'))}">${l.favorite ? ICONS.star : ICONS.starOutline}</button>` : ''}
           ${l.colorable ? `<button type="button" class="icon-btn" data-action="color" data-id="${escapeHtml(l.id)}" title="${escapeHtml(HueMuxI18n.t('lights.chooseColor'))}">${ICONS.palette}</button>` : ''}

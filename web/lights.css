@@ -131,8 +131,18 @@ body { margin: 0; }
 .light-card-head h3 {
   margin: 0; flex: 1; min-width: 0;
   font-size: 1rem; font-weight: 600; color: var(--ink);
-  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
   display: flex; align-items: center; gap: 0.5rem;
+  overflow: hidden;
+}
+/* The ellipsis has to live on the text node's own box, not on the h3: the h3
+   is a flex container (it lays out an icon beside the label) and
+   text-overflow does nothing on one. The result was a hard clip with no "…",
+   so "Wszystkie w tym pokoju" simply ended mid-word. */
+.light-card-head h3 > span {
+  min-width: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 .light-card-head h3 svg { flex-shrink: 0; width: 20px; height: 20px; color: var(--ink); }
 .light-card-actions { display: flex; align-items: center; gap: 0.4rem; flex-shrink: 0; }

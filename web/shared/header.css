@@ -67,3 +67,55 @@ huemux-header { display: block; }
   .ls-header-inner { padding: 0.6rem 0.8rem; gap: 0.6rem; }
   .ls-nav a { padding: 0.35rem 0.6rem; font-size: 0.85rem; }
 }
+
+/* ── Mobile: nav becomes a floating bottom bar ────────────────────────────
+   Two reasons, both from using this on a real phone. The top of the screen is
+   the hardest place to reach one-handed and the easiest to lose to a status
+   bar or camera cutout — the nav sat under the clock and was not merely ugly
+   but untappable, which stranded the Settings link and with it the only route
+   to a diagnostics report. Putting navigation at the bottom is both reachable
+   and out of the system UI's way.
+
+   The brand and the theme/language buttons stay in the top bar: they are
+   glanced at, not aimed at. */
+@media (pointer: coarse) and (max-width: 700px) {
+  .ls-header-inner {
+    padding: 0.55rem 0.9rem;
+    /* Room for the bottom bar so the last card is not trapped under it. */
+    margin-bottom: 0;
+  }
+
+  .ls-nav {
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 40;
+    flex: none;
+    justify-content: space-around;
+    gap: 0;
+    padding: 0.35rem 0.5rem calc(0.35rem + env(safe-area-inset-bottom, 0px));
+    background: var(--surface-alt);
+    border-top: 1px solid var(--border);
+    box-shadow: 0 -4px 20px var(--shadow);
+  }
+
+  .ls-nav a {
+    flex: 1;
+    text-align: center;
+    /* 44px minimum, and generous because these are the primary controls. */
+    padding: 0.75rem 0.5rem;
+    font-size: 0.95rem;
+    border-radius: 10px;
+  }
+
+  /* An empty nav must not leave a floating bar with nothing in it — the
+     header renders no links when there is only one feature tab. */
+  .ls-nav:empty { display: none; }
+
+  /* Keep page content clear of the fixed bar. Applied to body rather than
+     each page's container so it cannot be forgotten by a new page. */
+  body {
+    padding-bottom: calc(4.2rem + env(safe-area-inset-bottom, 0px));
+  }
+}

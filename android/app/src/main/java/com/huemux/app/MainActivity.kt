@@ -12,6 +12,8 @@ import android.webkit.WebViewClient
 import android.widget.TextView
 import androidx.activity.OnBackPressedCallback
 import androidx.appcompat.app.AppCompatActivity
+import androidx.core.view.ViewCompat
+import androidx.core.view.WindowInsetsCompat
 import com.huemux.mobile.Mobile
 
 /**
@@ -65,6 +67,25 @@ class MainActivity : AppCompatActivity() {
             }
         }
         setContentView(webView)
+
+        // targetSdk 35 makes Android 15+ draw the app edge-to-edge, so without
+        // this the WebView extends under the status bar: the page header sits
+        // beneath the clock and battery icons, unreadable and — because the
+        // system consumes the touches — unclickable. That included the
+        // Settings link, which is the only route to the diagnostics report,
+        // so the app could not even be debugged from itself.
+        //
+        // Padding the WebView rather than the web content: it works regardless
+        // of what the page's CSS knows about safe areas, and it keeps
+        // env(safe-area-inset-*) at zero inside the WebView so a page that
+        // does handle insets cannot double-pad.
+        ViewCompat.setOnApplyWindowInsetsListener(webView) { v, insets ->
+            val bars = insets.getInsets(
+                WindowInsetsCompat.Type.systemBars() or WindowInsetsCompat.Type.displayCutout()
+            )
+            v.setPadding(bars.left, bars.top, bars.right, bars.bottom)
+            insets
+        }
 
         // Keep in-app back navigation working before it falls through to
         // finishing the activity.

@@ -7,8 +7,13 @@
 huemux-pairing {
   display: block;
   max-width: 480px;
+  /* Horizontal padding, not just auto margins: below 480px the max-width does
+     nothing and the panel ran edge-to-edge against the screen, with the bridge
+     card and the manual-IP field touching both sides. */
   margin: 2rem auto;
+  padding: 0 1rem;
   text-align: left;
+  box-sizing: border-box;
 }
 huemux-pairing[hidden] { display: none; }
 
