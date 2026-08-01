@@ -140,6 +140,16 @@
     "save": "Save",
     "saved": "Saved.",
     "savedRestart": "Saved — restart HueMux for this to take effect.",
-    "loadFailed": "Could not load settings: "
+    "loadFailed": "Could not load settings: ",
+    "diagnostics": "Diagnostics",
+    "diagnosticsHint": "Collects the version, configuration, connection state and recent log into one file. Attach it to a bug report — it is the fastest way to get a problem understood. Never includes your auth token.",
+    "diagnosticsDownload": "Download",
+    "diagnosticsCopy": "Copy",
+    "diagnosticsView": "View",
+    "diagnosticsShown": "Shown below — select all to copy manually.",
+    "diagnosticsCopied": "Copied to clipboard.",
+    "diagnosticsSelectManually": "Clipboard unavailable on an insecure page — the text is selected below, copy it manually.",
+    "diagnosticsDownloading": "Downloading…",
+    "diagnosticsDownloadHint": "If nothing downloaded, use View or Copy instead."
   }
 }

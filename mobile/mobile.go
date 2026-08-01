@@ -39,6 +39,7 @@ import (
 
 	"github.com/zamber/huemux/internal/appconfig"
 	"github.com/zamber/huemux/internal/config"
+	"github.com/zamber/huemux/internal/debuglog"
 	"github.com/zamber/huemux/internal/engine"
 	"github.com/zamber/huemux/internal/lightctl"
 	"github.com/zamber/huemux/internal/pipeline"
@@ -75,6 +76,11 @@ func Start(configDir string) (string, error) {
 		return "", errors.New("huemux: configDir is required on Android")
 	}
 	config.SetDir(configDir)
+	// On Android this is the only way logs are ever obtainable: no command
+	// line for -debug, no reachable filesystem. The settings screen's
+	// diagnostics button reads this buffer.
+	debuglog.Capture()
+	server.Version = "android"
 
 	// Whether a config file exists has to be checked before Load, not
 	// inferred from what it returns: Load merges over appconfig.Default(), so

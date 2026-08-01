@@ -297,6 +297,7 @@ func (s *Server) routes() {
 	s.mux.HandleFunc("/api/favorites", s.guard(s.handleFavorites))
 	s.mux.HandleFunc("/api/locale", s.guard(s.handleLocale))
 	s.mux.HandleFunc("/api/config", s.guard(s.handleConfig))
+	s.mux.HandleFunc("/api/diagnostics", s.guard(s.handleDiagnostics))
 	s.mux.HandleFunc("/ws", s.guard(s.handleWS))
 }
 

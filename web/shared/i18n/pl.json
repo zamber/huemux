@@ -140,6 +140,16 @@
     "save": "Zapisz",
     "saved": "Zapisano.",
     "savedRestart": "Zapisano — uruchom HueMux ponownie, aby zmiany zadziałały.",
-    "loadFailed": "Nie udało się wczytać ustawień: "
+    "loadFailed": "Nie udało się wczytać ustawień: ",
+    "diagnostics": "Diagnostyka",
+    "diagnosticsHint": "Zbiera wersję, konfigurację, stan połączenia i ostatnie logi do jednego pliku. Dołącz go do zgłoszenia błędu — to najszybszy sposób na zrozumienie problemu. Nigdy nie zawiera tokenu uwierzytelniania.",
+    "diagnosticsDownload": "Pobierz",
+    "diagnosticsCopy": "Kopiuj",
+    "diagnosticsView": "Pokaż",
+    "diagnosticsShown": "Pokazane poniżej — zaznacz wszystko, aby skopiować ręcznie.",
+    "diagnosticsCopied": "Skopiowano do schowka.",
+    "diagnosticsSelectManually": "Schowek niedostępny na niezabezpieczonej stronie — tekst jest zaznaczony poniżej, skopiuj go ręcznie.",
+    "diagnosticsDownloading": "Pobieranie…",
+    "diagnosticsDownloadHint": "Jeśli nic się nie pobrało, użyj Pokaż lub Kopiuj."
   }
 }

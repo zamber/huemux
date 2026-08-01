@@ -51,3 +51,23 @@ body { margin: 0; }
 #settings .warning { color: var(--warn, #c0392b); }
 
 .actions { display: flex; align-items: center; gap: 0.8rem; margin-top: 1.4rem; }
+
+/* Diagnostics. The textarea is the fallback that always works: a WebView may
+   refuse a download and an insecure origin has no clipboard API, but text on
+   screen can always be selected and shared. */
+#diag-text {
+  width: 100%;
+  margin-top: 0.7rem;
+  padding: 0.5rem;
+  background: var(--surface-alt);
+  color: var(--ink);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  font-family: inherit;
+  font-size: 0.72rem;
+  line-height: 1.45;
+  white-space: pre;
+  overflow: auto;
+}
+#diagnostics .row { flex-wrap: wrap; }
+#diagnostics .row button { flex: 0 0 auto; }

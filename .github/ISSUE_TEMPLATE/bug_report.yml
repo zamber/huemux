@@ -91,14 +91,25 @@ body:
     attributes:
       label: Debug log
       description: >-
-        Re-run the affected command with `-debug` added (e.g. `huemux
-        -debug` or `huemux-desktop -debug`, combinable with any other flag —
-        `huemux -debug -v` works), reproduce the problem, then quit. The
-        exact log path is printed to the terminal on startup, and is also
-        one of the paths below depending on your OS. **Drag the whole file
-        into this box** rather than pasting an excerpt — the point of
-        capturing everything into one file is that a full attachment beats
-        a hand-picked snippet that might be missing the one relevant line.
+        **Easiest way, and it works everywhere including Android:** open
+        Settings in HueMux and press **Download** under Diagnostics. That
+        produces one file with the version, configuration, connection state
+        and recent log. Attach it here. It never contains your auth token.
+        If the download does nothing (some WebViews block it), use **Copy** or
+        **View** on the same screen and paste the text instead.
+
+
+        Only available on the machine HueMux is running on, since the report
+        includes your bridge address and local network details.
+
+
+        **If HueMux will not start at all**, there is no settings screen to
+        press, so fall back to the `-debug` flag: run `huemux -debug` (or
+        `huemux-desktop -debug`, combinable with any other flag), reproduce
+        the problem, then quit and attach the whole log file. Its path is
+        printed at startup and listed per-OS below. Attach the full file
+        rather than an excerpt — a hand-picked snippet is usually missing the
+        one relevant line.
 
 
         | OS | Path |
