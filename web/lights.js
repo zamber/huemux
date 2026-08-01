@@ -131,6 +131,91 @@ function handleMessage(msg) {
   }
 }
 
+// ---------- targeted DOM updates ----------
+//
+// A light_event names exactly one light, but the original code responded by
+// rebuilding the whole grid with innerHTML. Measured on a wall panel that was
+// ~745ms through to paint, twice per action, and consecutive taps queued
+// behind each other until latency reached seconds. See ARCHITECTURE.md.
+//
+// patchLightCard updates the handful of attributes that can actually change,
+// leaving the DOM structure alone. Returns false when the card is not on
+// screen, so the caller can fall back to a full render.
+
+function patchLightCard(l) {
+  const card = els.grid.querySelector(`.light-card[data-id="${cssEscape(l.id)}"]`);
+  if (!card) return false;
+
+  const brightnessPct = l.on ? Math.round(l.brightness) : 0;
+  const rgb = l.colorable ? xyToRgb(l.x, l.y, brightnessPct || 40) : null;
+
+  card.classList.toggle('off', !l.on);
+  if (rgb) card.style.setProperty('--card-accent', `rgb(${rgb.r},${rgb.g},${rgb.b})`);
+
+  const grad = card.querySelector('.light-card-gradient');
+  if (grad && rgb) grad.setAttribute('style', gradientStyleFor(rgb, brightnessPct || 40));
+
+  const power = card.querySelector('[data-action="toggle"]');
+  if (power) {
+    power.classList.toggle('active', !!l.on);
+    power.innerHTML = l.on ? ICONS.powerOn : ICONS.powerOff;
+    power.title = HueMuxI18n.t(l.on ? 'lights.turnOff' : 'lights.turnOn');
+  }
+
+  const fav = card.querySelector('[data-action="favorite"]');
+  if (fav) {
+    fav.classList.toggle('active', !!l.favorite);
+    fav.innerHTML = l.favorite ? ICONS.star : ICONS.starOutline;
+  }
+
+  // Never fight a finger that is mid-drag: editingIds already guards the
+  // render path, and this is the same rule at element level.
+  const slider = card.querySelector('.brightness-slider');
+  if (slider && !editingIds.has(l.id) && document.activeElement !== slider) {
+    slider.value = String(brightnessPct);
+  }
+  return true;
+}
+
+// patchRoomTile is the same idea for a room's bulk tile. Its power state
+// tracks "any light in the room is on", which the tile renders from the room's
+// grouped_light — so a grouped_light event can update it in place too.
+function patchRoomTile(room) {
+  const tile = els.grid.querySelector(`.all-lights-tile[data-room-id="${cssEscape(room.id)}"]`);
+  if (!tile) return false;
+  const power = tile.querySelector('[data-action="toggle-room"]');
+  if (power) {
+    power.classList.toggle('active', !!room.on);
+    power.innerHTML = room.on ? ICONS.powerOn : ICONS.powerOff;
+    power.title = HueMuxI18n.t(room.on ? 'lights.turnAllOff' : 'lights.turnAllOn');
+  }
+  const slider = tile.querySelector('.brightness-slider');
+  if (slider && !editingIds.has(room.id) && document.activeElement !== slider) {
+    slider.value = String(Math.round(room.brightness || 0));
+  }
+  return true;
+}
+
+// cssEscape — CSS.escape is absent on older WebViews, and light ids are
+// bridge-generated UUIDs, so a conservative fallback is enough.
+function cssEscape(v) {
+  if (window.CSS && CSS.escape) return CSS.escape(v);
+  return String(v).replace(/["\\]/g, '\\$&');
+}
+
+// scheduleRender coalesces full rebuilds into one per animation frame. A
+// room-wide change emits an event per light; without this each one paid for
+// its own full rebuild.
+let renderQueued = false;
+function scheduleRender() {
+  if (renderQueued) return;
+  renderQueued = true;
+  requestAnimationFrame(() => {
+    renderQueued = false;
+    renderGrid();
+  });
+}
+
 function mergeLightEvent(ev) {
   if (ev.type === 'light') {
     const l = lights.find((x) => x.id === ev.id);
@@ -139,13 +224,21 @@ function mergeLightEvent(ev) {
     if (ev.brightness !== undefined) l.brightness = ev.brightness;
     if (ev.x !== undefined) l.x = ev.x;
     if (ev.y !== undefined) l.y = ev.y;
+
+    // Patch just this card. A light_event cannot change the grid's structure
+    // — no card appears, disappears or moves — so a full rebuild was always
+    // doing ~745ms of work to change a class and an icon.
+    if (editingIds.size === 0 && patchLightCard(l)) return;
   } else if (ev.type === 'grouped_light') {
     const r = rooms.find((x) => x.grouped_light_id === ev.id);
     if (!r) return;
     if (ev.on !== undefined) r.on = ev.on;
     if (ev.brightness !== undefined) r.brightness = ev.brightness;
+    if (editingIds.size === 0 && patchRoomTile(r)) return;
   }
-  if (editingIds.size === 0) renderGrid();
+  // Fall through only when the affected element is not on screen — the
+  // Favorites view, a room filter, or a light that has genuinely appeared.
+  if (editingIds.size === 0) scheduleRender();
 }
 
 function mergeFavorite(id, fav) {
@@ -159,8 +252,10 @@ function mergeFavorite(id, fav) {
     const l = lights.find((x) => x.id === id);
     if (l) l.favorite = fav;
   }
+  // A favourite change can add or remove cards in the Favorites view, so this
+  // one genuinely is structural. Coalesced rather than immediate.
   if (editingIds.size === 0) {
-    renderGrid();
+    scheduleRender();
     renderZoneScenes();
     renderFilterMenu();
   }
@@ -568,6 +663,10 @@ function updateFilterSummary() {
 function actionToggleAll() {
   const target = !lights.some((l) => l.on);
   lights.forEach((l) => send({ type: 'light_toggle', rid: l.id, on: target }));
+  // The worst case for round-trip latency: one message and one returning
+  // event per light. Reflect all of them immediately.
+  for (const l of lights) { l.on = target; patchLightCard(l); }
+  for (const r of rooms) { r.on = target; patchRoomTile(r); }
 }
 
 function actionColorAll(r, g, b) {
@@ -771,7 +870,18 @@ els.grid.addEventListener('click', (e) => {
       break;
     case 'toggle': {
       const l = lights.find((x) => x.id === id);
-      send({ type: 'light_toggle', rid: id, on: !(l && l.on) });
+      const next = !(l && l.on);
+      send({ type: 'light_toggle', rid: id, on: next });
+      // Optimistic: show the new state now rather than after the round trip.
+      // Measured at ~460ms on a LAN deployment — the HTTPS PUT to the bridge,
+      // the bridge acting on it, and the eventstream reporting back — all of
+      // which was visible as dead time where a tap appeared to do nothing.
+      // The event still arrives and reconciles; if the bridge rejects the
+      // change or the light is unreachable, the next event corrects this.
+      if (l) {
+        l.on = next;
+        patchLightCard(l);
+      }
       break;
     }
     case 'color':
@@ -786,7 +896,16 @@ els.grid.addEventListener('click', (e) => {
     case 'toggle-room': {
       const roomId = btn.dataset.roomId;
       const anyOn = lights.filter((l) => l.room_id === roomId).some((l) => l.on);
-      send({ type: 'room_toggle', rid: id, on: !anyOn });
+      const next = !anyOn;
+      send({ type: 'room_toggle', rid: id, on: next });
+      // Optimistic, and worth more here than for a single light: a room-wide
+      // change produces one event per light, so without this the room appears
+      // to change one card at a time over a second or more.
+      const room = rooms.find((r) => r.id === roomId);
+      if (room) { room.on = next; patchRoomTile(room); }
+      for (const l of lights) {
+        if (l.room_id === roomId) { l.on = next; patchLightCard(l); }
+      }
       break;
     }
     case 'color-room':
