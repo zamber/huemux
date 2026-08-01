@@ -95,12 +95,15 @@ func Start(configDir string) (string, error) {
 	if err != nil {
 		return "", fmt.Errorf("load config: %w", err)
 	}
-	// No mobile browser can capture a screen, and MediaProjection is not
-	// wired up yet, so screen sync is opt-in on the phone rather than the
-	// default — it would otherwise open a DTLS stream nothing can feed. An
-	// explicit choice on disk always wins.
+	// Full profile on first run, now that MediaProjection feeds the engine.
+	//
+	// This defaulted to lights-only while there was no way to capture on
+	// Android: a Sync tab that could not sync was worse than no tab. That is
+	// no longer true — the Kotlin side captures the screen and calls PushFrame
+	// directly — so the phone gets both halves like every other platform. An
+	// explicit choice on disk still wins.
 	if firstRun {
-		cfg.Profile = appconfig.ProfileLights
+		cfg.Profile = appconfig.ProfileFull
 	}
 	if err := cfg.Validate(); err != nil {
 		return "", fmt.Errorf("invalid config: %w", err)

@@ -3,4 +3,8 @@
     <!-- Shown instead of a blank WebView when the embedded Go server fails to
          start, so the failure is legible rather than a white rectangle. -->
     <string name="start_failed">HueMux could not start.\n\n%1$s</string>
+
+    <string name="capture_channel">Screen sync</string>
+    <string name="capture_title">HueMux is syncing your lights</string>
+    <string name="capture_text">Capturing the screen to drive your Hue lights.</string>
 </resources>

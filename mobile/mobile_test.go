@@ -89,7 +89,7 @@ func TestStartUsesInjectedConfigDir(t *testing.T) {
 	}
 }
 
-func TestDefaultsToLightsProfile(t *testing.T) {
+func TestDefaultsToFullProfile(t *testing.T) {
 	dir := reset(t)
 
 	if _, err := Start(dir); err != nil {
@@ -103,10 +103,10 @@ func TestDefaultsToLightsProfile(t *testing.T) {
 	if err := json.Unmarshal([]byte(raw), &cfg); err != nil {
 		t.Fatal(err)
 	}
-	// A phone cannot capture its own screen through the web APIs and has no
-	// picker, so sync is opt-in there.
-	if cfg.Profile != appconfig.ProfileLights {
-		t.Errorf("profile = %q, want %q by default on mobile", cfg.Profile, appconfig.ProfileLights)
+	// Was lights-only while Android had no way to capture. MediaProjection
+	// now feeds the engine, so the phone gets both halves.
+	if cfg.Profile != appconfig.ProfileFull {
+		t.Errorf("profile = %q, want %q by default on mobile", cfg.Profile, appconfig.ProfileFull)
 	}
 }
 
