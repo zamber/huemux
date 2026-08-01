@@ -136,10 +136,20 @@ func (s *Server) patchConfig(w http.ResponseWriter, r *http.Request) {
 // strings and trusting one here would let anything behind a proxy — or
 // anything willing to set the header — claim to be local.
 func isLoopbackRequest(r *http.Request) bool {
-	host, _, err := net.SplitHostPort(r.RemoteAddr)
+	host, _, err := splitHostPortLenient(r.RemoteAddr)
 	if err != nil {
 		host = r.RemoteAddr
 	}
 	ip := net.ParseIP(host)
 	return ip != nil && ip.IsLoopback()
+}
+
+// splitHostPortLenient splits an address that may or may not carry a port,
+// which RemoteAddr does not actually guarantee.
+func splitHostPortLenient(addr string) (string, string, error) {
+	host, port, err := net.SplitHostPort(addr)
+	if err != nil {
+		return addr, "", err
+	}
+	return host, port, nil
 }

@@ -13,8 +13,8 @@ reviewable commit or small series, and to leave `main` working.
 | 2 | Profiles, server side | **done** |
 | 3 | Extract pairing UI into `web/shared/` | **done** |
 | 4 | Profile-aware UI + settings screen | **done** |
-| 5 | Listen address, Origin, auth | not started |
-| 6 | TLS modes | not started |
+| 5 | Listen address, Origin, auth | **done** |
+| 6 | TLS modes | **done** |
 | 7 | Android M1 — lights, standalone | **Go side done; Kotlin app not started** |
 | 8 | Android M2 — config + mobile polish | not started |
 | 9 | Android M3 — MediaProjection sync | not started |

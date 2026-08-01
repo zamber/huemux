@@ -5,13 +5,16 @@ package server
 
 import (
 	"context"
+	"crypto/tls"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io/fs"
 	"log"
 	"net"
 	"net/http"
 	"os"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -51,6 +54,11 @@ type Server struct {
 	pairMu    sync.Mutex
 	pairState pairingState
 
+	authLimit *authLimiter
+
+	lnMu sync.Mutex
+	ln   net.Listener
+
 	mu           sync.Mutex
 	frameSource  *Conn
 	uiConns      map[*Conn]struct{}
@@ -84,12 +92,43 @@ func New(cfg appconfig.Config, store *config.Store, favorites *config.FavoritesS
 		favorites: favorites,
 		mux:       http.NewServeMux(),
 		uiConns:   map[*Conn]struct{}{},
+		authLimit: newAuthLimiter(),
 	}
 	if eng != nil || lights != nil {
 		s.setPaired(eng, lights)
 	}
 	s.routes()
 	return s
+}
+
+// Close releases the listener so the port is free again.
+//
+// Added because it was genuinely missing: without it a process that started a
+// server could never give the port back, which showed up as the mobile
+// facade's tests exhausting the port range after a handful of start/stop
+// cycles. In-flight connections are not drained — there is no long-running
+// work to lose, and every client reconnects on its own.
+func (s *Server) Close() error {
+	s.lnMu.Lock()
+	ln := s.ln
+	s.ln = nil
+	s.lnMu.Unlock()
+	if ln == nil {
+		return nil
+	}
+	return ln.Close()
+}
+
+// guard wraps a handler with token authentication. Applied to every /api
+// route and the WebSocket upgrade — not to the static UI, which is just an
+// HTML shell that cannot do anything until one of these answers it.
+func (s *Server) guard(h http.HandlerFunc) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		if !s.authorized(w, r) {
+			return
+		}
+		h(w, r)
+	}
 }
 
 // Config returns the effective application configuration.
@@ -249,42 +288,82 @@ func (s *Server) routes() {
 	// page renders its own scene strip from /api/scenes, so they stay
 	// reachable under every profile (see appconfig.Config.NeedsLightctl).
 	if s.cfg.ShowsSyncTab() {
-		s.mux.HandleFunc("/api/areas", s.handleAreas)
+		s.mux.HandleFunc("/api/areas", s.guard(s.handleAreas))
 	}
-	s.mux.HandleFunc("/api/status", s.handleStatusAPI)
-	s.mux.HandleFunc("/api/lights", s.handleLights)
-	s.mux.HandleFunc("/api/rooms", s.handleRooms)
-	s.mux.HandleFunc("/api/scenes", s.handleScenes)
-	s.mux.HandleFunc("/api/favorites", s.handleFavorites)
-	s.mux.HandleFunc("/api/locale", s.handleLocale)
-	s.mux.HandleFunc("/api/config", s.handleConfig)
-	s.mux.HandleFunc("/ws", s.handleWS)
+	s.mux.HandleFunc("/api/status", s.guard(s.handleStatusAPI))
+	s.mux.HandleFunc("/api/lights", s.guard(s.handleLights))
+	s.mux.HandleFunc("/api/rooms", s.guard(s.handleRooms))
+	s.mux.HandleFunc("/api/scenes", s.guard(s.handleScenes))
+	s.mux.HandleFunc("/api/favorites", s.guard(s.handleFavorites))
+	s.mux.HandleFunc("/api/locale", s.guard(s.handleLocale))
+	s.mux.HandleFunc("/api/config", s.guard(s.handleConfig))
+	s.mux.HandleFunc("/ws", s.guard(s.handleWS))
 }
 
-// ListenAndServe binds the first free port starting at 7654, trying ten
-// ports before giving up — a taken default port is not a reason to fail to
-// start.
+// ListenAndServe binds the configured address and starts serving.
+//
+// A port of 0 keeps the long-standing behaviour of scanning upward from the
+// default: a port already in use is not a reason to refuse to start. An
+// explicitly configured port is not scanned past, because silently landing on
+// a different port than the one someone wrote down is worse than failing.
 func (s *Server) ListenAndServe() (string, error) {
-	const base = 7654
+	cfg := s.Config()
+	host := cfg.Listen.Host
+	if host == "" {
+		host = appconfig.DefaultHost
+	}
+
 	var ln net.Listener
 	var err error
 	var port int
-	for port = base; port < base+10; port++ {
-		ln, err = net.Listen("tcp", fmt.Sprintf("127.0.0.1:%d", port))
-		if err == nil {
-			break
+
+	if cfg.Listen.Port == 0 {
+		const span = 10
+		for port = appconfig.DefaultPort; port < appconfig.DefaultPort+span; port++ {
+			ln, err = net.Listen("tcp", net.JoinHostPort(host, strconv.Itoa(port)))
+			if err == nil {
+				break
+			}
+			ln = nil
+		}
+		if ln == nil {
+			return "", fmt.Errorf("no free port in %d-%d on %s: %w",
+				appconfig.DefaultPort, appconfig.DefaultPort+span-1, host, err)
+		}
+	} else {
+		port = cfg.Listen.Port
+		ln, err = net.Listen("tcp", net.JoinHostPort(host, strconv.Itoa(port)))
+		if err != nil {
+			return "", fmt.Errorf("listen on %s:%d: %w", host, port, err)
 		}
 	}
-	if ln == nil {
-		return "", fmt.Errorf("no free port in %d-%d: %w", base, base+9, err)
+
+	s.Addr = net.JoinHostPort(host, strconv.Itoa(port))
+	scheme := "http"
+
+	if cfg.TLS.Mode != appconfig.TLSOff {
+		tlsCfg, err := tlsConfigFor(cfg)
+		if err != nil {
+			_ = ln.Close()
+			return "", err
+		}
+		ln = tls.NewListener(ln, tlsCfg)
+		scheme = "https"
 	}
-	s.Addr = fmt.Sprintf("127.0.0.1:%d", port)
+
+	s.lnMu.Lock()
+	s.ln = ln
+	s.lnMu.Unlock()
+
 	go func() {
 		if err := http.Serve(ln, s.mux); err != nil {
-			log.Printf("huemux: http server stopped: %v", err)
+			// A closed listener is the expected result of Close(), not a fault.
+			if !errors.Is(err, net.ErrClosed) {
+				log.Printf("huemux: http server stopped: %v", err)
+			}
 		}
 	}()
-	return "http://" + s.Addr, nil
+	return scheme + "://" + s.Addr, nil
 }
 
 func (s *Server) handleAreas(w http.ResponseWriter, r *http.Request) {
@@ -470,7 +549,7 @@ type controlMessage struct {
 }
 
 func (s *Server) handleWS(w http.ResponseWriter, r *http.Request) {
-	conn, err := Upgrade(w, r)
+	conn, err := Upgrade(w, r, s.Config().Listen.Host)
 	if err != nil {
 		log.Printf("huemux: websocket upgrade: %v", err)
 		return

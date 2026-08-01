@@ -103,7 +103,11 @@ const DefaultHost = "127.0.0.1"
 func Default() Config {
 	return Config{
 		Profile: ProfileFull,
-		Listen:  Listen{Host: DefaultHost, Port: DefaultPort},
+		// Port 0, not DefaultPort: 0 means "scan upward from DefaultPort",
+		// which is how huemux has always behaved — a port already in use is
+		// not a reason to refuse to start. Setting an explicit port here
+		// would silently turn that into a hard failure.
+		Listen: Listen{Host: DefaultHost, Port: 0},
 		Auth: Auth{
 			Mode:                         AuthNone,
 			AllowLoopbackUnauthenticated: true,
