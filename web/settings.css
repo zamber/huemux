@@ -1,0 +1,53 @@
+/* Settings page. Layout only — all colour comes from shared/theme.css tokens
+   so this matches the rest of the app in both themes automatically. */
+body { margin: 0; }
+
+#settings {
+  max-width: 560px;
+  margin: 0 auto;
+  padding: 1.2rem 1rem 3rem;
+}
+
+#settings h2 {
+  font-size: 1rem;
+  text-transform: none;
+  letter-spacing: normal;
+  color: var(--ink);
+  margin-top: 0;
+}
+
+.setting {
+  margin: 0 0 1.6rem;
+  padding: 0 0 1.2rem;
+  border-bottom: 1px solid var(--border);
+}
+.setting:last-of-type { border-bottom: none; }
+
+.setting > label {
+  display: block;
+  font-weight: 600;
+  margin-bottom: 0.4rem;
+}
+
+.setting .row { display: flex; gap: 0.5rem; margin-bottom: 0.4rem; }
+.setting .row input { flex: 1; min-width: 0; }
+
+#settings input,
+#settings select {
+  padding: 0.45rem;
+  background: var(--surface-alt);
+  color: var(--ink);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  /* 16px stops iOS Safari zooming the viewport on focus. */
+  font-size: 16px;
+  font-family: inherit;
+}
+#settings select { width: 100%; }
+#settings input:disabled,
+#settings select:disabled { opacity: 0.55; }
+
+#settings .hint { font-size: 0.82rem; color: var(--ink-muted); margin: 0.3rem 0 0; }
+#settings .warning { color: var(--warn, #c0392b); }
+
+.actions { display: flex; align-items: center; gap: 0.8rem; margin-top: 1.4rem; }

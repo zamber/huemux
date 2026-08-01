@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>HueMux — Settings</title>
+<meta id="theme-color-meta" name="theme-color" content="#000000">
+<script>
+// Inline so the theme is set before first paint — see the identical snippet
+// in sync.html/lights.html. Keep in sync with THEME_COLOR in shared/theme.js.
+(function () {
+  var LIGHT = '#f7f3ea', DARK = '#000000';
+  var stored = localStorage.getItem('theme');
+  var choice = (stored === 'light' || stored === 'dark') ? stored : 'system';
+  if (choice !== 'system') document.documentElement.setAttribute('data-theme', choice);
+  var resolved = choice === 'system'
+    ? (window.matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark')
+    : choice;
+  var meta = document.getElementById('theme-color-meta');
+  if (meta) meta.setAttribute('content', resolved === 'light' ? LIGHT : DARK);
+})();
+</script>
+<link rel="stylesheet" href="/shared/theme.css">
+<link rel="stylesheet" href="/shared/header.css">
+<link rel="stylesheet" href="/settings.css">
+</head>
+<body>
+<huemux-header></huemux-header>
+
+<main id="settings">
+  <h2 data-i18n="settings.heading">Settings</h2>
+  <p class="hint" id="settings-status" data-i18n="settings.loading">Loading…</p>
+
+  <p class="warning" id="settings-readonly" hidden data-i18n="settings.readOnly">
+    Settings can only be changed from the machine HueMux is running on.
+  </p>
+
+  <form id="settings-form" hidden>
+    <section class="setting">
+      <label for="set-profile" data-i18n="settings.profile">Profile</label>
+      <select id="set-profile">
+        <option value="full">full</option>
+        <option value="lights">lights</option>
+        <option value="sync">sync</option>
+      </select>
+      <p class="hint" data-i18n="settings.profileHint">
+        Which half of the app runs. "lights" skips screen sync entirely — no
+        DTLS stream, no capture.
+      </p>
+    </section>
+
+    <section class="setting">
+      <label data-i18n="settings.listen">Listen address</label>
+      <div class="row">
+        <input type="text" id="set-host" spellcheck="false">
+        <input type="number" id="set-port" min="0" max="65535">
+      </div>
+      <p class="hint" data-i18n="settings.listenHint">
+        127.0.0.1 keeps HueMux reachable only from this machine. Anything else
+        exposes it to your network — set authentication below if you do that.
+        Port 0 picks the first free port from 7654.
+      </p>
+    </section>
+
+    <section class="setting">
+      <label for="set-auth" data-i18n="settings.auth">Authentication</label>
+      <select id="set-auth">
+        <option value="none">none</option>
+        <option value="token">token</option>
+      </select>
+      <div class="row">
+        <input type="text" id="set-token" spellcheck="false"
+               data-i18n-attr="placeholder:settings.tokenPlaceholder">
+        <button type="button" id="set-token-gen" data-i18n="settings.generate">Generate</button>
+      </div>
+      <p class="hint" data-i18n="settings.authHint">
+        Three memorable words. Connections from this machine are never asked
+        for it.
+      </p>
+    </section>
+
+    <section class="setting">
+      <label for="set-tls" data-i18n="settings.tls">TLS</label>
+      <select id="set-tls">
+        <option value="off">off</option>
+        <option value="selfsigned">selfsigned</option>
+        <option value="files">files</option>
+      </select>
+      <p class="hint" data-i18n="settings.tlsHint">
+        HueMux does not obtain certificates. "files" uses ones you supply —
+        from Tailscale, or your own domain.
+      </p>
+    </section>
+
+    <div class="actions">
+      <button type="submit" id="set-save" data-i18n="settings.save">Save</button>
+      <span id="set-result" class="hint"></span>
+    </div>
+  </form>
+</main>
+
+<script src="/shared/theme.js"></script>
+<script src="/shared/i18n.js"></script>
+<script src="/shared/features.js"></script>
+<script src="/shared/header.js"></script>
+<script>HueMuxI18n.init(); HueMuxFeatures.load();</script>
+<script src="/settings.js"></script>
+</body>
+</html>

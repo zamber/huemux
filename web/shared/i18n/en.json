@@ -4,7 +4,8 @@
   },
   "nav": {
     "lights": "Lights",
-    "sync": "Sync"
+    "sync": "Sync",
+    "settings": "Settings"
   },
   "theme": {
     "titleSystem": "Theme: system (click to change)",
@@ -118,5 +119,25 @@
     "sceneDynamic": "Dynamic",
     "empty": "No lights found on this bridge.",
     "stopStreaming": "Stop streaming"
+  },
+  "settings": {
+    "heading": "Settings",
+    "loading": "Loading…",
+    "readOnly": "Settings can only be changed from the machine HueMux is running on.",
+    "profile": "Profile",
+    "profileHint": "Which half of the app runs. \"lights\" skips screen sync entirely — no DTLS stream, no capture.",
+    "listen": "Listen address",
+    "listenHint": "127.0.0.1 keeps HueMux reachable only from this machine. Anything else exposes it to your network — set authentication below if you do that. Port 0 picks the first free port from 7654.",
+    "auth": "Authentication",
+    "authHint": "Three memorable words. Connections from this machine are never asked for it.",
+    "tokenPlaceholder": "e.g. otter.beacon.willow",
+    "tokenSet": "(unchanged — type to replace)",
+    "generate": "Generate",
+    "tls": "TLS",
+    "tlsHint": "HueMux does not obtain certificates. \"files\" uses ones you supply — from Tailscale, or your own domain.",
+    "save": "Save",
+    "saved": "Saved.",
+    "savedRestart": "Saved — restart HueMux for this to take effect.",
+    "loadFailed": "Could not load settings: "
   }
 }
