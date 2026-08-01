@@ -222,7 +222,10 @@ func TestPartialFileKeepsOtherDefaults(t *testing.T) {
 	if cfg.Profile != ProfileLights {
 		t.Errorf("profile = %q, want %q", cfg.Profile, ProfileLights)
 	}
-	if cfg.Listen.Host != DefaultHost || cfg.Listen.Port != DefaultPort {
+	// Port 0 is the default and means "scan upward from DefaultPort" — see
+	// Default(). Asserting DefaultPort here would re-encode the behaviour that
+	// made a taken port a hard startup failure.
+	if cfg.Listen.Host != DefaultHost || cfg.Listen.Port != 0 {
 		t.Errorf("listen = %+v, want defaults preserved for keys absent from the file", cfg.Listen)
 	}
 	if !cfg.Auth.AllowLoopbackUnauthenticated {
@@ -420,5 +423,18 @@ func TestWordlistProperties(t *testing.T) {
 		if strings.HasSuffix(w, "s") && seen[strings.TrimSuffix(w, "s")] {
 			t.Errorf("word %q is the plural of another entry", w)
 		}
+	}
+}
+
+// TestDefaultPortIsAutoSelect pins the reason the default is 0 rather than
+// DefaultPort: huemux has always fallen through to the next free port when
+// 7654 was taken, and an explicit default would have quietly turned that into
+// a refusal to start.
+func TestDefaultPortIsAutoSelect(t *testing.T) {
+	if got := Default().Listen.Port; got != 0 {
+		t.Errorf("default port = %d, want 0 (auto-select from %d)", got, DefaultPort)
+	}
+	if err := Default().Validate(); err != nil {
+		t.Errorf("port 0 must be valid: %v", err)
 	}
 }

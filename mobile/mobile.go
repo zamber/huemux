@@ -124,13 +124,10 @@ func Start(configDir string) (string, error) {
 	return url, nil
 }
 
-// Stop releases what Start acquired. Safe to call when not started.
-//
-// Note the HTTP listener itself is not closed — Server has no Shutdown, and
-// on Android the process is torn down wholesale rather than being expected to
-// keep running cleanly afterwards. What matters here is stopping the DTLS
-// stream so the bridge is released promptly instead of waiting for its own
-// timeout; leaving an entertainment area held would block the real Hue app.
+// Stop releases what Start acquired: the DTLS stream first, so the bridge is
+// not left holding an entertainment area (which would block the real Hue app
+// until it timed out), then the HTTP listener so the port is free for the
+// next Start. Safe to call when not started.
 func Stop() {
 	mu.Lock()
 	defer mu.Unlock()
@@ -138,6 +135,7 @@ func Stop() {
 		return
 	}
 	stopSyncLocked()
+	_ = srv.Close()
 	srv, baseURL = nil, ""
 }
 

@@ -45,27 +45,49 @@ type Conn struct {
 	writeMu sync.Mutex
 }
 
-// checkOrigin enforces the loopback-only rule: without it, any website the
-// user has open in another tab could open a WebSocket to this port and
-// drive their lights. localAddr is the server's own bound address, used to
-// additionally allow an Origin that names our own port explicitly.
-func checkOrigin(r *http.Request) bool {
+// checkOrigin is what stops any website the user happens to have open from
+// opening a WebSocket to this port and driving their lights. It is the single
+// most load-bearing security check in the program.
+//
+// allowedHost widens the allowlist by exactly one name — the host the server
+// was configured to listen on — so a LAN deployment can serve its own UI.
+// Deliberately not a wildcard, and deliberately not "skip the check when a
+// token is present": an attacker's page would happily send a token it had
+// obtained, and the whole point of this check is that it holds even when
+// something else has failed.
+//
+// Note the port is ignored. An attacker who can bind another port on the same
+// host has already lost you the machine, so distinguishing ports buys nothing
+// while breaking legitimate access on the auto-selected fallback port.
+func checkOrigin(r *http.Request, allowedHost string) bool {
 	origin := r.Header.Get("Origin")
 	if origin == "" {
+		// A browser always sends Origin on a WebSocket handshake, so an
+		// absent one means a non-browser client — which does not need the
+		// protection this check provides, but also should not get a free pass.
 		return false
 	}
 	u, err := url.Parse(origin)
 	if err != nil {
 		return false
 	}
+	// Hostname() strips brackets from an IPv6 literal, so comparing against
+	// "[::1]" here could never match — that branch was dead code. Parse the
+	// address instead, which also covers the rest of 127.0.0.0/8.
 	host := u.Hostname()
-	return host == "127.0.0.1" || host == "localhost" || host == "[::1]" || host == "::1"
+	if strings.EqualFold(host, "localhost") {
+		return true
+	}
+	if ip := net.ParseIP(host); ip != nil && ip.IsLoopback() {
+		return true
+	}
+	return allowedHost != "" && strings.EqualFold(host, allowedHost)
 }
 
 // Upgrade performs the HTTP -> WebSocket handshake and hijacks the
 // underlying connection.
-func Upgrade(w http.ResponseWriter, r *http.Request) (*Conn, error) {
-	if !checkOrigin(r) {
+func Upgrade(w http.ResponseWriter, r *http.Request, allowedHost string) (*Conn, error) {
+	if !checkOrigin(r, allowedHost) {
 		http.Error(w, "origin not allowed", http.StatusForbidden)
 		return nil, fmt.Errorf("rejected websocket upgrade from origin %q", r.Header.Get("Origin"))
 	}
