@@ -29,6 +29,13 @@ import (
 var version = "dev"
 
 func main() {
+	// So /api/diagnostics reports the build, not "dev".
+	server.Version = version
+	// Always buffer recent log lines in memory, independent of -debug, so
+	// /api/diagnostics can produce a report after the fact rather than
+	// requiring a restart with logging already enabled.
+	debuglog.Capture()
+
 	args := os.Args[1:]
 
 	// -debug is stripped out here rather than added as its own switch case

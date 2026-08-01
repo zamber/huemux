@@ -17,6 +17,8 @@ import (
 	"path/filepath"
 	"runtime"
 	"runtime/debug"
+	"strings"
+	"sync"
 	"time"
 )
 
@@ -139,3 +141,78 @@ func teeStd(target **os.File, f *os.File) error {
 	}()
 	return nil
 }
+
+// --- in-memory ring buffer ---------------------------------------------
+//
+// Everything above writes to a file, and only when -debug was passed. That is
+// no use on a phone: there is no command line to pass a flag on, no filesystem
+// the user can reach, and by the time something misbehaves it is too late to
+// restart with logging enabled.
+//
+// So the last N lines are always kept in memory, regardless of -debug. The
+// cost is a few hundred kilobytes and a mutex on a path that already holds
+// one; the benefit is that diagnostics can be produced on demand, after the
+// fact, from a button in the UI.
+
+const ringCapacity = 800
+
+var ring = struct {
+	mu    sync.Mutex
+	lines []string
+	next  int
+	full  bool
+}{lines: make([]string, ringCapacity)}
+
+// ringWriter captures whatever is written to the standard logger.
+type ringWriter struct{}
+
+func (ringWriter) Write(p []byte) (int, error) {
+	for _, line := range strings.Split(strings.TrimRight(string(p), "\n"), "\n") {
+		if line != "" {
+			appendLine(line)
+		}
+	}
+	return len(p), nil
+}
+
+func appendLine(s string) {
+	// Bound the line: a single enormous log entry should not be able to
+	// consume the whole buffer and push out everything useful around it.
+	if len(s) > 2000 {
+		s = s[:2000] + "…(truncated)"
+	}
+	ring.mu.Lock()
+	ring.lines[ring.next] = s
+	ring.next = (ring.next + 1) % ringCapacity
+	if ring.next == 0 {
+		ring.full = true
+	}
+	ring.mu.Unlock()
+}
+
+// Recent returns the buffered lines, oldest first.
+func Recent() []string {
+	ring.mu.Lock()
+	defer ring.mu.Unlock()
+	if !ring.full {
+		out := make([]string, ring.next)
+		copy(out, ring.lines[:ring.next])
+		return out
+	}
+	out := make([]string, 0, ringCapacity)
+	out = append(out, ring.lines[ring.next:]...)
+	out = append(out, ring.lines[:ring.next]...)
+	return out
+}
+
+// Capture starts recording log output into the ring buffer. Idempotent, and
+// safe to call alongside Enable — the two compose, since Enable's file writer
+// is added to whatever output is already configured.
+func Capture() {
+	captureOnce.Do(func() {
+		log.SetOutput(io.MultiWriter(log.Writer(), ringWriter{}))
+		log.SetFlags(log.LstdFlags | log.Lmicroseconds)
+	})
+}
+
+var captureOnce sync.Once

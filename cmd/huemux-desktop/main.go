@@ -51,6 +51,13 @@ var version = "dev"
 const electronVersion = "43.2.0"
 
 func main() {
+	// So /api/diagnostics reports the build, not "dev".
+	server.Version = version
+	// Always buffer recent log lines in memory, independent of -debug, so
+	// /api/diagnostics can produce a report after the fact rather than
+	// requiring a restart with logging already enabled.
+	debuglog.Capture()
+
 	headless := flag.Bool("headless", false, "run the core service only, no desktop window — identical to plain `huemux`")
 	verbose := flag.Bool("verbose", false, "verbose CLI status log (headless mode only)")
 	debug := flag.Bool("debug", false, "write a detailed debug log to a file, including Electron's own main-process output — see KNOWN_ISSUES.md for the exact path per OS")

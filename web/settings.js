@@ -129,3 +129,68 @@ els.form.addEventListener('submit', (ev) => {
 });
 
 load();
+
+// ---------- diagnostics ----------
+//
+// Three ways out, because each fails somewhere that matters. A WebView may
+// swallow a download; navigator.clipboard is undefined on an insecure origin,
+// which every plain-HTTP LAN deployment is; and text on screen always works
+// but needs manual selection. Offering all three means there is never a device
+// where the answer is "you cannot get the log off it".
+
+const diag = {
+  download: document.getElementById('diag-download'),
+  copy: document.getElementById('diag-copy'),
+  view: document.getElementById('diag-view'),
+  result: document.getElementById('diag-result'),
+  text: document.getElementById('diag-text'),
+};
+
+function fetchDiagnostics() {
+  return fetch('/api/diagnostics')
+    .then((r) => (r.ok ? r.text() : r.text().then((t) => Promise.reject(new Error(t.trim() || ('HTTP ' + r.status))))));
+}
+
+function diagSay(msg, bad) {
+  diag.result.textContent = msg;
+  diag.result.className = bad ? 'hint warning' : 'hint';
+}
+
+diag.view.addEventListener('click', () => {
+  fetchDiagnostics().then((text) => {
+    diag.text.value = text;
+    diag.text.hidden = false;
+    diag.text.focus();
+    diag.text.setSelectionRange(0, 0);
+    diagSay(t('settings.diagnosticsShown', 'Shown below — select all to copy manually.'));
+  }).catch((e) => diagSay(String(e.message || e), true));
+});
+
+diag.copy.addEventListener('click', () => {
+  fetchDiagnostics().then((text) => {
+    // Only available in a secure context, which a plain-HTTP LAN page is not.
+    if (navigator.clipboard && window.isSecureContext) {
+      return navigator.clipboard.writeText(text)
+        .then(() => diagSay(t('settings.diagnosticsCopied', 'Copied to clipboard.')));
+    }
+    // Fall back to showing it rather than failing: the user can still select
+    // and copy, which is the whole point.
+    diag.text.value = text;
+    diag.text.hidden = false;
+    diag.text.select();
+    diagSay(t('settings.diagnosticsSelectManually',
+      'Clipboard unavailable on an insecure page — the text is selected below, copy it manually.'));
+  }).catch((e) => diagSay(String(e.message || e), true));
+});
+
+diag.download.addEventListener('click', () => {
+  // A plain navigation, not a blob: the server already sets
+  // Content-Disposition, and Android's WebView download listener handles a
+  // real navigation far more reliably than a synthesised blob: URL.
+  diagSay(t('settings.diagnosticsDownloading', 'Downloading…'));
+  window.location.href = '/api/diagnostics';
+  setTimeout(() => {
+    diagSay(t('settings.diagnosticsDownloadHint',
+      'If nothing downloaded, use View or Copy instead.'));
+  }, 2500);
+});

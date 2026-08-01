@@ -1,6 +1,8 @@
 package com.huemux.app
 
 import android.annotation.SuppressLint
+import android.content.Intent
+import android.net.Uri
 import android.net.wifi.WifiManager
 import android.os.Bundle
 import android.util.Log
@@ -47,6 +49,20 @@ class MainActivity : AppCompatActivity() {
             settings.domStorageEnabled = true
             // Keep navigation inside the app rather than bouncing to Chrome.
             webViewClient = WebViewClient()
+
+            // A WebView ignores downloads unless told what to do with them, so
+            // the settings page's "Download diagnostics" button would silently
+            // do nothing. Hand the URL to the system, which offers the share
+            // and save options the user needs to actually send the file on.
+            // This is the only way logs leave the phone — there is no adb, no
+            // command line, and no reachable filesystem.
+            setDownloadListener { url, _, _, _, _ ->
+                try {
+                    startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url)))
+                } catch (e: Exception) {
+                    Log.e(TAG, "could not open download: $url", e)
+                }
+            }
         }
         setContentView(webView)
 
