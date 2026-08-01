@@ -83,10 +83,42 @@ normal — nothing creates one for you.
 }
 ```
 
-> **Not wired up yet.** As of `v0.0.2-alpha.1` these settings are parsed,
-> validated, and reported — but do not yet change what the server does. The
-> behavior lands over the phases in [`plans/`](plans/). Until then, treat this
-> section as a preview of the shape, not a feature.
+Or edit them in the browser at `/settings.html`. Changes are only accepted
+from the machine HueMux runs on — rewriting the listen address or turning
+authentication off should not be reachable from the network it governs.
+
+### Exposing HueMux beyond this machine
+
+`listen.host` defaults to `127.0.0.1`, which is what makes the whole thing
+safe without a password: nothing else can reach it. Changing that is the one
+setting with real consequences, so it comes with two others.
+
+```jsonc
+{
+  "profile": "lights",
+  "listen": { "host": "0.0.0.0", "port": 7654 },
+  "auth":   { "mode": "token", "token": "otter.beacon.willow" },
+  "tls":    { "mode": "selfsigned" }
+}
+```
+
+- **`auth.mode: "token"`** requires a token on every API call and WebSocket
+  upgrade, as `Authorization: Bearer <token>` or `?token=<token>` (a browser's
+  WebSocket cannot set headers, hence the query form). Connections from the
+  machine itself are exempt, so nothing about local use changes and you can
+  never lock yourself out. Failed attempts are rate limited — the token is
+  short and memorable by design, which is only defensible with a limiter in
+  front of it. Generate one from the settings page, or let HueMux print one on
+  first non-loopback start.
+- **`tls.mode`** — `selfsigned` generates and reuses a certificate (browsers
+  will warn; it covers both loopback and your LAN address). `files` uses a
+  real certificate you already have. HueMux obtains nothing itself, which
+  means every sane option works: `tailscale cert`, a DNS-01 certificate for a
+  domain you own, or a local CA like mkcert. **Tailscale is the least
+  painful** — auto-renewing, no port forwarding, and it works off your LAN too.
+
+A token over plain HTTP crosses the network in cleartext, and HueMux says so
+at startup rather than letting you find out later.
 
 ## Running
 
