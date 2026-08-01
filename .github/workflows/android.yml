@@ -60,9 +60,18 @@ jobs:
     if: github.event_name != 'pull_request'
     steps:
       - uses: actions/checkout@v7
+
+      # Deliberately NOT go-version-file: go.mod here, unlike the verify job.
+      # gomobile tracks recent Go closely and currently requires >= 1.25, while
+      # this module declares 1.24 so it still builds on the development host.
+      # setup-go pins GOTOOLCHAIN=local, so taking the version from go.mod made
+      # `go install gomobile@latest` fail outright. A newer toolchain builds an
+      # older `go` directive fine, so only the AAR job needs the bump — the
+      # verify job keeps using go.mod precisely because it should test what the
+      # project actually claims to support.
       - uses: actions/setup-go@v7
         with:
-          go-version-file: go.mod
+          go-version: 'stable'
 
       - name: Install gomobile
         run: |
