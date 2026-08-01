@@ -1,0 +1,96 @@
+name: Android
+
+# Builds the gomobile AAR — the Go core packaged as an Android library.
+#
+# This lives in CI rather than being buildable locally on purpose: the Android
+# SDK plus NDK is roughly 8-12 GB, which is more than the development host has
+# free, and gomobile bind needs CGO and the NDK toolchain (unlike the rest of
+# this project, which is CGO_ENABLED=0 and cross-compiles anywhere). GitHub's
+# Ubuntu runners ship both preinstalled, so there is nothing to provision here.
+#
+# What CAN be checked without any of that, and is checked in the `verify` job
+# below, is that every package still compiles for android/arm64 — Go can do
+# that with CGO_ENABLED=0 and no NDK at all. That is the check worth running on
+# every push, since it catches the realistic regression (someone pulls in a
+# dependency that is not pure Go) in seconds rather than minutes.
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'mobile/**'
+      - 'internal/**'
+      - 'web/**'
+      - 'go.mod'
+      - 'go.sum'
+      - '.github/workflows/android.yml'
+  pull_request:
+    paths:
+      - 'mobile/**'
+      - 'internal/**'
+      - 'go.mod'
+      - 'go.sum'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  # Fast gate: does the whole core still target Android at all?
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-go@v7
+        with:
+          go-version-file: go.mod
+
+      - name: Cross-compile for android/arm64
+        run: |
+          # No NDK needed for this — it only proves the Go side has no
+          # platform-specific blocker, which is the thing most likely to break.
+          CGO_ENABLED=0 GOOS=android GOARCH=arm64 go build ./...
+
+      - name: Test the mobile facade
+        run: go test ./mobile/... -count=1
+
+  # The real artifact. Slower, and only worth running on main or on demand.
+  aar:
+    runs-on: ubuntu-latest
+    needs: verify
+    if: github.event_name != 'pull_request'
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-go@v7
+        with:
+          go-version-file: go.mod
+
+      - name: Install gomobile
+        run: |
+          go install golang.org/x/mobile/cmd/gomobile@latest
+          go install golang.org/x/mobile/cmd/gobind@latest
+          echo "$(go env GOPATH)/bin" >> "$GITHUB_PATH"
+
+      - name: Initialise gomobile against the runner's NDK
+        run: gomobile init
+
+      - name: Build AAR
+        run: |
+          mkdir -p dist
+          # arm64-v8a only for now: it covers every current Android device, and
+          # a universal build would multiply the ~10MB Go runtime by four for
+          # architectures nobody is going to install this on. Revisit if a real
+          # 32-bit or x86 user turns up.
+          gomobile bind -target=android/arm64 \
+            -androidapi 26 \
+            -javapkg com.huemux \
+            -o dist/huemux.aar \
+            ./mobile
+
+      - name: Report size
+        run: ls -lh dist/huemux.aar
+
+      - uses: actions/upload-artifact@v7
+        with:
+          name: huemux-aar
+          path: dist/huemux.aar
+          if-no-files-found: error

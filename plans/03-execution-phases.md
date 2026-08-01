@@ -15,7 +15,7 @@ reviewable commit or small series, and to leave `main` working.
 | 4 | Profile-aware UI + settings screen | not started |
 | 5 | Listen address, Origin, auth | not started |
 | 6 | TLS modes | not started |
-| 7 | Android M1 — lights, standalone | not started |
+| 7 | Android M1 — lights, standalone | **Go side done; Kotlin app not started** |
 | 8 | Android M2 — config + mobile polish | not started |
 | 9 | Android M3 — MediaProjection sync | not started |
 | 10 | Android M4 — CI build, signing, distribution | not started |
@@ -158,8 +158,27 @@ HueMux issues nothing itself — see Plan 01 for why.
 
 ## Phase 7 — Android M1
 
-`mobile/` facade, injected config dir, `make android`, minimal Kotlin
-WebView app.
+Started out of order, because the Go half needs no Android SDK and plan 02
+always said M1 could run in parallel.
+
+**Done:**
+- `internal/config.SetDir` — the three stores all resolve through `Dir()`, so
+  one seam covers bridge credentials, area settings, and favorites.
+  `os.UserConfigDir()` is meaningless on Android.
+- `mobile/` — the gomobile facade (`Start`/`Stop`/`URL`/`IsPaired`/
+  `ConfigJSON`/`SetConfigJSON`/`StartSync`/`StopSync`/`PushFrame`), flat enough
+  for gomobile's restricted type rules, with tests including a race-detector
+  concurrency case since gomobile calls in from arbitrary Java threads.
+- `.github/workflows/android.yml` — a fast `CGO_ENABLED=0 GOOS=android` compile
+  gate on every push, plus the actual `gomobile bind` AAR job on a runner.
+
+**Confirmed rather than assumed:** the entire core, DTLS included, compiles to
+a real `android/arm64` ELF binary locally with no NDK. That was plan 02's
+central bet and it holds.
+
+**Still to do:** the Kotlin app — `MainActivity` hosting a WebView on the URL
+`Start` returns, with `setDomStorageEnabled(true)` since theme and language
+live in `localStorage`.
 
 **Done when**, on a real phone with no server running anywhere: pair from
 fresh, control lights, kill and relaunch without re-pairing. **Verify bridge

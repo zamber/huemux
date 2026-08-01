@@ -18,6 +18,29 @@ gofmt -l ./cmd ./internal   # must print nothing
 The release workflow runs `go vet` and `go test` before publishing, so a
 failure there blocks a release rather than shipping a broken artifact.
 
+`go test -race` works but takes ~45s here, nearly all of it compiling the
+instrumented binary on two cores. That is slow enough to look like a hung test
+if you run it under a two-minute timeout and assume the worst — it already has
+once. Give it room, or run it in the background.
+
+## Android
+
+The whole core targets Android, and you can prove it without any SDK:
+
+```bash
+CGO_ENABLED=0 GOOS=android GOARCH=arm64 go build ./...
+```
+
+That is worth running after touching anything in `internal/` — it is what
+catches a dependency that turns out not to be pure Go, which is the realistic
+way Android support breaks. `mobile/` is the gomobile facade and is ordinary
+Go, so `go test ./mobile/...` covers it.
+
+What you **cannot** do locally is `gomobile bind`: it needs CGO and the NDK,
+and the SDK+NDK is 8–12 GB against a host with well under a gigabyte free.
+The AAR is built by `.github/workflows/android.yml` on a runner, where both
+are preinstalled. Do not try to install the SDK here.
+
 ## The frontend is embedded — rebuild after every `web/` edit
 
 `assets.go` does `//go:embed web`, so the whole frontend is baked into the

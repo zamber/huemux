@@ -18,8 +18,34 @@ type Bridge struct {
 	ClientKey string `json:"clientkey"`
 }
 
+// overrideDir, when non-empty, replaces the OS-derived config location.
+//
+// This exists for Android, where os.UserConfigDir() is meaningless: an app
+// gets a private directory handed to it by the framework
+// (Context.getFilesDir()) and cannot write anywhere else. The mobile facade
+// calls SetDir with that path before opening any store.
+//
+// A package-level override rather than threading a directory through every
+// constructor: all three stores already resolve their own paths through Dir(),
+// so one seam covers bridge credentials, area settings, and favorites at once.
+var overrideDir string
+
+// SetDir overrides the config directory for the whole process. Call it before
+// LoadBridge, NewStore, or NewFavoritesStore — anything already constructed
+// keeps the path it resolved at the time.
+//
+// Passing "" restores the OS-derived default, which is what the tests use to
+// undo themselves.
+func SetDir(dir string) { overrideDir = dir }
+
 // Dir returns huemux's config directory, creating it if necessary.
 func Dir() (string, error) {
+	if overrideDir != "" {
+		if err := os.MkdirAll(overrideDir, 0o700); err != nil {
+			return "", fmt.Errorf("create config dir %s: %w", overrideDir, err)
+		}
+		return overrideDir, nil
+	}
 	base, err := os.UserConfigDir()
 	if err != nil {
 		home, herr := os.UserHomeDir()
