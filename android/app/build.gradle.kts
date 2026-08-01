@@ -71,5 +71,8 @@ dependencies {
     implementation(files("libs/huemux.aar"))
 
     implementation("androidx.appcompat:appcompat:1.7.0")
+    // Used directly for window-inset handling; transitive availability is not
+    // something to rely on for an API the code calls by name.
+    implementation("androidx.core:core-ktx:1.15.0")
     implementation("androidx.activity:activity-ktx:1.9.3")
 }
