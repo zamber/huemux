@@ -68,13 +68,16 @@ class HueMuxHeader extends HTMLElement {
         '<nav class="ls-nav"></nav>' +
         '<div class="ls-header-actions">' +
           '<button type="button" id="ls-theme-btn" class="ls-icon-btn"></button>' +
+          '<button type="button" id="ls-simple-btn" class="ls-icon-btn">✨</button>' +
           '<button type="button" id="ls-lang-btn" class="ls-icon-btn"></button>' +
         '</div>' +
       '</div>';
 
     this._themeBtn = this.querySelector('#ls-theme-btn');
+    this._simpleBtn = this.querySelector('#ls-simple-btn');
     this._langBtn = this.querySelector('#ls-lang-btn');
     this._themeBtn.addEventListener('click', () => HueMuxTheme.cycle());
+    this._simpleBtn.addEventListener('click', () => HueMuxTheme.toggleSimple());
     this._langBtn.addEventListener('click', () => HueMuxI18n.cycle());
 
     this._renderNav();
@@ -114,24 +117,33 @@ class HueMuxHeader extends HTMLElement {
   }
 
   _renderTheme() {
-    // Reads through HueMuxTheme.current() rather than localStorage directly,
-    // so an unrecognised stored value falls back to 'system' in one place.
-    const choice = (typeof HueMuxTheme !== 'undefined') ? HueMuxTheme.current() : 'system';
-    // The simple variants reuse their palette's icon with a dot, rather than
-    // inventing a symbol: they are the same light/dark theme with the
-    // decoration removed, and the title says which.
-    const icons = {
-      system: '🌗', light: '☀️', dark: '🌙',
-      'simple-light': '☀', 'simple-dark': '🌒',
-    };
+    // Reads through HueMuxTheme rather than localStorage directly, so an
+    // unrecognised stored value falls back to 'system' in one place.
+    const has = typeof HueMuxTheme !== 'undefined';
+    const choice = has ? HueMuxTheme.palette() : 'system';
+    // Three palettes, three shapes that cannot be confused at 16px: a sun, a
+    // moon, and a half-lit moon for "whatever the system says". The previous
+    // five-icon cycle distinguished states by a crescent's thickness, which is
+    // not a distinction anyone can make on a phone.
+    const icons = { system: '🌓', light: '☀️', dark: '🌙' };
     const titleKeys = {
       system: 'theme.titleSystem', light: 'theme.titleLight', dark: 'theme.titleDark',
-      'simple-light': 'theme.titleSimpleLight', 'simple-dark': 'theme.titleSimpleDark',
     };
     this._themeBtn.textContent = icons[choice] || icons.system;
     const title = HueMuxI18n.t(titleKeys[choice] || titleKeys.system);
     this._themeBtn.setAttribute('title', title);
     this._themeBtn.setAttribute('aria-label', title);
+
+    // Decoration is a separate axis, so it gets a separate control. One glyph
+    // in two states — lit and dimmed — rather than a second near-identical
+    // symbol; aria-pressed carries the same fact for screen readers.
+    if (!this._simpleBtn) return;
+    const simple = has && HueMuxTheme.isSimple();
+    this._simpleBtn.classList.toggle('off', simple);
+    this._simpleBtn.setAttribute('aria-pressed', simple ? 'true' : 'false');
+    const st = HueMuxI18n.t(simple ? 'theme.titleEffectsOff' : 'theme.titleEffectsOn');
+    this._simpleBtn.setAttribute('title', st);
+    this._simpleBtn.setAttribute('aria-label', st);
   }
 
   _renderLang() {

@@ -11,11 +11,13 @@
 (function () {
   var LIGHT = '#f7f3ea', DARK = '#000000';
   var stored = localStorage.getItem('theme');
-  // Keep in sync with BASE/CHOICES in shared/theme.js.
+  // Palette and decoration are two independent keys; the old combined values
+  // are still understood until theme.js migrates them.
+  // Keep in sync with PALETTES/SIMPLE_KEY in shared/theme.js.
   var base = { light: 'light', dark: 'dark', 'simple-light': 'light', 'simple-dark': 'dark' }[stored];
-  if (base) {
-    document.documentElement.setAttribute('data-theme', base);
-    if (stored.indexOf('simple-') === 0) document.documentElement.setAttribute('data-simple', '');
+  if (base) document.documentElement.setAttribute('data-theme', base);
+  if (localStorage.getItem('themeSimple') === '1' || (stored && stored.indexOf('simple-') === 0)) {
+    document.documentElement.setAttribute('data-simple', '');
   }
   var resolved = base || (window.matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark');
   var meta = document.getElementById('theme-color-meta');

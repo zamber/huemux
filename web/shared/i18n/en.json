@@ -11,8 +11,8 @@
     "titleSystem": "Theme: system (click to change)",
     "titleLight": "Theme: light (click to change)",
     "titleDark": "Theme: dark (click to change)",
-    "titleSimpleLight": "Theme: simple light — fewer effects, faster (click to change)",
-    "titleSimpleDark": "Theme: simple dark — fewer effects, faster (click to change)"
+    "titleEffectsOn": "Visual effects: on — click for the simpler, faster look",
+    "titleEffectsOff": "Visual effects: off — click to bring back gradients and shadows"
   },
   "lang": {
     "titleSystem": "Language: system (click to change)",

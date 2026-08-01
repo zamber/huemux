@@ -11,8 +11,8 @@
     "titleSystem": "Motyw: systemowy (kliknij, aby zmienić)",
     "titleLight": "Motyw: jasny (kliknij, aby zmienić)",
     "titleDark": "Motyw: ciemny (kliknij, aby zmienić)",
-    "titleSimpleLight": "Motyw: prosty jasny — mniej efektów, szybciej (kliknij, aby zmienić)",
-    "titleSimpleDark": "Motyw: prosty ciemny — mniej efektów, szybciej (kliknij, aby zmienić)"
+    "titleEffectsOn": "Efekty wizualne: włączone — kliknij, aby uprościć i przyspieszyć",
+    "titleEffectsOff": "Efekty wizualne: wyłączone — kliknij, aby przywrócić gradienty i cienie"
   },
   "lang": {
     "titleSystem": "Język: systemowy (kliknij, aby zmienić)",
