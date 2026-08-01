@@ -111,6 +111,23 @@ less DOM work will.
 
 Two taps in quick succession therefore cost more than twice one tap.
 
+## Results after fixing
+
+Items 1–3 below are implemented. Re-measured on the same wall panel:
+
+| | before | after |
+|---|---|---|
+| Single tap → visible update | 420–480 ms | **6–17 ms** |
+| Five taps 250 ms apart | 1435, 1321, 602, 396, 369 ms | **12, 45, 53, 29, 16 ms** |
+| All-lights toggle | worst case, one event per light | **53 ms** |
+| Full grid rebuilds per action | 2 | **0** |
+
+The compounding is gone entirely — rapid taps no longer queue, because nothing
+blocks the main thread for hundreds of milliseconds. Correctness was checked by
+comparing every card's rendered state against `/api/lights` after a burst of
+toggles: no mismatches, so the optimistic path still reconciles with whatever
+the bridge actually did.
+
 ## The fix, in priority order
 
 1. **Optimistic local update.** Apply the toggle to the local model and the
@@ -129,7 +146,13 @@ Two taps in quick succession therefore cost more than twice one tap.
    device, so it is offered as a look-and-feel choice rather than a fix. It
    may still help GPU-bound hardware weaker than the one measured.
 
-Items 1–3 are client-side only; nothing in the Go server changes.
+Items 1–3 are implemented and client-side only; nothing in the Go server
+changed. Item 4 shipped as a preference, not a performance feature.
+
+`patchLightCard` and `patchRoomTile` return `false` when their element is not
+on screen, so anything genuinely structural — the Favorites view gaining a
+card, a filter change — still falls through to a full (now coalesced) render.
+That fallback is what keeps the optimisation from becoming a correctness bug.
 
 ## Theme complexity
 
