@@ -41,7 +41,25 @@ jobs:
           go install golang.org/x/mobile/cmd/gobind@latest
           echo "$(go env GOPATH)/bin" >> "$GITHUB_PATH"
 
+      # A release keystore, if one has been configured. Without it the job
+      # still produces a debug-signed APK — installable, just not upgradeable
+      # from a differently-signed build and not eligible for a store. Making
+      # this optional keeps the repo buildable by anyone who forks it.
+      - name: Decode signing keystore
+        id: keystore
+        if: env.KEYSTORE_B64 != ''
+        env:
+          KEYSTORE_B64: ${{ secrets.ANDROID_KEYSTORE_B64 }}
+        run: |
+          echo "$KEYSTORE_B64" | base64 -d > "$RUNNER_TEMP/huemux.jks"
+          echo "path=$RUNNER_TEMP/huemux.jks" >> "$GITHUB_OUTPUT"
+
       - name: Build APK
+        env:
+          HUEMUX_KEYSTORE: ${{ steps.keystore.outputs.path }}
+          HUEMUX_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          HUEMUX_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          HUEMUX_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
         run: |
           gomobile init
           go get -tool golang.org/x/mobile/cmd/gobind
@@ -50,10 +68,17 @@ jobs:
             -javapkg com.huemux -o android/app/libs/huemux.aar ./mobile
           cd android
           gradle wrapper --gradle-version 8.11.1
-          ./gradlew --no-daemon assembleDebug
           mkdir -p ../apk
-          cp app/build/outputs/apk/debug/app-debug.apk \
-             "../apk/huemux-${GITHUB_REF_NAME}-arm64.apk"
+          if [ -n "$HUEMUX_KEYSTORE" ]; then
+            ./gradlew --no-daemon assembleRelease
+            cp app/build/outputs/apk/release/app-release.apk \
+               "../apk/huemux-${GITHUB_REF_NAME}-arm64.apk"
+          else
+            echo "::notice::No ANDROID_KEYSTORE_B64 secret — producing a debug-signed APK"
+            ./gradlew --no-daemon assembleDebug
+            cp app/build/outputs/apk/debug/app-debug.apk \
+               "../apk/huemux-${GITHUB_REF_NAME}-arm64-debug.apk"
+          fi
 
       - uses: actions/upload-artifact@v7
         with:

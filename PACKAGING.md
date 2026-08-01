@@ -268,3 +268,51 @@ both targets). This is the lowest-effort Linux packaging option of the
 three (formula/Flatpak/AppImage) — reasonable first thing to automate in
 `release.yml` on `ubuntu-latest` (`appimagetool` is a single downloadable
 binary, no special runner needed) before tackling Flatpak/Homebrew.
+
+## Android
+
+The APK is built by `.github/workflows/release.yml` and attached to each
+release. It cannot be built on a machine without the Android SDK and NDK
+(8–12 GB), which is why it lives in CI — GitHub's runners ship both.
+
+### Signing
+
+Without a keystore the workflow produces a **debug-signed** APK, named
+`…-arm64-debug.apk`. That installs and runs fine, and is what alpha releases
+have shipped so far. Its two limits: Android refuses to upgrade between
+differently-signed builds (so a later signed release needs an uninstall
+first), and no store will accept it.
+
+To ship signed builds, create a keystore **once** and keep it safe — losing it
+means never being able to update the app for existing installs, since Android
+identifies an app by its signature:
+
+```sh
+keytool -genkeypair -v \
+  -keystore huemux.jks -alias huemux \
+  -keyalg RSA -keysize 4096 -validity 10000
+```
+
+Then add four repository secrets:
+
+| Secret | Value |
+|---|---|
+| `ANDROID_KEYSTORE_B64` | `base64 -w0 huemux.jks` |
+| `ANDROID_KEYSTORE_PASSWORD` | the store password |
+| `ANDROID_KEY_ALIAS` | `huemux` |
+| `ANDROID_KEY_PASSWORD` | the key password |
+
+The workflow detects `ANDROID_KEYSTORE_B64` and switches to `assembleRelease`
+automatically. Nothing else changes, and a fork without the secrets keeps
+building debug APKs rather than failing.
+
+**Do not commit the keystore**, and note that a `.jks` in a public repo is
+equivalent to publishing the private key — the same reasoning that keeps
+HueMux out of the certificate business in the TLS section of the README.
+
+### Distribution
+
+F-Droid is the natural fit: the build is reproducible from source, has no
+proprietary dependencies, and needs no Google account. Play Store is possible
+but adds a `MediaProjection` policy review once screen sync lands, which is
+one reason that feature is scoped after lights control.
