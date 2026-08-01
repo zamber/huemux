@@ -86,6 +86,7 @@ function handleControlMessage(msg) {
     els.startBtn.disabled = false;
     els.stopBtn.disabled = true;
     els.changeSourceBtn.disabled = true;
+    renderSyncButtons();
     return;
   }
   if (msg.type !== 'status') return;
@@ -231,23 +232,58 @@ els.startBtn.addEventListener('click', async () => {
     return;
   }
 
-  send({ type: 'select_area', area_id: areaId });
+  // Skipped for native capture: Kotlin already called StartSync (which is
+  // what selects the area and dials DTLS) before raising the consent dialog,
+  // so sending it again would re-dial underneath a live stream.
+  if (!nativeCapture) send({ type: 'select_area', area_id: areaId });
 
   syncing = true;
   els.startBtn.disabled = true;
   els.stopBtn.disabled = false;
   els.changeSourceBtn.disabled = false;
+  renderSyncButtons();
 });
 
-els.stopBtn.addEventListener('click', () => {
+els.stopBtn.addEventListener('click', () => stopSyncing());
+
+// One place to unwind, because a stream can end four ways: this button, the
+// system's own "stop sharing" affordance, the engine reporting stream_stopped
+// because another client took over, or the capture service being reclaimed.
+// Each used to unwind separately, and the native ones did not unwind at all —
+// the UI went on claiming to stream after the frames had stopped.
+function stopSyncing(opts) {
+  const silent = opts && opts.silent;
   stopCapture();
   resetPreview();
-  send({ type: 'stop' });
+  // Skip the outbound stop when the server already knows — it told us.
+  if (!silent) send({ type: 'stop' });
   syncing = false;
   els.startBtn.disabled = false;
   els.stopBtn.disabled = true;
   els.changeSourceBtn.disabled = true;
-});
+  renderSyncButtons();
+}
+
+// Start and Stop were two buttons sitting side by side, one of them always
+// disabled — which reads as broken rather than unavailable, and on a phone
+// wastes a third of the control row. One button that says what it will do is
+// clearer and matches the stop-streaming control the lights page already has.
+function renderSyncButtons() {
+  els.startBtn.hidden = syncing;
+  els.stopBtn.hidden = !syncing;
+  els.stopBtn.disabled = false;
+  els.changeSourceBtn.hidden = !syncing;
+  // Changing source is meaningless where the OS picks it for us.
+  if (nativeCapture) els.changeSourceBtn.hidden = true;
+}
+
+// Called from Kotlin when capture ends outside the page's control.
+window.__huemuxCaptureEnded = function () {
+  if (!syncing && !nativeCapture) return;
+  nativeCapture = false;
+  document.documentElement.removeAttribute('data-native-capture');
+  stopSyncing({ silent: true });
+};
 
 els.changeSourceBtn.addEventListener('click', async () => {
   stopCapture();

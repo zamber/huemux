@@ -103,6 +103,24 @@ class MainActivity : AppCompatActivity() {
         // environment. See startCapture() in web/app.js.
         webView.addJavascriptInterface(NativeBridge(), "HueMuxNative")
 
+        // Capture can end without the page asking: the user taps "Stop
+        // sharing" in the system UI, or Android reclaims the service. Tell the
+        // page so it can reset its controls, and stop the DTLS stream so the
+        // bridge releases the entertainment area immediately instead of
+        // waiting out its keepalive timeout.
+        ScreenCaptureService.onCaptureEnded = {
+            try {
+                Mobile.stopSync()
+            } catch (e: Exception) {
+                Log.w(TAG, "stopSync after capture ended", e)
+            }
+            runOnUiThread {
+                webView.evaluateJavascript(
+                    "window.__huemuxCaptureEnded && window.__huemuxCaptureEnded()", null,
+                )
+            }
+        }
+
         acquireMulticastLock()
         startServer()
     }
@@ -151,6 +169,8 @@ class MainActivity : AppCompatActivity() {
         // Tearing the server down on a rotation would drop the WebSocket and
         // blank the UI for no reason.
         if (isFinishing) {
+            ScreenCaptureService.onCaptureEnded = null
+            ScreenCaptureService.stop(this)
             multicastLock?.let { if (it.isHeld) it.release() }
             Mobile.stop()
         }

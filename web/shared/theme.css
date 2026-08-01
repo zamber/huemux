@@ -183,7 +183,12 @@ button, input, select, textarea, optgroup {
 input[type=range], .brightness-slider {
   -webkit-appearance: none;
   appearance: none;
-  touch-action: none;
+  /* pan-y, not none: a slider spans the full width of a card, so with
+     touch-action:none any upward swipe that starts on one drags the
+     brightness instead of scrolling the page — which on a phone is most
+     swipes. Giving vertical gestures back to the browser keeps the page
+     scrollable while horizontal drags still adjust the value. */
+  touch-action: pan-y;
   width: 100%;
   height: 8px;
   background: var(--surface-alt);
@@ -276,7 +281,13 @@ input[type=checkbox], input[type=radio] {
 }
 .scene-chip-star svg { width: 16px; height: 16px; }
 .scene-chip-star:hover { background: var(--card-hover); color: var(--ink); }
-.scene-chip-star.active { color: var(--accent); }
+.scene-chip-star.active {
+  /* Not --accent (blue): a star communicates "favourited" by being filled, and
+     tinting it the link colour made it read as a link. The icon itself is
+     swapped to the filled variant in JS; this just keeps it high-contrast
+     against the chip in both themes. */
+  color: var(--ink);
+}
 
 /* 32px is well under the 44px finger minimum, and this control toggles a
    favourite — a mis-tap silently undoes something. Expand the hit area via

@@ -101,29 +101,53 @@ func DetectLetterbox(g *Grid) LetterboxMask {
 		return sum / float64(g.H)
 	}
 
-	for y := 0; y < g.H/3; y++ { // never treat more than a third of the frame as a bar
+	// Per-edge cap. This used to be a third, which was fine for cinematic
+	// letterboxing on a widescreen monitor and badly wrong on a phone:
+	// 16:9 content on a ~9:20 portrait display leaves bands of roughly 35%
+	// top and bottom, so detection hit the cap, gave up, and every edge zone
+	// sampled pure black regardless of what was on screen.
+	//
+	// Capped per edge rather than unbounded so a genuinely dark scene cannot
+	// be mistaken for a bar and collapse the sampled area to nothing; the
+	// combined guard below enforces that a real slice of content survives.
+	maxV := g.H * 45 / 100
+	maxH := g.W * 45 / 100
+
+	for y := 0; y < maxV; y++ {
 		if rowLum(y) > letterboxLuminanceThreshold {
 			break
 		}
 		m.Top++
 	}
-	for y := g.H - 1; y >= g.H-g.H/3; y-- {
+	for y := g.H - 1; y >= g.H-maxV; y-- {
 		if rowLum(y) > letterboxLuminanceThreshold {
 			break
 		}
 		m.Bottom++
 	}
-	for x := 0; x < g.W/3; x++ {
+	for x := 0; x < maxH; x++ {
 		if colLum(x) > letterboxLuminanceThreshold {
 			break
 		}
 		m.Left++
 	}
-	for x := g.W - 1; x >= g.W-g.W/3; x-- {
+	for x := g.W - 1; x >= g.W-maxH; x-- {
 		if colLum(x) > letterboxLuminanceThreshold {
 			break
 		}
 		m.Right++
+	}
+
+	// Both edges can each be under their cap while together leaving almost
+	// nothing. A fully black frame is the obvious case, and it would otherwise
+	// produce an empty sampling region rather than the correct answer of
+	// "everything is black".
+	const minContent = 4 // grid cells; the grid is 64x36
+	if g.H-m.Top-m.Bottom < minContent {
+		m.Top, m.Bottom = 0, 0
+	}
+	if g.W-m.Left-m.Right < minContent {
+		m.Left, m.Right = 0, 0
 	}
 	return m
 }

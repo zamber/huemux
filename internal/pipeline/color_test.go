@@ -40,3 +40,37 @@ func TestSampleZoneLinearSolidRed(t *testing.T) {
 		t.Fatalf("expected a strong red channel, got R=%d G=%d B=%d", ch.R, ch.G, ch.B)
 	}
 }
+
+// TestDetectLetterboxLargeBars covers the phone case: 16:9 content on a tall
+// portrait display leaves bands far bigger than the old one-third cap, so
+// detection gave up and every edge zone sampled pure black.
+func TestDetectLetterboxLargeBars(t *testing.T) {
+	// 64x36 grid, content occupying only the middle 10 rows — 36% bars.
+	g := &Grid{W: 64, H: 36, Pix: make([]byte, 64*36*3)}
+	for y := 13; y < 23; y++ {
+		for x := 0; x < 64; x++ {
+			i := (y*64 + x) * 3
+			g.Pix[i], g.Pix[i+1], g.Pix[i+2] = 200, 180, 160
+		}
+	}
+	m := DetectLetterbox(g)
+	if m.Top != 13 {
+		t.Errorf("Top = %d, want 13 (the old third-of-frame cap stopped at 12)", m.Top)
+	}
+	if m.Bottom != 13 {
+		t.Errorf("Bottom = %d, want 13", m.Bottom)
+	}
+}
+
+// A fully black frame must not collapse the sampled region to nothing: the
+// right answer is "everything is black", not "there is no content".
+func TestDetectLetterboxAllBlackKeepsContent(t *testing.T) {
+	g := &Grid{W: 64, H: 36, Pix: make([]byte, 64*36*3)}
+	m := DetectLetterbox(g)
+	if g.H-m.Top-m.Bottom < 1 {
+		t.Errorf("all-black frame collapsed the vertical region: top=%d bottom=%d", m.Top, m.Bottom)
+	}
+	if g.W-m.Left-m.Right < 1 {
+		t.Errorf("all-black frame collapsed the horizontal region: left=%d right=%d", m.Left, m.Right)
+	}
+}
