@@ -12,7 +12,7 @@ reviewable commit or small series, and to leave `main` working.
 | 1 | `internal/appconfig` — schema, file, flags | **done** |
 | 2 | Profiles, server side | **done** |
 | 3 | Extract pairing UI into `web/shared/` | **done** |
-| 4 | Profile-aware UI + settings screen | not started |
+| 4 | Profile-aware UI + settings screen | **done** |
 | 5 | Listen address, Origin, auth | not started |
 | 6 | TLS modes | not started |
 | 7 | Android M1 — lights, standalone | **Go side done; Kotlin app not started** |

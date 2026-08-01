@@ -30,6 +30,9 @@ import (
 // 0.0.0.0 — because there is no authentication and the WebSocket it serves
 // drives real lights.
 type Server struct {
+	// cfgMu guards cfg, which stopped being immutable once /api/config could
+	// PATCH it at runtime. Read through Config(), never directly.
+	cfgMu     sync.RWMutex
 	cfg       appconfig.Config
 	store     *config.Store
 	favorites *config.FavoritesStore
@@ -90,7 +93,19 @@ func New(cfg appconfig.Config, store *config.Store, favorites *config.FavoritesS
 }
 
 // Config returns the effective application configuration.
-func (s *Server) Config() appconfig.Config { return s.cfg }
+func (s *Server) Config() appconfig.Config {
+	s.cfgMu.RLock()
+	defer s.cfgMu.RUnlock()
+	return s.cfg
+}
+
+// setConfig replaces the effective configuration. Only /api/config calls
+// this, and only from a loopback caller.
+func (s *Server) setConfig(cfg appconfig.Config) {
+	s.cfgMu.Lock()
+	defer s.cfgMu.Unlock()
+	s.cfg = cfg
+}
 
 // BuildPaired constructs the services the configured profile calls for from a
 // paired bridge. Exported so the process entry points build exactly the same
@@ -113,7 +128,7 @@ func BuildPaired(cfg appconfig.Config, bridge config.Bridge, store *config.Store
 }
 
 func (s *Server) buildPaired(bridge config.Bridge) (*engine.Engine, *lightctl.Service) {
-	return BuildPaired(s.cfg, bridge, s.store, s.favorites)
+	return BuildPaired(s.Config(), bridge, s.store, s.favorites)
 }
 
 func (s *Server) engine() *engine.Engine {
@@ -167,7 +182,7 @@ func (s *Server) setPaired(eng *engine.Engine, lights *lightctl.Service) {
 	// for the sync page's scene strip — there is no light-control UI for
 	// those events to reach, so the subscription would be pure background
 	// traffic nobody reads.
-	if lights != nil && s.cfg.ShowsLightsTab() {
+	if lights != nil && s.Config().ShowsLightsTab() {
 		go s.runLightEventBroadcast(ctx, lights)
 	}
 }
@@ -242,6 +257,7 @@ func (s *Server) routes() {
 	s.mux.HandleFunc("/api/scenes", s.handleScenes)
 	s.mux.HandleFunc("/api/favorites", s.handleFavorites)
 	s.mux.HandleFunc("/api/locale", s.handleLocale)
+	s.mux.HandleFunc("/api/config", s.handleConfig)
 	s.mux.HandleFunc("/ws", s.handleWS)
 }
 

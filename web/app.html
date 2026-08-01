@@ -27,20 +27,41 @@
 </head>
 <body>
 <huemux-header active="sync"></huemux-header>
-<div class="shell-frames">
-  <iframe id="frame-sync" class="shell-frame active" src="/sync.html" title="Sync"></iframe>
-  <iframe id="frame-lights" class="shell-frame" src="/lights.html" title="Lights"></iframe>
-</div>
+<!-- Iframes are created by the bootstrap below, not written statically:
+     each one opens its own WebSocket the moment it loads, so a frame for a
+     tab the profile disabled would be a second connection to a page nobody
+     can reach. -->
+<div class="shell-frames" id="shell-frames"></div>
 
 <script src="/shared/theme.js"></script>
 <script src="/shared/i18n.js"></script>
+<script src="/shared/features.js"></script>
 <script src="/shared/header.js"></script>
 <script>
-  // shell.js needs the i18n dictionary already loaded the first time it
+  // Order matters twice over.
+  //
+  // Features must resolve before the iframes are created, so a disabled tab
+  // never loads a page (and opens a WebSocket) that is then hidden.
+  //
+  // And shell.js needs the i18n dictionary already loaded the first time it
   // sets document.title — unlike data-i18n DOM text, which init()'s own
   // concluding applyTo(document) sweep re-corrects a moment later, a title
   // set once from a still-empty dictionary would just stick as a raw key.
-  HueMuxI18n.init().then(function () {
+  Promise.all([HueMuxI18n.init(), HueMuxFeatures.load()]).then(function (r) {
+    var f = r[1];
+    var host = document.getElementById('shell-frames');
+
+    function addFrame(id, src, title) {
+      var el = document.createElement('iframe');
+      el.id = id;
+      el.className = 'shell-frame';
+      el.src = src;
+      el.title = title;
+      host.appendChild(el);
+    }
+    if (f.sync) addFrame('frame-sync', '/sync.html', 'Sync');
+    if (f.lights) addFrame('frame-lights', '/lights.html', 'Lights');
+
     var s = document.createElement('script');
     s.src = '/shared/shell.js';
     document.body.appendChild(s);

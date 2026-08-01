@@ -818,6 +818,7 @@ function restoreFilterFromURL() {
 // ---------- init ----------
 
 restoreFilterFromURL();
+HueMuxFeatures.load();
 HueMuxI18n.init().then(() => {
   renderFilterMenu();
   renderGrid();

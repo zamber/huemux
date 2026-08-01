@@ -39,12 +39,15 @@ class HueMuxHeader extends HTMLElement {
     this._onLangChange = () => { this._renderLang(); HueMuxI18n.applyTo(this); };
     document.addEventListener('huemux:themechange', this._onThemeChange);
     document.addEventListener('huemux:langchange', this._onLangChange);
+    this._onFeatures = () => this._renderNav();
+    document.addEventListener('huemux:features', this._onFeatures);
   }
 
   disconnectedCallback() {
     if (this._onClick) this.removeEventListener('click', this._onClick);
     document.removeEventListener('huemux:themechange', this._onThemeChange);
     document.removeEventListener('huemux:langchange', this._onLangChange);
+    document.removeEventListener('huemux:features', this._onFeatures);
   }
 
   attributeChangedCallback(name) {
@@ -79,9 +82,29 @@ class HueMuxHeader extends HTMLElement {
     const active = this.getAttribute('active') || '';
     const nav = this.querySelector('.ls-nav');
     if (!nav) return;
-    nav.innerHTML =
-      '<a href="/lights.html" data-tab="lights" data-i18n="nav.lights"' + (active === 'lights' ? ' class="active"' : '') + '>Lights</a>' +
-      '<a href="/sync.html" data-tab="sync" data-i18n="nav.sync"' + (active === 'sync' ? ' class="active"' : '') + '>Sync</a>';
+
+    // Which tabs exist comes from the server, because the profile decides it
+    // and the server is the only thing that knows. HueMuxFeatures defaults to
+    // both-enabled until /api/config answers, so the nav renders immediately
+    // and settles rather than flickering in from empty.
+    const f = (window.HueMuxFeatures && window.HueMuxFeatures.current()) || { lights: true, sync: true };
+
+    let html = '';
+    if (f.lights) {
+      html += '<a href="/lights.html" data-tab="lights" data-i18n="nav.lights"' +
+        (active === 'lights' ? ' class="active"' : '') + '>Lights</a>';
+    }
+    if (f.sync) {
+      html += '<a href="/sync.html" data-tab="sync" data-i18n="nav.sync"' +
+        (active === 'sync' ? ' class="active"' : '') + '>Sync</a>';
+    }
+    // With one feature tab there is nothing to navigate between, so a single
+    // permanently-active link would just be noise — but Settings still needs
+    // a way in, so it is always present.
+    if (!(f.lights && f.sync)) html = '';
+    html += '<a href="/settings.html" data-tab="settings" data-i18n="nav.settings"' +
+      (active === 'settings' ? ' class="active"' : '') + '>Settings</a>';
+    nav.innerHTML = html;
     HueMuxI18n.applyTo(nav);
   }
 

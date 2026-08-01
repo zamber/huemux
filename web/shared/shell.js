@@ -6,11 +6,18 @@
 // to tear down whichever one you left, which meant you could never run
 // screen sync and control lights at the same time.
 window.HueMuxShell = (() => {
-  const frames = {
-    sync: document.getElementById('frame-sync'),
-    lights: document.getElementById('frame-lights'),
-  };
-  let active = 'sync';
+  // Only frames the page actually rendered. app.html omits the iframe for a
+  // tab the profile disabled, so this map is built from what exists rather
+  // than from a fixed pair — otherwise switchTab would target a null element
+  // and the shell would land on a frame that was never created.
+  const frames = {};
+  const syncFrame = document.getElementById('frame-sync');
+  const lightsFrame = document.getElementById('frame-lights');
+  if (syncFrame) frames.sync = syncFrame;
+  if (lightsFrame) frames.lights = lightsFrame;
+
+  // Whichever frame exists, preferring sync to match the historical default.
+  let active = frames.sync ? 'sync' : (frames.lights ? 'lights' : null);
 
   function titleFor(tab) {
     const key = tab === 'lights' ? 'nav.lights' : 'nav.sync';
@@ -18,7 +25,7 @@ window.HueMuxShell = (() => {
   }
 
   function switchTab(tab) {
-    if (!frames[tab]) return;
+    if (!frames[tab] || !active) return;
     if (tab !== active) {
       frames[active].classList.remove('active');
       frames[tab].classList.add('active');
@@ -32,8 +39,18 @@ window.HueMuxShell = (() => {
 
   document.addEventListener('huemux:langchange', () => { document.title = titleFor(active); });
 
-  const initial = location.pathname.indexOf('lights') !== -1 ? 'lights' : 'sync';
-  switchTab(initial);
+  // Honour the URL only if that tab exists in this build; otherwise fall back
+  // to whatever single frame there is. A lights-only deployment opened at
+  // /sync.html used to land on a frame that does not exist and show nothing.
+  const wanted = location.pathname.indexOf('lights') !== -1 ? 'lights' : 'sync';
+  const initial = frames[wanted] ? wanted : active;
+  if (initial) {
+    frames[initial].classList.add('active');
+    active = initial;
+    const header = document.querySelector('huemux-header');
+    if (header) header.setAttribute('active', initial);
+    document.title = titleFor(initial);
+  }
 
   return { switchTab, current: () => active };
 })();

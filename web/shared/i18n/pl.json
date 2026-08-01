@@ -4,7 +4,8 @@
   },
   "nav": {
     "lights": "Światła",
-    "sync": "Synchronizacja"
+    "sync": "Synchronizacja",
+    "settings": "Ustawienia"
   },
   "theme": {
     "titleSystem": "Motyw: systemowy (kliknij, aby zmienić)",
@@ -118,5 +119,25 @@
     "sceneDynamic": "Dynamiczna",
     "empty": "Nie znaleziono świateł na tym mostku.",
     "stopStreaming": "Zatrzymaj strumieniowanie"
+  },
+  "settings": {
+    "heading": "Ustawienia",
+    "loading": "Ładowanie…",
+    "readOnly": "Ustawienia można zmieniać tylko na komputerze, na którym działa HueMux.",
+    "profile": "Profil",
+    "profileHint": "Która połowa aplikacji działa. „lights” całkowicie pomija synchronizację ekranu — bez strumienia DTLS, bez przechwytywania.",
+    "listen": "Adres nasłuchiwania",
+    "listenHint": "127.0.0.1 sprawia, że HueMux jest dostępny tylko z tego komputera. Każdy inny adres udostępnia go w sieci — ustaw wtedy uwierzytelnianie poniżej. Port 0 wybiera pierwszy wolny port od 7654.",
+    "auth": "Uwierzytelnianie",
+    "authHint": "Trzy łatwe do zapamiętania słowa. Połączenia z tego komputera nigdy o nie nie proszą.",
+    "tokenPlaceholder": "np. otter.beacon.willow",
+    "tokenSet": "(bez zmian — wpisz, aby zastąpić)",
+    "generate": "Generuj",
+    "tls": "TLS",
+    "tlsHint": "HueMux nie pozyskuje certyfikatów. „files” używa tych, które dostarczysz — z Tailscale lub własnej domeny.",
+    "save": "Zapisz",
+    "saved": "Zapisano.",
+    "savedRestart": "Zapisano — uruchom HueMux ponownie, aby zmiany zadziałały.",
+    "loadFailed": "Nie udało się wczytać ustawień: "
   }
 }
