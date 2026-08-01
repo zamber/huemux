@@ -11,9 +11,14 @@
   var DARK = '#000000', LIGHT = '#f7f3ea';
   var t = localStorage.getItem('theme');
   var resolved;
-  if (t === 'light' || t === 'dark') {
-    document.documentElement.setAttribute('data-theme', t);
-    resolved = t;
+  // Must understand the simple-* variants too, or a page stored as
+  // "simple-dark" would flash the system theme before theme.js corrects it.
+  // Keep in sync with BASE/CHOICES in shared/theme.js.
+  var base = { light: 'light', dark: 'dark', 'simple-light': 'light', 'simple-dark': 'dark' }[t];
+  if (base) {
+    document.documentElement.setAttribute('data-theme', base);
+    if (t.indexOf('simple-') === 0) document.documentElement.setAttribute('data-simple', '');
+    resolved = base;
   } else {
     resolved = window.matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark';
   }

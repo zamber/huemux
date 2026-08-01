@@ -297,3 +297,48 @@ input[type=checkbox], input[type=radio] {
   font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.04em;
   color: var(--ink-muted); margin: 0 0 0.35rem; font-weight: 600;
 }
+
+/* ── Simple variants ──────────────────────────────────────────────────────
+   html[data-simple] keeps the palette and every accent colour, and removes
+   the decoration that costs the most to composite. Measured on a 1280x800
+   Android panel, a full grid rebuild ran ~325ms with nine blurred gradient
+   layers on screen; those layers are re-rasterised on every rebuild and are
+   purely ambience.
+
+   Deliberately a separate attribute from data-theme, so light/dark palettes
+   and "how decorated" stay independent — no palette rule below needs to know
+   this exists. See ARCHITECTURE.md. */
+
+/* The per-light colour is the one thing that must survive: it is information,
+   not decoration. It moves from a blurred wash to a tinted border and a small
+   solid swatch, which cost essentially nothing to paint. */
+html[data-simple] .light-card-gradient {
+  filter: none;
+  opacity: 0;
+}
+html[data-simple] .light-card {
+  transition: none;
+  border-left-width: 4px;
+  border-left-color: var(--card-accent, var(--border));
+}
+html[data-simple] .light-card:hover {
+  transform: none;
+  box-shadow: none;
+}
+html[data-simple] .light-card:hover .light-card-gradient { opacity: 0; }
+
+/* Shadows are the other per-element paint cost worth dropping. */
+html[data-simple] .light-card,
+html[data-simple] .scene-chip,
+html[data-simple] huemux-pairing .bridge-card {
+  box-shadow: none;
+}
+
+/* Transitions on frequently-rebuilt nodes serve no purpose when the node is
+   destroyed and recreated on every update anyway. */
+html[data-simple] .light-card,
+html[data-simple] .light-card-gradient,
+html[data-simple] .scene-chip,
+html[data-simple] .icon-btn {
+  transition: none;
+}

@@ -109,9 +109,20 @@ class HueMuxHeader extends HTMLElement {
   }
 
   _renderTheme() {
-    const choice = localStorage.getItem('theme') || 'system';
-    const icons = { system: '🌗', light: '☀️', dark: '🌙' };
-    const titleKeys = { system: 'theme.titleSystem', light: 'theme.titleLight', dark: 'theme.titleDark' };
+    // Reads through HueMuxTheme.current() rather than localStorage directly,
+    // so an unrecognised stored value falls back to 'system' in one place.
+    const choice = (typeof HueMuxTheme !== 'undefined') ? HueMuxTheme.current() : 'system';
+    // The simple variants reuse their palette's icon with a dot, rather than
+    // inventing a symbol: they are the same light/dark theme with the
+    // decoration removed, and the title says which.
+    const icons = {
+      system: '🌗', light: '☀️', dark: '🌙',
+      'simple-light': '☀', 'simple-dark': '🌒',
+    };
+    const titleKeys = {
+      system: 'theme.titleSystem', light: 'theme.titleLight', dark: 'theme.titleDark',
+      'simple-light': 'theme.titleSimpleLight', 'simple-dark': 'theme.titleSimpleDark',
+    };
     this._themeBtn.textContent = icons[choice] || icons.system;
     const title = HueMuxI18n.t(titleKeys[choice] || titleKeys.system);
     this._themeBtn.setAttribute('title', title);

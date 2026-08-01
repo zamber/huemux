@@ -11,11 +11,13 @@
 (function () {
   var LIGHT = '#f7f3ea', DARK = '#000000';
   var stored = localStorage.getItem('theme');
-  var choice = (stored === 'light' || stored === 'dark') ? stored : 'system';
-  if (choice !== 'system') document.documentElement.setAttribute('data-theme', choice);
-  var resolved = choice === 'system'
-    ? (window.matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark')
-    : choice;
+  // Keep in sync with BASE/CHOICES in shared/theme.js.
+  var base = { light: 'light', dark: 'dark', 'simple-light': 'light', 'simple-dark': 'dark' }[stored];
+  if (base) {
+    document.documentElement.setAttribute('data-theme', base);
+    if (stored.indexOf('simple-') === 0) document.documentElement.setAttribute('data-simple', '');
+  }
+  var resolved = base || (window.matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark');
   var meta = document.getElementById('theme-color-meta');
   if (meta) meta.setAttribute('content', resolved === 'light' ? LIGHT : DARK);
 })();

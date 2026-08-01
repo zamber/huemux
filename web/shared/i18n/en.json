@@ -10,7 +10,9 @@
   "theme": {
     "titleSystem": "Theme: system (click to change)",
     "titleLight": "Theme: light (click to change)",
-    "titleDark": "Theme: dark (click to change)"
+    "titleDark": "Theme: dark (click to change)",
+    "titleSimpleLight": "Theme: simple light — fewer effects, faster (click to change)",
+    "titleSimpleDark": "Theme: simple dark — fewer effects, faster (click to change)"
   },
   "lang": {
     "titleSystem": "Language: system (click to change)",
