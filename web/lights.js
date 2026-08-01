@@ -625,8 +625,14 @@ function openColorPicker(targetId) {
   }
 
   function resize() {
-    canvas.width = overlay.clientWidth;
-    canvas.height = overlay.clientHeight - 180; // header+footer, matches lights.css
+    // Measure the canvas rather than subtracting a constant for the header
+    // and footer. The old `overlay.clientHeight - 180` hardcoded their
+    // combined height into JS, so it silently drifted whenever lights.css
+    // changed and left almost no canvas on a short screen in landscape. The
+    // canvas is `flex: 1` in a column, so its own laid-out box is already the
+    // right answer.
+    canvas.width = canvas.clientWidth;
+    canvas.height = canvas.clientHeight;
     renderGradient();
   }
 

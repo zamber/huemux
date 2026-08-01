@@ -15,8 +15,8 @@ reviewable commit or small series, and to leave `main` working.
 | 4 | Profile-aware UI + settings screen | **done** |
 | 5 | Listen address, Origin, auth | **done** |
 | 6 | TLS modes | **done** |
-| 7 | Android M1 — lights, standalone | **Go side done; Kotlin app not started** |
-| 8 | Android M2 — config + mobile polish | not started |
+| 7 | Android M1 — lights, standalone | **built, untested on a device** |
+| 8 | Android M2 — config + mobile polish | **done** |
 | 9 | Android M3 — MediaProjection sync | not started |
 | 10 | Android M4 — CI build, signing, distribution | not started |
 

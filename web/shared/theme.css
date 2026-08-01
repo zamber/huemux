@@ -118,6 +118,16 @@ html[data-theme="light"] {
 
 * { box-sizing: border-box; }
 
+/* Notches and the gesture bar. Harmless on desktop, where the env() values
+   are all zero. */
+@supports (padding: env(safe-area-inset-left)) {
+  body {
+    padding-left: env(safe-area-inset-left);
+    padding-right: env(safe-area-inset-right);
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+}
+
 body {
   font-family: 'Fira Code', ui-monospace, 'Cascadia Code', 'SF Mono', Menlo, Consolas, monospace;
   background: var(--surface);
@@ -150,6 +160,14 @@ button, input, select, textarea, optgroup {
   pointer-events: none;
   z-index: 0;
   filter: blur(50px);
+}
+
+/* A 50px blur is composited per card, and a phone showing a dozen light cards
+   pays it a dozen times — enough to cost frames while scrolling on mid-range
+   hardware. The gradient is decoration, so soften the cost rather than the
+   look: a smaller radius is visually near-identical at phone card sizes. */
+@media (pointer: coarse) {
+  .light-card-gradient { filter: blur(24px); }
 }
 .light-card { position: relative; }
 .light-card > *:not(.light-card-gradient) { position: relative; z-index: 1; }
@@ -259,6 +277,14 @@ input[type=checkbox], input[type=radio] {
 .scene-chip-star svg { width: 16px; height: 16px; }
 .scene-chip-star:hover { background: var(--card-hover); color: var(--ink); }
 .scene-chip-star.active { color: var(--accent); }
+
+/* 32px is well under the 44px finger minimum, and this control toggles a
+   favourite — a mis-tap silently undoes something. Expand the hit area via
+   padding rather than the visual circle, so the chip layout is unchanged. */
+@media (pointer: coarse) {
+  .scene-chip-star { width: 40px; height: 40px; }
+  .scene-chip-star svg { width: 18px; height: 18px; }
+}
 
 /* Favorites view: scenes grouped by room instead of one flat/wrapped row —
    .scenes-strip's own flex-wrap is overridden per group here since each
