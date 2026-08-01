@@ -100,3 +100,28 @@ func TestPairedReportsBridgeStateNotEngineState(t *testing.T) {
 		t.Error("a lights-only server with a paired bridge must report paired despite the nil engine")
 	}
 }
+
+// TestStatusReportsPairedWithoutEngine is the browser-side counterpart to
+// TestPairedReportsBridgeStateNotEngineState. A lights-only profile has no
+// engine by design, and inferring "unpaired" from that told the web UI to show
+// the pairing panel forever on a working, already-paired server — making the
+// whole profile unusable in a browser.
+func TestStatusReportsPairedWithoutEngine(t *testing.T) {
+	s := New(cfgWithProfile(appconfig.ProfileLights), nil, nil, nil, nil)
+
+	if s.statusMessage(nil).Paired {
+		t.Error("a server with no bridge must report paired=false")
+	}
+
+	_, lights := BuildPaired(cfgWithProfile(appconfig.ProfileLights),
+		config.Bridge{BridgeIP: "192.0.2.10"}, nil, nil)
+	s.setPaired(nil, lights)
+
+	msg := s.statusMessage(nil)
+	if s.Engine() != nil {
+		t.Fatal("lights profile must not have an engine")
+	}
+	if !msg.Paired {
+		t.Error("a paired lights-only server must report paired=true despite the nil engine")
+	}
+}

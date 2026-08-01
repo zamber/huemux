@@ -514,10 +514,19 @@ func (s *Server) statusMessage(conn *Conn) statusWire {
 	var msg statusWire
 	eng := s.engine()
 	if eng == nil {
+		// Paired comes from the bridge, not from whether a sync engine
+		// exists. Under a lights-only profile the engine is nil forever by
+		// design, and reporting Paired:false there told the browser to show
+		// the pairing panel on a fully working, already-paired server — every
+		// status push, so it could never get past it. Exactly the bug fixed
+		// for the CLI readout in Server.Paired(); this path was missed.
+		//
+		// The pairing state still rides along: harmless when paired, and it
+		// is what drives the panel when genuinely unpaired.
 		s.pairMu.Lock()
 		ps := s.pairState
 		s.pairMu.Unlock()
-		msg = statusWire{Type: "status", Paired: false, Pairing: &ps}
+		msg = statusWire{Type: "status", Paired: s.Paired(), Pairing: &ps}
 	} else {
 		snap := eng.Snapshot()
 		msg = statusWire{Type: "status", Paired: true, Snapshot: &snap, Zones: snap.Zones, Settings: &snap.Settings}

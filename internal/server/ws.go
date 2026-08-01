@@ -81,7 +81,35 @@ func checkOrigin(r *http.Request, allowedHost string) bool {
 	if ip := net.ParseIP(host); ip != nil && ip.IsLoopback() {
 		return true
 	}
-	return allowedHost != "" && strings.EqualFold(host, allowedHost)
+	if allowedHost != "" && strings.EqualFold(host, allowedHost) {
+		return true
+	}
+
+	// A wildcard bind needs special handling, and missing it broke LAN access
+	// entirely: with listen.host set to "0.0.0.0" a browser still connects to
+	// a concrete address, so its Origin is "192.168.1.x" and can never equal
+	// "0.0.0.0". Every upgrade was rejected while static assets kept loading,
+	// so the page rendered its header and then sat empty — found only by
+	// opening it on a real device.
+	//
+	// Still not a wildcard: the Origin must name an address this machine
+	// actually holds. Same bounded set the self-signed certificate is issued
+	// for, and for the same reason.
+	if isWildcardHost(allowedHost) {
+		if ip := net.ParseIP(host); ip != nil {
+			for _, own := range localAddresses() {
+				if own.Equal(ip) {
+					return true
+				}
+			}
+		}
+	}
+	return false
+}
+
+// isWildcardHost reports whether host means "every interface".
+func isWildcardHost(host string) bool {
+	return host == "" || host == "0.0.0.0" || host == "::" || host == "[::]"
 }
 
 // Upgrade performs the HTTP -> WebSocket handshake and hijacks the
