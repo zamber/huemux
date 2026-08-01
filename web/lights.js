@@ -209,7 +209,18 @@ async function initialLoad() {
 }
 
 function hasAnyFavorites() {
-  return lights.some((l) => l.favorite) || scenes.some((sc) => !!favoritesRaw[sc.id]) || !!favoritesRaw.all;
+  return lights.some((l) => l.favorite) ||
+    scenes.some((sc) => !!favoritesRaw[sc.id]) ||
+    rooms.some((r) => !!favoritesRaw['room:' + r.id]) ||
+    !!favoritesRaw.all;
+}
+
+// Rooms whose bulk tile has been favourited. The Favorites view renders these
+// as tiles even though none of their individual lights may be favourited —
+// favouriting a room means "give me the whole-room control", not "give me
+// every light in it".
+function favoritedRooms() {
+  return rooms.filter((r) => !!favoritesRaw['room:' + r.id]);
 }
 
 // ---------- color math ----------
@@ -306,6 +317,15 @@ function renderGrid() {
       if (!byRoomId.has(key)) byRoomId.set(key, { name: l.room_name || '—', lights: [] });
       byRoomId.get(key).lights.push(l);
     }
+    // A room favourited via its bulk tile has to appear in the Favorites view
+    // even when none of its individual lights are favourited — otherwise
+    // favouriting a room is a control that does nothing observable. Seed an
+    // empty group so the loop below emits its tile.
+    if (filter === 'favorites') {
+      for (const r of favoritedRooms()) {
+        if (!byRoomId.has(r.id)) byRoomId.set(r.id, { name: r.name || '—', lights: [] });
+      }
+    }
     const { roomScenes } = splitScenesByRoomVsZone(filteredScenes());
     const scenesByRoomId = new Map();
     for (const sc of roomScenes) {
@@ -315,7 +335,13 @@ function renderGrid() {
 
     html += [...byRoomId.entries()].map(([roomId, entry]) => {
       const room = rooms.find((r) => r.id === roomId);
-      const tile = (room && filter !== 'favorites') ? renderRoomTile(room, entry.lights) : '';
+      // Normally no bulk tile in Favorites — "quick access to what I
+      // favourited" is not the same as room-wide control. The exception is a
+      // room whose tile is itself the favourite, which is the whole point of
+      // having favourited it.
+      const roomIsFav = room && !!favoritesRaw['room:' + room.id];
+      const tile = (room && (filter !== 'favorites' || roomIsFav))
+        ? renderRoomTile(room, entry.lights) : '';
       const sceneList = sortScenesFavoriteFirst(scenesByRoomId.get(roomId) || []);
       return `
         <div class="room-group">
@@ -349,14 +375,20 @@ function splitScenesByRoomVsZone(list) {
 function renderLightCard(l) {
   const off = !l.on;
   const brightnessPct = l.on ? Math.round(l.brightness) : 0;
-  const gradient = l.colorable ? gradientStyleFor(xyToRgb(l.x, l.y, brightnessPct || 40), brightnessPct || 40) : '';
+  const rgb = l.colorable ? xyToRgb(l.x, l.y, brightnessPct || 40) : null;
+  const gradient = rgb ? gradientStyleFor(rgb, brightnessPct || 40) : '';
+  // The light's own colour, exposed as a custom property on the card. The
+  // blurred gradient layer conveys it in the full themes; the simple themes
+  // drop that layer and use this for a tinted border instead, so the colour
+  // survives as information rather than being lost with the decoration.
+  const accent = rgb ? `--card-accent:rgb(${rgb.r},${rgb.g},${rgb.b});` : '';
   // Hidden, not just disabled, in the Favorites view — lights-ui's own rule
   // (showFavoriteButton={currentFilter !== 'favorites'}): favorites are for
   // quick access, and a star sitting right there invites an accidental
   // unfavorite when all you meant to do was tap the power button.
   const showFavBtn = filter !== 'favorites';
   return `
-    <div class="light-card ${off ? 'off' : ''}" data-id="${escapeHtml(l.id)}">
+    <div class="light-card ${off ? 'off' : ''}" data-id="${escapeHtml(l.id)}" style="${accent}">
       ${gradient ? `<div class="light-card-gradient" style="${gradient}"></div>` : ''}
       <div class="light-card-head">
         <h3 title="${escapeHtml(l.name)}">${escapeHtml(l.name)}</h3>
@@ -405,6 +437,10 @@ function renderAllLightsTile() {
 // "all", not per-room, at least for now.
 function renderRoomTile(room, roomLights) {
   const anyOn = roomLights.some((l) => l.on);
+  const roomFav = !!favoritesRaw['room:' + room.id];
+  // Same rule as light cards and scene chips: no star in the Favorites view,
+  // where it would sit under the thumb inviting an accidental unfavourite.
+  const showFavBtn = filter !== 'favorites';
   const hasBrightness = roomLights.some((l) => l.dimmable);
   const hasColor = roomLights.some((l) => l.colorable);
   const onLights = roomLights.filter((l) => l.on && l.dimmable);
@@ -416,6 +452,7 @@ function renderRoomTile(room, roomLights) {
       <div class="light-card-head">
         <h3>${ICONS.lightbulb}<span>${escapeHtml(HueMuxI18n.t('lights.allInRoom'))}</span></h3>
         <div class="light-card-actions">
+          ${showFavBtn ? `<button type="button" class="icon-btn ${roomFav ? 'active' : ''}" data-action="favorite" data-id="room:${escapeHtml(room.id)}" title="${escapeHtml(HueMuxI18n.t('lights.toggleFavorite'))}">${roomFav ? ICONS.star : ICONS.starOutline}</button>` : ''}
           ${hasColor ? `<button type="button" class="icon-btn" data-action="color-room" data-room-id="${escapeHtml(room.id)}" title="${escapeHtml(HueMuxI18n.t('lights.chooseColorAll'))}">${ICONS.palette}</button>` : ''}
           <button type="button" class="icon-btn ${anyOn ? 'active' : ''}" data-action="toggle-room" data-room-id="${escapeHtml(room.id)}" data-id="${escapeHtml(room.grouped_light_id)}" title="${escapeHtml(HueMuxI18n.t(anyOn ? 'lights.turnAllOff' : 'lights.turnAllOn'))}">${anyOn ? ICONS.powerOn : ICONS.powerOff}</button>
         </div>

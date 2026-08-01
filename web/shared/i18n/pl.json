@@ -10,7 +10,9 @@
   "theme": {
     "titleSystem": "Motyw: systemowy (kliknij, aby zmienić)",
     "titleLight": "Motyw: jasny (kliknij, aby zmienić)",
-    "titleDark": "Motyw: ciemny (kliknij, aby zmienić)"
+    "titleDark": "Motyw: ciemny (kliknij, aby zmienić)",
+    "titleSimpleLight": "Motyw: prosty jasny — mniej efektów, szybciej (kliknij, aby zmienić)",
+    "titleSimpleDark": "Motyw: prosty ciemny — mniej efektów, szybciej (kliknij, aby zmienić)"
   },
   "lang": {
     "titleSystem": "Język: systemowy (kliknij, aby zmienić)",

@@ -10,18 +10,49 @@
 
 const HueMuxTheme = (() => {
   const THEME_COLOR = { dark: '#000000', light: '#f7f3ea' };
-  const CYCLE = { system: 'light', light: 'dark', dark: 'system' };
+
+  // Five choices, not three. "simple-light"/"simple-dark" keep the palette and
+  // the accent colours but drop the per-card blurred gradient layers and the
+  // hover elevation — the most expensive things the UI composites, and purely
+  // decorative. On a weak panel that is the difference between a rebuild
+  // costing ~325ms and something far cheaper; on a desktop the full themes
+  // cost nothing noticeable, so both stay available.
+  //
+  // Stored client-side, so a phone can keep the full look while a wall panel
+  // runs simple. The server neither knows nor cares.
+  const CHOICES = ['system', 'light', 'dark', 'simple-light', 'simple-dark'];
+  const CYCLE = {
+    system: 'light',
+    light: 'dark',
+    dark: 'simple-light',
+    'simple-light': 'simple-dark',
+    'simple-dark': 'system',
+  };
+
+  // Which base palette a choice resolves to, for the address-bar colour.
+  const BASE = {
+    light: 'light', 'simple-light': 'light',
+    dark: 'dark', 'simple-dark': 'dark',
+  };
 
   function current() {
     const stored = localStorage.getItem('theme');
-    return stored === 'light' || stored === 'dark' ? stored : 'system';
+    return CHOICES.indexOf(stored) > 0 ? stored : 'system';
   }
 
+  // resolved answers "light or dark?" — the base palette, ignoring whether the
+  // simple variant is in play. Callers that need the variant use current().
   function resolved(choice) {
     if (choice === 'system') {
       return window.matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark';
     }
-    return choice;
+    return BASE[choice] || choice;
+  }
+
+  // simple() reports whether decoration should be stripped. Kept separate from
+  // the palette so the two are independently addressable in CSS.
+  function simple(choice) {
+    return choice === 'simple-light' || choice === 'simple-dark';
   }
 
   function updateThemeColorMeta(choice) {
@@ -31,10 +62,18 @@ const HueMuxTheme = (() => {
   }
 
   function applyToDOM(choice) {
+    const root = document.documentElement;
+    // data-theme stays light|dark so every existing palette rule keeps
+    // working untouched; the variant rides on a separate attribute.
     if (choice === 'system') {
-      document.documentElement.removeAttribute('data-theme');
+      root.removeAttribute('data-theme');
     } else {
-      document.documentElement.setAttribute('data-theme', choice);
+      root.setAttribute('data-theme', resolved(choice));
+    }
+    if (simple(choice)) {
+      root.setAttribute('data-simple', '');
+    } else {
+      root.removeAttribute('data-simple');
     }
     updateThemeColorMeta(choice);
     document.dispatchEvent(new CustomEvent('huemux:themechange', { detail: { choice } }));
@@ -68,5 +107,5 @@ const HueMuxTheme = (() => {
     if (e.key === 'theme') applyToDOM(current());
   });
 
-  return { current, resolved, cycle };
+  return { current, resolved, cycle, simple, CHOICES };
 })();
