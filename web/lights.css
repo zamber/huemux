@@ -55,6 +55,31 @@ body { margin: 0; }
 .filter-item:hover { background: var(--card-hover); color: var(--ink); }
 .filter-item.active { color: var(--ink); font-weight: 600; }
 
+/* On a phone the dropdown is a 170px-wide, 300px-tall scroller anchored to
+   the toolbar — cramped as soon as there are more than a couple of rooms, and
+   its rows are ~34px, under the 44px finger minimum. Become a bottom sheet
+   instead: full width, thumb-reachable, and roomy enough to show every room
+   without scrolling. */
+@media (pointer: coarse) and (max-width: 700px) {
+  .filter-list {
+    position: fixed;
+    top: auto;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    min-width: 0;
+    max-height: 60vh;
+    border-radius: 14px 14px 0 0;
+    border-bottom: none;
+    padding: 0.4rem 0.4rem calc(0.4rem + env(safe-area-inset-bottom, 0px));
+    box-shadow: 0 -8px 32px var(--shadow);
+  }
+  .filter-item {
+    padding: 0.85rem 0.9rem;
+    font-size: 0.95rem;
+  }
+}
+
 /* #lights-grid itself is just a vertical stack of room groups (or, for the
    single-room filter, one bare .lights-cards-grid) — the actual responsive
    card grid lives on .lights-cards-grid so it can apply equally to a lone
@@ -135,7 +160,10 @@ body { margin: 0; }
 }
 .color-picker-head { padding: 1.1rem; text-align: center; background: rgba(0,0,0,0.8); }
 .color-picker-head h2 { margin: 0; color: #fff; font-size: 1.15rem; font-weight: 600; }
-.color-picker-canvas { flex: 1; width: 100%; cursor: crosshair; touch-action: none; }
+/* min-height:0 so the canvas can actually shrink inside the column flex
+   container — without it a flex item refuses to go below its content size and
+   the footer gets pushed off a short screen. */
+.color-picker-canvas { flex: 1; min-height: 0; width: 100%; cursor: crosshair; touch-action: none; }
 .color-picker-foot { display: flex; align-items: center; gap: 1rem; padding: 1rem 1.1rem; background: rgba(0,0,0,0.8); color: #fff; }
 .color-picker-swatch { width: 56px; height: 56px; border-radius: 10px; border: 2px solid rgba(255,255,255,0.3); }
 .color-picker-cursor {

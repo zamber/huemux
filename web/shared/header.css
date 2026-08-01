@@ -54,6 +54,13 @@ huemux-header { display: block; }
   transition: background-color 0.15s ease, transform 0.1s ease;
 }
 .ls-icon-btn:hover { background: var(--card-hover); }
+
+/* 36px is comfortable with a mouse and below the 44px minimum for a finger.
+   Grow it only where the pointer is actually coarse, so the desktop header
+   keeps its proportions. */
+@media (pointer: coarse) {
+  .ls-icon-btn { width: 44px; height: 44px; }
+}
 .ls-icon-btn:active { transform: scale(0.94); }
 
 @media (max-width: 480px) {
