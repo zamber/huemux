@@ -262,10 +262,82 @@ els.changeSourceBtn.addEventListener('click', async () => {
 // picker UI, no desktopCapturer plumbing needed here — desktopCapturer
 // itself is main-process-only in modern Electron and simply isn't reachable
 // from this side. The page has no idea which context it's running in.
+// startNativeCapture hands off to Android's MediaProjection.
+//
+// Frames never touch JavaScript on this path: Kotlin downsamples and calls
+// into the Go engine in-process, which is both faster and avoids shipping
+// megabytes a second through a WebView bridge. The consequence is that there
+// is no local video preview to draw — the zone swatches, which come from the
+// server's status push, carry the useful half of that anyway.
+async function startNativeCapture() {
+  const areaId = els.areaSelect.value;
+  if (!areaId) throw new Error('no entertainment area selected');
+
+  nativeCapture = true;
+  document.documentElement.setAttribute('data-native-capture', '');
+
+  // A @JavascriptInterface method is synchronous and can only return
+  // primitives, so it cannot hand back a promise. The consent dialog is
+  // asynchronous and dismissable, and the page has to know which happened or
+  // its Start button stays disabled forever — hence the callback handshake:
+  // we register a resolver under an id, Kotlin calls it when the dialog
+  // closes.
+  try {
+    await new Promise((resolve, reject) => {
+      const id = 'c' + Date.now() + Math.random().toString(36).slice(2, 8);
+      captureWaiters[id] = (ok, err) => {
+        delete captureWaiters[id];
+        ok ? resolve() : reject(new Error(err || 'capture was not permitted'));
+      };
+      window.HueMuxNative.startCapture(areaId, id);
+    });
+  } catch (e) {
+    nativeCapture = false;
+    document.documentElement.removeAttribute('data-native-capture');
+    throw e;
+  }
+}
+
+// Resolvers keyed by request id, called from Kotlin. Assigned to window
+// explicitly — a top-level const is not a property of window, and the native
+// side looks this up by name.
+const captureWaiters = {};
+window.__huemuxCaptureResult = function (id, ok, err) {
+  const fn = captureWaiters[id];
+  if (fn) fn(ok, err);
+};
+
+function stopNativeCapture() {
+  nativeCapture = false;
+  document.documentElement.removeAttribute('data-native-capture');
+  try {
+    if (window.HueMuxNative && window.HueMuxNative.stopCapture) {
+      window.HueMuxNative.stopCapture();
+    }
+  } catch (e) { /* the service may already be gone; nothing to recover */ }
+}
+
+let nativeCapture = false;
+
 async function startCapture() {
   const capW = Number(getControl('capture_width') || 320);
   const capH = Number(getControl('capture_height') || 180);
   const capFPS = Number(getControl('capture_fps') || 30);
+
+  // Tier 0: native capture, when the page is hosted by the Android app.
+  //
+  // No mobile browser implements getDisplayMedia — not Chrome, Firefox,
+  // Safari or any WebView — so on a phone the ladder below has nothing to
+  // climb. Android's MediaProjection is the only route, and it lives on the
+  // Kotlin side, which injects HueMuxNative for exactly this.
+  //
+  // A capability check, not an environment check: asking whether the bridge
+  // exists is deterministic, whereas getDisplayMedia fails differently on
+  // every WebView version — undefined here, NotAllowedError there, a hang
+  // waiting on a permission prompt that never appears elsewhere.
+  if (window.HueMuxNative && typeof window.HueMuxNative.startCapture === 'function') {
+    return startNativeCapture();
+  }
 
   stream = await navigator.mediaDevices.getDisplayMedia({
     video: { frameRate: capFPS, resizeMode: 'crop-and-scale' },
@@ -383,6 +455,10 @@ function onWorkerMessage(e) {
 }
 
 function stopCapture() {
+  // Native capture holds an Android foreground service and a MediaProjection
+  // session; leaving those running would keep the screen-capture notification
+  // up and the DTLS stream alive after the user pressed Stop.
+  if (nativeCapture) stopNativeCapture();
   if (worker) { worker.postMessage({ type: 'stop' }); worker.terminate(); worker = null; }
   if (videoEl) { videoEl.pause(); videoEl.srcObject = null; videoEl = null; }
   if (stream) { stream.getTracks().forEach((t) => t.stop()); stream = null; }

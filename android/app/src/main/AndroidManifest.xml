@@ -12,6 +12,14 @@
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
     <uses-permission android:name="android.permission.CHANGE_WIFI_MULTICAST_STATE" />
 
+    <!-- Screen sync. FOREGROUND_SERVICE_MEDIA_PROJECTION is required from
+         Android 14; without it startForeground throws at runtime rather than
+         failing a check at install time. POST_NOTIFICATIONS is needed from 13
+         for the ongoing capture notification the service is obliged to show. -->
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MEDIA_PROJECTION" />
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+
     <application
         android:allowBackup="false"
         android:icon="@android:drawable/ic_menu_compass"
@@ -30,5 +38,13 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
+
+        <!-- foregroundServiceType is mandatory from Android 10 for a service
+             that holds a MediaProjection, and must match the type passed to
+             startForeground(). -->
+        <service
+            android:name=".ScreenCaptureService"
+            android:exported="false"
+            android:foregroundServiceType="mediaProjection" />
     </application>
 </manifest>

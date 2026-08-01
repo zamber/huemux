@@ -2,15 +2,18 @@ package com.huemux.app
 
 import android.annotation.SuppressLint
 import android.content.Intent
+import android.media.projection.MediaProjectionManager
 import android.net.Uri
 import android.net.wifi.WifiManager
 import android.os.Bundle
 import android.util.Log
 import android.view.ViewGroup
+import android.webkit.JavascriptInterface
 import android.webkit.WebView
 import android.webkit.WebViewClient
 import android.widget.TextView
 import androidx.activity.OnBackPressedCallback
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
@@ -95,6 +98,11 @@ class MainActivity : AppCompatActivity() {
             }
         })
 
+        // The page detects this object's presence to decide that native
+        // capture is available — a capability check, not a guess about the
+        // environment. See startCapture() in web/app.js.
+        webView.addJavascriptInterface(NativeBridge(), "HueMuxNative")
+
         acquireMulticastLock()
         startServer()
     }
@@ -147,6 +155,78 @@ class MainActivity : AppCompatActivity() {
             Mobile.stop()
         }
         super.onDestroy()
+    }
+
+
+    // --- native screen capture bridge ------------------------------------
+    //
+    // No mobile browser implements getDisplayMedia, so the web UI cannot
+    // capture anything on its own. This exposes MediaProjection to the page.
+    //
+    // The consent dialog is asynchronous and the user can dismiss it, so
+    // startCapture returns a JS promise rather than a bare boolean: the page
+    // needs to distinguish "running" from "declined" to reset its buttons.
+
+    private var pendingCaptureCallback: String? = null
+
+    private val projectionLauncher = registerForActivityResult(
+        ActivityResultContracts.StartActivityForResult()
+    ) { result ->
+        val cb = pendingCaptureCallback
+        pendingCaptureCallback = null
+        if (result.resultCode == RESULT_OK && result.data != null) {
+            ScreenCaptureService.startForegroundService(this, result.resultCode, result.data!!)
+            resolveCapture(cb, true, "")
+        } else {
+            // Dismissing the system dialog is a normal outcome, not an error
+            // worth logging as one — but the page must hear about it or its
+            // Start button stays disabled forever.
+            resolveCapture(cb, false, "capture permission denied")
+        }
+    }
+
+    private fun resolveCapture(cbId: String?, ok: Boolean, err: String) {
+        if (cbId == null) return
+        val js = "window.__huemuxCaptureResult && window.__huemuxCaptureResult(" +
+            "'" + cbId + "', " + ok + ", " + org.json.JSONObject.quote(err) + ")"
+        runOnUiThread { webView.evaluateJavascript(js, null) }
+    }
+
+    inner class NativeBridge {
+        /**
+         * Asks for screen-capture consent and starts the service.
+         * Resolution is reported back through window.__huemuxCaptureResult.
+         */
+        @JavascriptInterface
+        fun startCapture(areaId: String, callbackId: String) {
+            runOnUiThread {
+                try {
+                    Mobile.startSync(areaId)
+                } catch (e: Exception) {
+                    // Selecting the area is what opens the DTLS stream. If that
+                    // fails there is nothing to capture *for*, so do not put a
+                    // consent dialog in front of the user first.
+                    Log.e(TAG, "startSync failed", e)
+                    resolveCapture(callbackId, false, e.message ?: "could not select area")
+                    return@runOnUiThread
+                }
+                pendingCaptureCallback = callbackId
+                val mgr = getSystemService(MEDIA_PROJECTION_SERVICE) as MediaProjectionManager
+                projectionLauncher.launch(mgr.createScreenCaptureIntent())
+            }
+        }
+
+        @JavascriptInterface
+        fun stopCapture() {
+            runOnUiThread {
+                ScreenCaptureService.stop(this@MainActivity)
+                try {
+                    Mobile.stopSync()
+                } catch (e: Exception) {
+                    Log.w(TAG, "stopSync failed", e)
+                }
+            }
+        }
     }
 
     private companion object {

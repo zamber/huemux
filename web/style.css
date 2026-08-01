@@ -110,3 +110,13 @@ huemux-pairing { grid-column: 1 / -1; }
 @media (max-width: 800px) {
   #app-main { grid-template-columns: 1fr; }
 }
+
+/* Native (Android MediaProjection) capture pushes frames straight into the Go
+   engine without passing through JavaScript, so there is nothing to draw in
+   the preview canvas — it would sit black and look broken. The zone swatches
+   drawn from the server's status push still work and carry the useful part. */
+html[data-native-capture] #preview-wrap .preview-hint { display: none; }
+html[data-native-capture] #preview {
+  min-height: 120px;
+  background: var(--surface-alt);
+}
