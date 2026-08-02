@@ -24,15 +24,16 @@ so the order is also roughly the order to do them in.
 
 ## 0. Blockers — nothing ships until these are done
 
-### 0.1 There is no LICENSE file
+### 0.1 The LICENSE file — GPL-3.0-or-later (done 2026-08-02)
 
-The repository is public with no licence, which under copyright law means
-**all rights reserved**: nobody may redistribute it, and that includes
-F-Droid, Flathub and anyone packaging it downstream. Several channels will
-refuse the submission outright, and the ones that do not are relying on a
-permission that has not been given.
+The repository ships [LICENSE](LICENSE) under **GPL-3.0-or-later**, and that
+closes the distribution blocker. The state that made it a blocker is worth
+remembering: a public repo with no licence means **all rights reserved**
+under copyright law — nobody may redistribute it, F-Droid, Flathub and any
+downstream packager included — and several channels refuse such submissions
+outright. With the file in place, that gate is closed.
 
-#### Recommendation: GPL-3.0-or-later
+#### Why GPL-3.0-or-later
 
 For a project you want in the FOSS ecosystem and do not want quietly
 repackaged, **GPL-3.0-or-later** is the right fit, and the dependency set
@@ -196,7 +197,7 @@ Free-software channels, in the order they cost you effort. None of them wants
 money, an identity check, or a trademark opinion, and there is a genuine gap
 here: the FOSS Hue app selection is thin.
 
-All of them need §0.1's `LICENSE` file first. That is the whole gate.
+§0.1's `LICENSE` file already exists, so the legal gate is closed.
 
 ### 2A.1 Obtainium — works today, zero effort
 
@@ -520,7 +521,7 @@ Two rules worth encoding in the workflow:
 FOSS channels first, which is also the cheapest-first order. Nothing before
 step 6 costs money or involves anyone's approval.
 
-1. **`LICENSE` — GPL-3.0-or-later** (§0.1). Blocks every FOSS channel below.
+1. **`LICENSE` — GPL-3.0-or-later** (§0.1) — done 2026-08-02. No longer blocks any FOSS channel.
 2. **Sign the Android release consistently** (PACKAGING.md). Do it before
    anyone installs, because Android will not upgrade across a signature change.
 3. **Obtainium** (§2A.1) — a README line. Works with what CI already builds.
