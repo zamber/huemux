@@ -2,8 +2,15 @@
 
 Development and verification notes for whoever (or whatever) is changing this
 codebase. User-facing docs are in [README.md](README.md); release mechanics are
-in [PACKAGING.md](PACKAGING.md); designs for unstarted work are in
-[plans/](plans/).
+in [PACKAGING.md](PACKAGING.md); store submission, accounts and the legal
+prerequisites are in [PUBLISHING.md](PUBLISHING.md); designs for unstarted work
+are in [plans/](plans/).
+
+Two things are unresolved and block distribution: there is **no `LICENSE`
+file** (a public repo without one is all rights reserved, so no packager may
+redistribute it), and the project name contains **Signify's "Hue"
+trademark**. Both are cheaper to settle before there are store listings and an
+installed base. See PUBLISHING.md §0.
 
 ## Commands
 

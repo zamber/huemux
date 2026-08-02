@@ -26,6 +26,15 @@ reviewable commit or small series, and to leave `main` working.
 | 15 | Capture lifecycle; full-res recording removed | **built, untested on a device** |
 | 16 | Split frame path — pipeline downscale, direct encode | **device-confirmed: snappy at 100% recording resolution** |
 | 17 | Restricted-profile nav, sticky heading, encoder tail | **built, untested on a device** |
+| 18 | Licence, attribution, About screen | **not started** |
+| 19 | Privacy policy + store legal declarations | **not started** |
+| 20 | Unattended channels — Scoop, Homebrew tap, AppImage | **not started** |
+| 21 | F-Droid | **not started** |
+| 22 | Release workflow split + `release` environment | **not started** |
+| 23 | Flathub | **not started** |
+| 24 | Windows signing, then winget | **not started** |
+| 25 | macOS notarization, then Homebrew cask | **not started** |
+| 26 | Google Play | **not started** |
 
 ---
 
@@ -399,3 +408,116 @@ absent from any report taken after capture stops, which is all of them.
 
 **Done when** a device confirms both restricted profiles are navigable, the
 heading covers what scrolls under it, and `in == out` on a recording.
+
+---
+
+# Publishing phases (18–26)
+
+Full detail, including every legal obligation and the secrets each channel
+needs, is in [PUBLISHING.md](../PUBLISHING.md). This is the running order and
+the acceptance criteria; the reasoning lives there.
+
+Ordered easiest to hardest, which is also roughly dependency order. Two items
+block nearly everything and are not code:
+
+- **There is no `LICENSE` file.** A public repo without one is all rights
+  reserved, so F-Droid, Flathub and Homebrew cannot legally package it.
+- **The name contains Signify's trademark.** "HueMux" and `huemux.com` both
+  use "Hue". Renaming is far cheaper before store listings, an installed base
+  and package-manager entries exist than after, so the decision belongs at the
+  start of this sequence rather than the end.
+
+## Phase 18 — Licence, attribution, About screen
+
+Commit a `LICENSE`. Generate `THIRD_PARTY_LICENSES` with `go-licenses` rather
+than maintaining it by hand, and add `go-licenses check` to CI so an
+incompatible dependency fails the build instead of a store review. Add an
+About section to Settings carrying the version, the licence, the full
+third-party text served from embedded `web/` (a device with no internet must
+still be able to show it), and the trademark disclaimer.
+
+**Done when** the About screen shows every dependency's licence offline, and
+CI fails on a deliberately-added copyleft dependency.
+
+## Phase 19 — Privacy policy and store declarations
+
+A privacy policy page on the existing `docs/` site. It must be exact about
+screen capture and recording — a mismatch between the policy and the behaviour
+is what gets an app pulled. Draft the Data safety answers, the encryption
+export declaration, and the `FOREGROUND_SERVICE_MEDIA_PROJECTION`
+justification alongside it, since all four have to agree with each other.
+
+**Done when** huemux.com/privacy is live and the four declarations are drafted
+and consistent.
+
+## Phase 20 — Unattended channels
+
+Scoop manifest, a `homebrew-huemux` tap, AppImage on the release. None needs an
+account, a fee or a review. Quick wins that also prove the release artifacts
+are consumable by something other than a browser.
+
+**Done when** `scoop install` and `brew install` both work from a clean machine.
+
+## Phase 21 — F-Droid
+
+The first real store, and the one that needs no Google account, no fee and no
+signing key — F-Droid signs it. Requires Phase 18's licence. The work is
+getting their builders through `gomobile bind`, which needs the NDK.
+
+**Done when** the app is in the F-Droid repo and updates land automatically on
+a tag.
+
+## Phase 22 — Release workflow split
+
+Split into `build` (no secrets) → `sign` → `publish`, with publish gated on a
+`release` GitHub Environment carrying a manual approval. The point is that no
+credential is reachable from a pull request and no mistyped tag can publish by
+itself. Key the Play track off the existing pre-release tag test, and start
+production rollouts staged.
+
+**Done when** a fork's PR cannot read any signing secret, and a tag push waits
+for approval before anything leaves the repo.
+
+## Phase 23 — Flathub
+
+Manifest, AppStream metainfo with the SPDX licence, and offline sources —
+Flatpak builds have no network, so Go modules must be vendored and Electron
+pre-fetched. The Electron half is the real work.
+
+**Done when** the Flathub build passes and the app installs from Flathub.
+
+## Phase 24 — Windows signing, then winget
+
+Azure Trusted Signing is the only option that works cleanly from CI; OV and EV
+certificates now live on hardware tokens. Requires verifying a legal identity.
+winget follows, since an unsigned installer collects SmartScreen warnings
+until it builds reputation.
+
+**Done when** a downloaded release `.exe` runs with no SmartScreen warning.
+
+## Phase 25 — macOS notarization, then Homebrew cask
+
+Apple Developer Program, Developer ID certificate, `notarytool`, stapling, and
+signing the embedded Electron framework as well as the app. Homebrew core's
+cask has notability thresholds on top, so a self-hosted tap remains the
+fallback.
+
+**Done when** the desktop app opens on a clean Mac without right-click-Open.
+
+## Phase 26 — Google Play
+
+Last, because it is the most gated and the most exposed to the trademark
+question. Needs an account and identity verification, a closed test with real
+testers held for a continuous period before production is unlocked, an App
+Bundle rather than the current APK, Play App Signing, and the declarations from
+Phase 19 — the `MediaProjection` justification being the likeliest rejection.
+
+Note on the account: a separate Google account does **not** reliably insulate a
+personal one. Google terminates associated accounts, and association is
+inferred from payment methods, phone numbers and devices. The mitigation that
+actually matters is not tripping policy, and the likeliest trip for this app is
+the trademark in its name — which no account arrangement addresses. See
+PUBLISHING.md §3.1.
+
+**Done when** the app is on a production track with a staged rollout, and a
+tagged release reaches the internal track without manual steps.
