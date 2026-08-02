@@ -26,8 +26,8 @@ reviewable commit or small series, and to leave `main` working.
 | 15 | Capture lifecycle; full-res recording removed | **built, untested on a device** |
 | 16 | Split frame path — pipeline downscale, direct encode | **device-confirmed: snappy at 100% recording resolution** |
 | 17 | Restricted-profile nav, sticky heading, encoder tail | **built, untested on a device** |
-| 18 | `LICENSE` (GPL-3.0-or-later) + consistent Android signing | **not started** |
-| 19 | Obtainium — README line, works with current CI | **not started** |
+| 18 | `LICENSE` (GPL-3.0-or-later) + consistent Android signing | **done — first signed release pending** |
+| 19 | Obtainium — README line, works with current CI | **documented; needs one signed release to verify** |
 | 20 | Attribution + About screen | **not started** |
 | 21 | IzzyOnDroid | **not started** |
 | 22 | Scoop, Homebrew tap, AUR | **not started** |
