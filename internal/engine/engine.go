@@ -90,7 +90,7 @@ type Engine struct {
 // New builds an Engine for an already-paired bridge.
 func New(bridge config.Bridge, store *config.Store) *Engine {
 	return &Engine{
-		client:       hue.NewClient(bridge.BridgeIP, bridge.Username),
+		client:       hue.NewClient(bridge.BridgeIP, bridge.Username, bridge.CertSHA256),
 		store:        store,
 		bridge:       bridge,
 		lightFeature: map[string]hue.LightColorFeatures{},

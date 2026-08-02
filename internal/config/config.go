@@ -12,10 +12,11 @@ import (
 // Bridge holds what Pair() produces: enough to reconnect to the bridge and
 // re-open the DTLS stream without pairing again.
 type Bridge struct {
-	BridgeIP  string `json:"bridge_ip"`
-	BridgeID  string `json:"bridge_id"`
-	Username  string `json:"username"`
-	ClientKey string `json:"clientkey"`
+	BridgeIP   string `json:"bridge_ip"`
+	BridgeID   string `json:"bridge_id"`
+	Username   string `json:"username"`
+	ClientKey  string `json:"clientkey"`
+	CertSHA256 string `json:"cert_sha256,omitempty"` // hex-encoded SHA-256 of the bridge's self-signed certificate
 }
 
 // overrideDir, when non-empty, replaces the OS-derived config location.

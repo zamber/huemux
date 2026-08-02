@@ -90,7 +90,7 @@ type Service struct {
 // New builds a Service for an already-paired bridge.
 func New(bridge config.Bridge, favorites *config.FavoritesStore) *Service {
 	return &Service{
-		client:    hue.NewClient(bridge.BridgeIP, bridge.Username),
+		client:    hue.NewClient(bridge.BridgeIP, bridge.Username, bridge.CertSHA256),
 		favorites: favorites,
 	}
 }
