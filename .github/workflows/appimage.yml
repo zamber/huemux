@@ -6,8 +6,17 @@
 #
 # The URL never changes between builds; the asset under it does. Combined
 # with the embedded update information and the .zsync file uploaded
-# alongside, `./huemux-x86_64.AppImage --appimage-update` (or the
-# AppImageUpdate tool) can update the image in place without a browser.
+# alongside, appimageupdatetool (the AppImage project's CLI updater) can
+# update the image in place with a delta download:
+#
+#   appimageupdatetool huemux-x86_64.AppImage
+#
+# The update information names the .zsync asset, not the AppImage: the
+# updater fetches whatever the embedded filename points at, and zsync
+# files are what it can parse. Verified against appimageupdatetool's own
+# AppImage, which uses "gh-releases-zsync|AppImage|AppImageUpdate|
+# continuous|appimageupdatetool-*x86_64.AppImage.zsync" for exactly this
+# reason.
 #
 # Triggered on every push to main, not on tags: every release is a tag on a
 # main commit, and the branch push precedes the tag, so tagging would only
@@ -64,9 +73,13 @@ jobs:
           # --file-url makes appimagetool emit the .zsync file alongside the
           # AppImage (it runs zsyncmake internally), with the URL the update
           # client will fetch deltas from baked in.
+          #
+          # The update-information filename must be the .zsync asset, not the
+          # AppImage: appimageupdatetool fetches the file named in the string
+          # and hands it to zsync2 to parse, and only a .zsync parses.
           "$RUNNER_TEMP/appimagetool" --appimage-extract-and-run \
             --no-appstream \
-            --updateinformation "gh-releases-zsync|zamber|huemux|continuous|huemux-x86_64.AppImage" \
+            --updateinformation "gh-releases-zsync|zamber|huemux|continuous|huemux-x86_64.AppImage.zsync" \
             --file-url "https://github.com/zamber/huemux/releases/download/continuous/huemux-x86_64.AppImage" \
             AppDir huemux-x86_64.AppImage
 
@@ -75,7 +88,7 @@ jobs:
           gh release view continuous >/dev/null 2>&1 || \
             gh release create continuous \
               --title "Continuous AppImage builds" \
-              --notes "The latest AppImage, always at the same URL. Update in place with: ./huemux-x86_64.AppImage --appimage-update"
+              --notes "The latest AppImage, always at the same URL. Update in place with appimageupdatetool: https://github.com/AppImage/AppImageUpdate/releases"
         env:
           GH_TOKEN: ${{ github.token }}
 
