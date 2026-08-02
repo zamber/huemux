@@ -19,14 +19,59 @@ const els = {
   result: document.getElementById('set-result'),
 };
 
-// Same wordlist idea as the Go side, kept short and readable. Only used to
-// *suggest* a token in the UI; the authoritative generator and the entropy
-// discussion live in internal/appconfig/token.go.
+// Wordlist mirrored from internal/appconfig/wordlist.go — the single source of
+// truth for the token vocabulary. 382 words × 4 words = log2(382⁴) ≈ 34 bits.
+// Only used to *suggest* a token; the authoritative generator lives in
+// internal/appconfig/token.go.
 const WORDS = [
   'otter', 'badger', 'falcon', 'walrus', 'gecko', 'puffin', 'marten', 'lemur',
-  'amber', 'birch', 'canyon', 'delta', 'ember', 'fjord', 'harbor', 'island',
-  'copper', 'indigo', 'ivory', 'jade', 'olive', 'pearl', 'silver', 'topaz',
-  'anchor', 'beacon', 'compass', 'lantern', 'mirror', 'ribbon', 'saddle', 'violin',
+  'bison', 'cobra', 'dingo', 'ferret', 'gibbon', 'heron', 'impala', 'jackal',
+  'koala', 'llama', 'meerkat', 'newt', 'ocelot', 'panda', 'quail', 'rabbit',
+  'salmon', 'tapir', 'urchin', 'viper', 'wombat', 'yak', 'zebra', 'beaver',
+  'cougar', 'donkey', 'egret', 'finch', 'gopher', 'hornet', 'iguana', 'kitten',
+  'lobster', 'magpie', 'narwhal', 'osprey', 'parrot', 'raven', 'shrimp', 'turtle',
+  'weasel', 'bobcat', 'canary', 'dolphin', 'elk', 'flamingo', 'gazelle', 'hamster',
+  'amber', 'birch', 'canyon', 'delta', 'ember', 'fjord', 'glacier', 'harbor',
+  'island', 'jungle', 'kelp', 'lagoon', 'meadow', 'nebula', 'oasis', 'prairie',
+  'quartz', 'ridge', 'summit', 'tundra', 'valley', 'willow', 'cedar', 'dune',
+  'forest', 'grotto', 'hollow', 'inlet', 'jasmine', 'lichen', 'marsh', 'orchid',
+  'pebble', 'reef', 'savanna', 'thistle', 'vine', 'aspen', 'boulder', 'cliff',
+  'drizzle', 'eclipse', 'frost', 'gale', 'haze', 'monsoon', 'nimbus', 'aurora',
+  'blizzard', 'cyclone', 'dew', 'flurry', 'hail', 'mist', 'rainbow', 'thunder',
+  'azure', 'bronze', 'copper', 'crimson', 'denim', 'emerald', 'fuchsia', 'gold',
+  'indigo', 'ivory', 'jade', 'khaki', 'lilac', 'maroon', 'olive', 'pewter',
+  'ruby', 'sapphire', 'teal', 'umber', 'velvet', 'beige', 'cobalt', 'flax',
+  'garnet', 'henna', 'linen', 'mauve', 'onyx', 'pearl', 'russet', 'silver',
+  'topaz', 'walnut', 'zinc', 'granite', 'marble', 'opal', 'satin', 'wicker',
+  'almond', 'bagel', 'cocoa', 'donut', 'endive', 'fennel', 'ginger', 'honey',
+  'jam', 'kiwi', 'lemon', 'mango', 'nutmeg', 'pepper', 'papaya', 'quinoa',
+  'radish', 'saffron', 'tomato', 'vanilla', 'waffle', 'yogurt', 'apricot', 'basil',
+  'cashew', 'date', 'fig', 'grape', 'hazel', 'juniper', 'lentil', 'melon',
+  'noodle', 'oregano', 'peanut', 'raisin', 'sesame', 'truffle', 'wheat', 'yam',
+  'anchor', 'beacon', 'compass', 'domino', 'engine', 'fabric', 'gadget', 'hammer',
+  'inkwell', 'jigsaw', 'kettle', 'lantern', 'mirror', 'needle', 'organ', 'pencil',
+  'quiver', 'ribbon', 'saddle', 'teapot', 'umbrella', 'violin', 'wagon', 'anvil',
+  'basket', 'candle', 'drum', 'easel', 'funnel', 'goblet', 'harp', 'ladder',
+  'mallet', 'nozzle', 'paddle', 'rocket', 'shovel', 'tripod', 'vessel', 'whistle',
+  'abacus', 'bucket', 'chisel', 'dial', 'flask', 'gauge', 'helmet', 'kayak',
+  'lever', 'magnet', 'piston', 'quilt', 'rudder', 'socket', 'trowel', 'wrench',
+  'arcade', 'bridge', 'castle', 'dome', 'estate', 'forge', 'gallery', 'hangar',
+  'igloo', 'jetty', 'kiosk', 'lodge', 'manor', 'nursery', 'orchard', 'pavilion',
+  'quarry', 'rampart', 'studio', 'temple', 'vault', 'windmill', 'attic', 'balcony',
+  'cabin', 'depot', 'foyer', 'garden', 'hostel', 'library', 'market', 'obelisk',
+  'parlor', 'rotunda', 'spire', 'tavern', 'veranda', 'wharf', 'bazaar', 'chapel',
+  'anthem', 'ballad', 'cadence', 'duet', 'echo', 'fable', 'gusto', 'harmony',
+  'idyll', 'jubilee', 'lyric', 'melody', 'nocturne', 'octave', 'poem', 'rhythm',
+  'sonnet', 'tempo', 'verse', 'waltz', 'aura', 'bliss', 'charm', 'dream',
+  'ease', 'fervor', 'glee', 'hope', 'jest', 'kindle', 'luster', 'mirth',
+  'nectar', 'polish', 'quest', 'relish', 'spark', 'trust', 'vigor', 'whim',
+  'arrow', 'bounce', 'circle', 'dash', 'eddy', 'flutter', 'glide', 'hover',
+  'jolt', 'leap', 'orbit', 'pivot', 'ripple', 'spiral', 'twirl', 'vortex',
+  'wander', 'zigzag', 'arch', 'bevel', 'cube', 'diamond', 'ellipse', 'helix',
+  'lattice', 'mosaic', 'prism', 'sphere', 'wedge', 'zenith',
+  'comet', 'dusk', 'equinox', 'galaxy', 'horizon', 'lunar', 'meteor', 'noon',
+  'planet', 'quasar', 'solar', 'twilight', 'dawn', 'evening', 'midday', 'season',
+  'spring', 'solstice', 'autumn', 'winter', 'epoch', 'moment', 'sunrise', 'sunset',
 ];
 
 function t(key, fallback) {
@@ -39,9 +84,9 @@ function suggestToken() {
   // crypto.getRandomValues, not Math.random: this is a credential, even if
   // the user is free to replace it with anything they like.
   const out = [];
-  const buf = new Uint32Array(3);
+  const buf = new Uint32Array(4);
   crypto.getRandomValues(buf);
-  for (let i = 0; i < 3; i++) out.push(WORDS[buf[i] % WORDS.length]);
+  for (let i = 0; i < 4; i++) out.push(WORDS[buf[i] % WORDS.length]);
   return out.join('.');
 }
 
@@ -56,7 +101,7 @@ function render(cfg) {
   // the field blank means "unchanged"; typing replaces it.
   els.token.placeholder = cfg.auth.has_token
     ? t('settings.tokenSet', '(unchanged — type to replace)')
-    : t('settings.tokenPlaceholder', 'e.g. otter.beacon.willow');
+    : t('settings.tokenPlaceholder', 'e.g. otter.beacon.willow.cougar');
 
   els.status.hidden = true;
   els.form.hidden = false;

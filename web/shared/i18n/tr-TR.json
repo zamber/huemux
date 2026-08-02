@@ -140,7 +140,7 @@
     "listenHint": "127.0.0.1 HueMux'u yalnızca bu makineden erişilebilir yapar. Başka herhangi bir adres ağa açığa çıkarır — bunu yaparsanız aşağıda kimlik doğrulamayı ayarlayın. Port 0, 7654'ten ilk boş portu seçer.",
     "auth": "Kimlik doğrulama",
     "authHint": "Hatırlanması kolay üç kelime. Bu makineden gelen bağlantılar asla istemez.",
-    "tokenPlaceholder": "ör. otter.beacon.willow",
+    "tokenPlaceholder": "ör. otter.beacon.willow.cougar",
     "tokenSet": "(değişmedi — değiştirmek için yazın)",
     "generate": "Oluştur",
     "tls": "TLS",

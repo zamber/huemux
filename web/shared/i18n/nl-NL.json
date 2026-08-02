@@ -140,7 +140,7 @@
     "listenHint": "127.0.0.1 maakt HueMux alleen van deze computer bereikbaar. Iets anders maakt het beschikbaar voor uw netwerk — zet verificationing hieronder in als u dat doet. Poort 0 kiest de eerste beschikbare poort van 7654.",
     "auth": "Verificatie",
     "authHint": "Drie gemakkelijk te onthouden woorden. Verbindingen van deze computer vragen hier nooit om.",
-    "tokenPlaceholder": "bijv. otter.beacon.willow",
+    "tokenPlaceholder": "bijv. otter.beacon.willow.cougar",
     "tokenSet": "(ongewijzigd — typ om te vervangen)",
     "generate": "Genereer",
     "tls": "TLS",

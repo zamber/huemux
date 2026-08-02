@@ -140,7 +140,7 @@
     "listenHint": "127.0.0.1은 이 컴퓨터에서만 HueMux에 도달하게 합니다. 다른 주소는 네트워크에 노출됩니다 — 그렇다면 아래에서 인증을 설정하세요. 포트 0은 7654부터 첫 번째 사용 가능한 포트를 선택합니다.",
     "auth": "인증",
     "authHint": "기억하기 쉬운 세 단어입니다. 이 컴퓨터에서의 연결은 절대 요청하지 않습니다.",
-    "tokenPlaceholder": "예: otter.beacon.willow",
+    "tokenPlaceholder": "예: otter.beacon.willow.cougar",
     "tokenSet": "(변경 없음 — 교체하려면 입력)",
     "generate": "생성",
     "tls": "TLS",

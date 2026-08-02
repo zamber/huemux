@@ -140,7 +140,7 @@
     "listenHint": "127.0.0.1 gör att HueMux endast är nåbar från denna dator. Något annat exponerar den för ditt nätverk — ange autentisering nedan om du gör det. Port 0 väljer första lediga port från 7654.",
     "auth": "Autentisering",
     "authHint": "Tre lätt att komma ihåg ord. Anslutningar från den här datorn uppmanas aldrig.",
-    "tokenPlaceholder": "t.ex. otter.beacon.willow",
+    "tokenPlaceholder": "t.ex. otter.beacon.willow.cougar",
     "tokenSet": "(oförändrat — skriv för att ersätta)",
     "generate": "Generera",
     "tls": "TLS",

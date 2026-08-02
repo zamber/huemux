@@ -140,7 +140,7 @@
     "listenHint": "127.0.0.1 gør HueMux kun tilgængelig fra denne computer. Alt andet viser det på dit netværk — indstil godkendelse nedenfor, hvis du gør det. Port 0 vælger første ledige port fra 7654.",
     "auth": "Godkendelse",
     "authHint": "Tre nemme at huske ord. Forbindelser fra denne computer bliver aldrig spurgt.",
-    "tokenPlaceholder": "f.eks. otter.beacon.willow",
+    "tokenPlaceholder": "f.eks. otter.beacon.willow.cougar",
     "tokenSet": "(uændret — skriv for at erstatte)",
     "generate": "Generér",
     "tls": "TLS",
