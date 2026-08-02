@@ -65,8 +65,8 @@
   content: '';
   width: 0.42em;
   height: 0.42em;
-  margin-left: auto;
-  border-right: 2px solid currentColor;
+  margin-inline-start: auto;
+  border-inline-end: 2px solid currentColor;
   border-bottom: 2px solid currentColor;
   transform: translateY(-0.15em) rotate(45deg);
   transition: transform 0.15s ease;
@@ -76,7 +76,7 @@
 .hm-dropdown-panel {
   position: absolute;
   top: calc(100% + 6px);
-  left: 0;
+  inset-inline-start: 0;
   /* Above the fixed bottom nav (z-index 40): a long list can still reach it,
      and being clipped by the chrome is exactly the bug this replaced. */
   z-index: 60;
@@ -94,7 +94,7 @@
 .hm-dropdown-item {
   display: block;
   width: 100%;
-  text-align: left;
+  text-align: start;
   padding: 0.5rem 0.7rem;
   margin: 0;
   background: none;
@@ -127,8 +127,7 @@
   .hm-dropdown { position: static; }
 
   .hm-dropdown-panel {
-    left: 0;
-    right: 0;
+    inset-inline: 0;
     width: auto;
     transform: none;
     max-width: none;

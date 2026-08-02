@@ -14,11 +14,6 @@
     "titleEffectsOn": "Visual effects: on — click for the simpler, faster look",
     "titleEffectsOff": "Visual effects: off — click to bring back gradients and shadows"
   },
-  "lang": {
-    "titleSystem": "Language: system (click to change)",
-    "titleEn": "Language: English (click to change)",
-    "titlePl": "Language: Polish (click to change)"
-  },
   "pairing": {
     "heading": "Pair with your Hue bridge",
     "searching": "Searching for a bridge on your network…",
@@ -150,7 +145,6 @@
     "generate": "Generate",
     "tls": "TLS",
     "tlsHint": "HueMux does not obtain certificates. \"files\" uses ones you supply — from Tailscale, or your own domain.",
-    "save": "Save",
     "saved": "Saved.",
     "savedRestart": "Saved — restart HueMux for this to take effect.",
     "loadFailed": "Could not load settings: ",
@@ -166,7 +160,24 @@
     "diagnosticsDownloadHint": "If nothing downloaded, use View or Copy instead.",
     "diagnosticsShare": "Share",
     "diagnosticsSaved": "Saved to ",
-    "diagnosticsDownloadFailed": "Could not save the file."
+    "diagnosticsDownloadFailed": "Could not save the file.",
+    "profileFull": "Full — lights and screen sync",
+    "profileLights": "Lights only",
+    "profileSync": "Screen sync only",
+    "authNone": "None",
+    "authToken": "Token",
+    "tlsOff": "Off",
+    "tlsSelfsigned": "Self-signed certificate",
+    "tlsFiles": "Certificate files",
+    "saving": "Saving…",
+    "language": "Language",
+    "languageSystem": "System",
+    "languageHint": "\"System\" follows your device. Translations other than English are machine generated — corrections are welcome on the issue tracker.",
+    "direction": "Text direction",
+    "directionAuto": "Follow the language",
+    "directionLtr": "Left to right",
+    "directionRtl": "Right to left",
+    "directionHint": "Normally follows the language — only Arabic is right to left. Forcing it is for checking that the mirrored layout is correct without having to read the language it belongs to."
   },
   "about": {
     "heading": "About",

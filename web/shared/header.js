@@ -41,7 +41,7 @@ class HueMuxHeader extends HTMLElement {
     this.addEventListener('click', this._onClick);
 
     this._onThemeChange = () => this._renderTheme();
-    this._onLangChange = () => { this._renderLang(); HueMuxI18n.applyTo(this); };
+    this._onLangChange = () => { this._renderTheme(); HueMuxI18n.applyTo(this); };
     document.addEventListener('huemux:themechange', this._onThemeChange);
     document.addEventListener('huemux:langchange', this._onLangChange);
     this._onFeatures = () => this._renderNav();
@@ -76,21 +76,17 @@ class HueMuxHeader extends HTMLElement {
         '<div class="ls-header-actions">' +
           '<button type="button" id="ls-theme-btn" class="ls-icon-btn"></button>' +
           '<button type="button" id="ls-simple-btn" class="ls-icon-btn">✨</button>' +
-          '<button type="button" id="ls-lang-btn" class="ls-icon-btn"></button>' +
         '</div>' +
       '</div>';
 
     this._brandMark = this.querySelector('#ls-brand-mark');
     this._themeBtn = this.querySelector('#ls-theme-btn');
     this._simpleBtn = this.querySelector('#ls-simple-btn');
-    this._langBtn = this.querySelector('#ls-lang-btn');
     this._themeBtn.addEventListener('click', () => HueMuxTheme.cycle());
     this._simpleBtn.addEventListener('click', () => HueMuxTheme.toggleSimple());
-    this._langBtn.addEventListener('click', () => HueMuxI18n.cycle());
 
     this._renderNav();
     this._renderTheme();
-    this._renderLang();
     HueMuxI18n.applyTo(this);
   }
 
@@ -166,15 +162,6 @@ class HueMuxHeader extends HTMLElement {
     this._simpleBtn.setAttribute('aria-label', st);
   }
 
-  _renderLang() {
-    const choice = HueMuxI18n.current() || 'system';
-    const labels = { system: 'A', en: 'EN', pl: 'PL' };
-    const titleKeys = { system: 'lang.titleSystem', en: 'lang.titleEn', pl: 'lang.titlePl' };
-    this._langBtn.textContent = labels[choice] || labels.system;
-    const title = HueMuxI18n.t(titleKeys[choice] || titleKeys.system);
-    this._langBtn.setAttribute('title', title);
-    this._langBtn.setAttribute('aria-label', title);
-  }
 }
 
 customElements.define('huemux-header', HueMuxHeader);

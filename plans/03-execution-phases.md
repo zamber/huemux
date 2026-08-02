@@ -32,6 +32,10 @@ reviewable commit or small series, and to leave `main` working.
 | **R2** | **Release infrastructure — workflow split + gated environments** | **done** |
 | **R3** | **Release infrastructure — automated test gate** | **deferred: revisit when leaving 0.0.x** |
 | C1 | Attribution + About screen | **done** |
+| U1 | UI consistency — one button style, settings apply on change | **done** |
+| U2 | i18n groundwork — 26 locales, picker in Settings, RTL | **done** |
+| U3 | Translations for 25 locales | **in progress** |
+| U4 | Screenshots + 512px icon for store listings | **not started** |
 | C2 | IzzyOnDroid | **prepared — needs screenshots, then submit** |
 | C3 | Scoop, Homebrew tap, AUR | **not started** |
 | C4 | Flathub | **not started** |
@@ -530,6 +534,66 @@ disclaimer.
 
 **Done when** the About screen shows every licence with no network, and CI
 fails on a deliberately-added copyleft dependency.
+
+## U1 — UI consistency — **done**
+
+From device screenshots. The `<huemux-pairing>` component rendered differently
+on each page — filled blue on Sync, browser defaults on Lights — because
+style.css carried a global `button` rule and only Sync loads it. One canonical
+button now lives in shared/theme.css, outlined rather than filled, with
+`.primary` opting in to the inverted treatment for the single action on a
+screen that earns it.
+
+Settings apply as they change; the Save button is gone. It was a second step
+that exists only to be forgotten, and it misreported failure — one submit for
+the whole form made a rejected field look like nothing had saved when nothing
+had been *sent*. Selects apply on change, text fields debounce and apply on
+blur, and requests are serialised so two PATCHes cannot commit out of order.
+
+Settings' select options were also never translated — profile/auth/tls rendered
+raw enum values in every language.
+
+## U2 — i18n groundwork — **done**
+
+The header's cycle button worked at two languages and could not scale to
+twenty-six. The picker is a dropdown in Settings, listing each language **in its
+own language**, because a list in English is useless to exactly the person who
+needs it.
+
+Matching is best-fit rather than exact: `pt` finds a Portuguese, `en-GB` finds
+`en`. Missing keys — and missing files — fall back to English instead of
+rendering raw key paths, which matters when two dozen translations will lag the
+source every time a string is added.
+
+RTL came mostly free by converting physical CSS properties to logical ones. The
+exceptions are documented in theme.css: the brand mark does not mirror (a
+flipped logo is a different logo), and addresses, versions and the diagnostics
+dump are forced LTR — an IP with reordered octets is not a translation problem
+but a wrong address on screen.
+
+Direction is overridable independently of language. Tying it to the language
+would mean the only way to check the mirrored layout is to switch to a language
+you cannot read, where correct and broken look alike.
+
+## U3 — Translations
+
+25 locales, produced in parallel and validated by `scripts/check-i18n.py`,
+which checks what is checkable without speaking the language: key parity,
+placeholder survival, brand names surviving verbatim, and no bidi control
+characters (invisible in an editor, and near-impossible to trace from a
+rendering bug back to a JSON file).
+
+It cannot check whether a translation is *good*. The Settings hint says they
+are machine generated and invites corrections, which is the honest position.
+
+**Done when** `check-i18n.py` passes for all 25 and the app has been opened in
+at least one RTL and one CJK locale on a device.
+
+## U4 — Screenshots and store icon
+
+Blocks C2. Screenshots must not show the bridge's LAN address; the 512px PNG
+should be rendered from the vector by `scripts/gen-icon.py` output rather than
+drawn separately.
 
 ## C2 — IzzyOnDroid — **prepared**
 

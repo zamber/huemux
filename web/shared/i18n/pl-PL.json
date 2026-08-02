@@ -14,11 +14,6 @@
     "titleEffectsOn": "Efekty wizualne: włączone — kliknij, aby uprościć i przyspieszyć",
     "titleEffectsOff": "Efekty wizualne: wyłączone — kliknij, aby przywrócić gradienty i cienie"
   },
-  "lang": {
-    "titleSystem": "Język: systemowy (kliknij, aby zmienić)",
-    "titleEn": "Język: angielski (kliknij, aby zmienić)",
-    "titlePl": "Język: polski (kliknij, aby zmienić)"
-  },
   "pairing": {
     "heading": "Połącz z mostkiem Hue",
     "searching": "Wyszukiwanie mostka w sieci…",
@@ -150,7 +145,6 @@
     "generate": "Generuj",
     "tls": "TLS",
     "tlsHint": "HueMux nie pozyskuje certyfikatów. „files” używa tych, które dostarczysz — z Tailscale lub własnej domeny.",
-    "save": "Zapisz",
     "saved": "Zapisano.",
     "savedRestart": "Zapisano — uruchom HueMux ponownie, aby zmiany zadziałały.",
     "loadFailed": "Nie udało się wczytać ustawień: ",
@@ -166,7 +160,24 @@
     "diagnosticsDownloadHint": "Jeśli nic się nie pobrało, użyj Pokaż lub Kopiuj.",
     "diagnosticsShare": "Udostępnij",
     "diagnosticsSaved": "Zapisano w ",
-    "diagnosticsDownloadFailed": "Nie udało się zapisać pliku."
+    "diagnosticsDownloadFailed": "Nie udało się zapisać pliku.",
+    "profileFull": "Pełny — światła i synchronizacja ekranu",
+    "profileLights": "Tylko światła",
+    "profileSync": "Tylko synchronizacja ekranu",
+    "authNone": "Brak",
+    "authToken": "Token",
+    "tlsOff": "Wyłączone",
+    "tlsSelfsigned": "Certyfikat samopodpisany",
+    "tlsFiles": "Pliki certyfikatów",
+    "saving": "Zapisywanie…",
+    "language": "Język",
+    "languageSystem": "Systemowy",
+    "languageHint": "„Systemowy” podąża za ustawieniem urządzenia. Tłumaczenia inne niż angielskie są maszynowe — poprawki mile widziane w systemie zgłoszeń.",
+    "direction": "Kierunek tekstu",
+    "directionAuto": "Zgodnie z językiem",
+    "directionLtr": "Od lewej do prawej",
+    "directionRtl": "Od prawej do lewej",
+    "directionHint": "Zwykle zgodny z językiem — tylko arabski jest pisany od prawej. Wymuszenie służy do sprawdzenia lustrzanego układu bez znajomości tego języka."
   },
   "about": {
     "heading": "O programie",
