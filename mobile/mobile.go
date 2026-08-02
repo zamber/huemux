@@ -286,3 +286,27 @@ func stopSyncLocked() {
 		eng.Stop(ctx)
 	}
 }
+
+// SetHostInfo hands the Go side a block of text describing state only the host
+// application can see, for inclusion in the diagnostics report. On Android
+// that is the capture and recording state: the MediaProjection, the virtual
+// display and the encoder all live in Kotlin, so when recording fails, it
+// fails somewhere this process cannot observe. Before this existed, a
+// diagnostics report from a phone with broken recording said nothing at all
+// about recording.
+//
+// Safe before Start: the storage is package-level and independent of the
+// server, so the host can report a failure that happened during startup.
+func SetHostInfo(text string) {
+	server.SetHostInfo(text)
+}
+
+// LogHost records one line in the same in-memory ring the diagnostics report
+// prints, so host-side events appear in order alongside the Go ones.
+//
+// Meant for state changes and failures — capture started at this size, the
+// encoder refused that one — not per-frame chatter. The ring holds a few
+// hundred lines and this shares it with everything else.
+func LogHost(line string) {
+	debuglog.Note("huemux/host: " + line)
+}

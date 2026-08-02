@@ -7,6 +7,7 @@ import (
 	"testing"
 
 	"github.com/zamber/huemux/internal/appconfig"
+	"github.com/zamber/huemux/internal/debuglog"
 )
 
 func getDiag(s *Server, remote string) *httptest.ResponseRecorder {
@@ -66,5 +67,46 @@ func TestDiagnosticsReportsCoreState(t *testing.T) {
 		if !strings.Contains(body, want) {
 			t.Errorf("report missing %q", want)
 		}
+	}
+}
+
+// The host block is how the Android half of the app gets into a report at all.
+// Everything about MediaProjection, the capture display and the video encoder
+// lives in Kotlin, so without this a report from a phone where recording had
+// failed described a Go process that believed all was well and said nothing
+// whatsoever about recording.
+func TestDiagnosticsIncludesHostBlock(t *testing.T) {
+	t.Cleanup(func() { SetHostInfo("") })
+
+	s := New(appconfig.Default(), nil, nil, nil, nil)
+	if body := getDiag(s, "127.0.0.1:1").Body.String(); strings.Contains(body, "\nhost\n") {
+		t.Errorf("host section should be absent when nothing set it; got:\n%s", body)
+	}
+
+	SetHostInfo("capture               running 234x480 scale=0.2\nrecording             stopped\n")
+	body := getDiag(s, "127.0.0.1:1").Body.String()
+	if !strings.Contains(body, "\nhost\n----\n") {
+		t.Errorf("host section missing; got:\n%s", body)
+	}
+	if !strings.Contains(body, "running 234x480 scale=0.2") {
+		t.Errorf("host text missing; got:\n%s", body)
+	}
+	// It must land before the log, so a reader sees the state that produced
+	// the lines before reading them.
+	if strings.Index(body, "\nhost\n") > strings.Index(body, "\nrecent log\n") {
+		t.Error("host section should precede the log")
+	}
+}
+
+// Host lines share the ring with the Go ones so the two interleave in order —
+// that ordering is the whole diagnostic value of having them in one report.
+func TestHostLinesAppearInTheLog(t *testing.T) {
+	t.Cleanup(func() { SetHostInfo("") })
+	debuglog.Note("huemux/host: record: encoder configure failed 234x480")
+
+	s := New(appconfig.Default(), nil, nil, nil, nil)
+	body := getDiag(s, "127.0.0.1:1").Body.String()
+	if !strings.Contains(body, "record: encoder configure failed 234x480") {
+		t.Errorf("host log line missing from report; got:\n%s", body)
 	}
 }

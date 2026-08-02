@@ -33,6 +33,7 @@
 </script>
 <link rel="stylesheet" href="/shared/theme.css">
 <link rel="stylesheet" href="/shared/header.css">
+<link rel="stylesheet" href="/shared/scrollbars.css">
 <link rel="stylesheet" href="/shared/pairing.css">
 <link rel="stylesheet" href="/style.css">
 </head>
@@ -135,7 +136,7 @@
       <div class="control">
         <label data-i18n="sync.recording">Screen recording</label>
         <select id="record-quality">
-          <option value="capture" data-i18n="sync.recordQualityCapture">Match capture — cheap</option>
+          <option value="capture" data-i18n="sync.recordQualityCapture">Match capture — no second mirror needed</option>
           <option value="native" data-i18n="sync.recordQualityNative">Full resolution — better video</option>
         </select>
         <div class="record-row">
@@ -143,11 +144,11 @@
           <span id="record-status" class="hint"></span>
         </div>
         <p class="hint" data-i18n="sync.recordingHint">
-          Records while sync runs, to Movies/HueMux. Recording always needs a
-          second screen mirror of its own — Android gives a mirror exactly one
-          destination, and this one's is already the colour pipeline. "Match
-          capture" reuses the size set above; "full resolution" is a second
-          full-size encode, which not every device will agree to.
+          Records while sync runs, to Movies/HueMux. "Match capture" encodes
+          the frames sync is already capturing, so it needs nothing extra from
+          the device and is as sharp as the capture resolution above. "Full
+          resolution" mirrors the screen a second time at its own resolution
+          for a better video, which some devices refuse.
         </p>
       </div>
     </section>
@@ -261,6 +262,8 @@
 </main>
 
 <script src="/shared/theme.js"></script>
+<script src="/shared/scrollbars.js"></script>
+<script src="/shared/slider-touch.js"></script>
 <script src="/shared/i18n.js"></script>
 <script src="/shared/features.js"></script>
 <script src="/shared/header.js"></script>

@@ -216,3 +216,20 @@ func Capture() {
 }
 
 var captureOnce sync.Once
+
+// Note records a line in the in-memory ring the diagnostics report reads,
+// timestamped the same way the standard logger's lines are.
+//
+// This exists for events that happen outside Go. On Android the interesting
+// half of screen sync — the MediaProjection consent, the virtual display, the
+// encoder — lives in Kotlin, and when it fails it fails there. None of it
+// reaches the standard logger, so a diagnostics report from a phone described
+// a Go process that believed everything was fine while the actual fault was
+// two layers up and invisible. Note is how that layer gets into the same
+// report, in order, next to the Go lines it interleaves with.
+//
+// Not gated on Enabled: the ring is always running, and these events are rare
+// and deliberately chosen rather than per-frame chatter.
+func Note(line string) {
+	appendLine(time.Now().Format("2006/01/02 15:04:05.000000") + " " + line)
+}

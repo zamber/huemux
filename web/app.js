@@ -733,6 +733,13 @@ function renderCaptureState(st) {
     : `${pct} · ${HueMuxI18n.t('sync.captureWhenRunning')}`;
   els.captureScaleReadout.textContent = size;
 
+  // Changing the capture size rebuilds the capture display, and the encoder
+  // was configured for the size it had when recording started — so the control
+  // is locked for the duration rather than allowed to corrupt the rest of the
+  // file. The native side refuses it too; this is so the UI says why.
+  els.captureScale.disabled = !!st.scaleLocked;
+  els.recordQuality.disabled = !!st.recording;
+
   els.recordQuality.value = st.quality === 'native' ? 'native' : 'capture';
   els.recordBtn.classList.toggle('recording', !!st.recording);
   els.recordBtn.textContent = HueMuxI18n.t(st.recording ? 'sync.recordStop' : 'sync.recordStart');

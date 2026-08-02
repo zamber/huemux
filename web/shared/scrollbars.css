@@ -1,0 +1,63 @@
+/* Scroll indicators that appear while scrolling and fade out after, rather
+ * than sitting on screen permanently.
+ *
+ * Every scrollable region in this UI is content the user reads — a room list, a
+ * scene strip, a diagnostics dump. A permanent scrollbar down the side of each
+ * one is a persistent piece of chrome saying something the act of scrolling
+ * already says, and on a narrow phone it crowds the content it describes.
+ *
+ * The thumb is styled but transparent by default, and given colour only while
+ * html[data-scrolling] is set (shared/scrollbars.js sets it on any scroll and
+ * clears it a beat later). Crucially the scrollbar is never removed and its
+ * width never changes: WebKit/Blink overlay scrollbars on Android and in a
+ * WebView do not reserve layout space, so fading the thumb costs no reflow and
+ * cannot shift content sideways as it appears. Setting `display: none` or a
+ * zero width would do the same job visually and is what one reaches for first,
+ * but it also takes the region out of the accessibility tree's scrollable
+ * reporting on some engines, and it makes the element un-scrollable by a
+ * trackpad drag on desktop.
+ *
+ * scrollbar-width/scrollbar-color are the standards-track equivalents for
+ * engines without ::-webkit-scrollbar; `thin` there rather than `none` for the
+ * same reason.
+ */
+
+:root {
+  scrollbar-width: thin;
+  scrollbar-color: transparent transparent;
+}
+
+html[data-scrolling] {
+  scrollbar-color: var(--border-strong) transparent;
+}
+
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: transparent;
+  border-radius: 999px;
+  /* Colour only — never width — so nothing reflows when it appears. */
+  transition: background-color 0.25s ease;
+}
+
+html[data-scrolling] ::-webkit-scrollbar-thumb {
+  background: var(--border-strong);
+}
+
+/* A thumb should not vanish mid-drag just because the fade timer expired, and
+   the pointer is already on it, so there is nothing to reveal. */
+::-webkit-scrollbar-thumb:hover,
+::-webkit-scrollbar-thumb:active {
+  background: var(--border-strong);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  ::-webkit-scrollbar-thumb { transition: none; }
+}
