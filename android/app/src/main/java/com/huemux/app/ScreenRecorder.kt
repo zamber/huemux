@@ -69,6 +69,20 @@ class ScreenRecorder(private val ctx: Context) {
         private set
 
     /**
+     * Where the last recording actually went, in words, and the URI to share
+     * it with. "It recorded and I have no idea where the file is" is not a
+     * usable outcome, so both are reported to the UI rather than left implicit
+     * in a folder convention.
+     */
+    @Volatile
+    var lastLocation: String = ""
+        private set
+
+    @Volatile
+    var lastUri: Uri? = null
+        private set
+
+    /**
      * Starts recording. Returns null on success, or a message describing why
      * not — never throws, so a caller can ignore the result and still be sure
      * screen capture is unaffected.
@@ -186,8 +200,14 @@ class ScreenRecorder(private val ctx: Context) {
         }
         recorder = null
 
+        val savedUri = uri
+        val savedFile = file
         publishOutput(err == null)
         lastOutput = if (err == null) name else ""
+        if (err == null) {
+            lastUri = savedUri
+            lastLocation = savedFile?.absolutePath ?: ("Movies/HueMux/" + name)
+        }
         return err
     }
 

@@ -7,4 +7,9 @@
     <string name="capture_channel">Screen sync</string>
     <string name="capture_title">HueMux is syncing your lights</string>
     <string name="capture_text">Capturing the screen to drive your Hue lights.</string>
+
+    <!-- Title of the system share sheet offered after a recording or a saved
+         diagnostics report, so the file can leave the device without the user
+         having to know where it landed. -->
+    <string name="share_file">Share file</string>
 </resources>

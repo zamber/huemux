@@ -144,6 +144,7 @@ const diag = {
   view: document.getElementById('diag-view'),
   result: document.getElementById('diag-result'),
   text: document.getElementById('diag-text'),
+  share: document.getElementById('diag-share'),
 };
 
 function fetchDiagnostics() {
@@ -183,23 +184,74 @@ diag.copy.addEventListener('click', () => {
   }).catch((e) => diagSay(String(e.message || e), true));
 });
 
+// The Android bridge, reachable from this frame or from the shell that hosts
+// it. Declared here rather than assumed, because settings.html is also served
+// standalone and in a desktop browser, where none of this exists.
+function nativeBridge() {
+  try {
+    const n = window.HueMuxNative || (window.top && window.top.HueMuxNative);
+    return (n && typeof n.saveTextFile === 'function') ? n : null;
+  } catch (e) {
+    return null;
+  }
+}
+
+function offerShare() {
+  const n = nativeBridge();
+  if (!n || typeof n.shareLastFile !== 'function') return;
+  diag.share.hidden = false;
+}
+
+if (diag.share) {
+  diag.share.addEventListener('click', () => {
+    const n = nativeBridge();
+    if (!n) return;
+    try {
+      const res = JSON.parse(n.shareLastFile());
+      if (!res.ok) diagSay(res.error, true);
+    } catch (e) {
+      diagSay(String(e), true);
+    }
+  });
+}
+
 diag.download.addEventListener('click', () => {
-  // A plain navigation, not a blob: the server already sets
-  // Content-Disposition, and Android's WebView download listener handles a
-  // real navigation far more reliably than a synthesised blob: URL.
-  //
-  // The navigation happens in a throwaway iframe rather than this window.
-  // The download listener normally intercepts before anything navigates, but
-  // if it does not, navigating this window would replace the Settings page
-  // with a wall of plain text — and inside the app shell that frame has no
-  // navigation of its own, so there would be no way back to it. A detached
-  // iframe absorbs that outcome; the listener fires either way.
   diagSay(t('settings.diagnosticsDownloading', 'Downloading…'));
-  const sink = document.createElement('iframe');
-  sink.hidden = true;
-  sink.src = '/api/diagnostics';
-  document.body.appendChild(sink);
-  setTimeout(() => sink.remove(), 20000);
+
+  // On Android, fetch the text here and let Kotlin write the file.
+  //
+  // A WebView ignores a download unless a DownloadListener handles it, and
+  // that listener does not fire for a navigation started inside an iframe.
+  // This button previously navigated the window, which worked; moving it into
+  // a throwaway iframe — to stop a failed download replacing the Settings page
+  // with plain text — removed the only mechanism that made it work at all. The
+  // fix is not to pick between those two, but to stop routing a file through a
+  // navigation: fetching over loopback always works, and the native side can
+  // write to Downloads directly.
+  const n = nativeBridge();
+  if (n) {
+    fetchDiagnostics().then((text) => {
+      const name = 'huemux-diagnostics-' +
+        new Date().toISOString().replace(/[-:T]/g, '').slice(0, 15) + '.txt';
+      const res = JSON.parse(n.saveTextFile(name, text));
+      if (!res.ok) {
+        diagSay(res.error || t('settings.diagnosticsDownloadFailed', 'Could not save the file.'), true);
+        return;
+      }
+      diagSay(t('settings.diagnosticsSaved', 'Saved to ') + (res.name || name));
+      offerShare();
+    }).catch((e) => diagSay(String(e.message || e), true));
+    return;
+  }
+
+  // Everywhere else the server's Content-Disposition and the browser's own
+  // download handling are enough.
+  const a = document.createElement('a');
+  a.href = '/api/diagnostics';
+  a.download = '';
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
   setTimeout(() => {
     diagSay(t('settings.diagnosticsDownloadHint',
       'If nothing downloaded, use View or Copy instead.'));

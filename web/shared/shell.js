@@ -41,16 +41,30 @@ window.HueMuxShell = (() => {
 
   document.addEventListener('huemux:langchange', () => { document.title = titleFor(active); });
 
+  // A hash change on an already-loaded shell is a same-document navigation:
+  // nothing reloads and none of the setup below re-runs, so the tab would stay
+  // put while the URL claimed otherwise. That is reachable both from
+  // shared/standalone-redirect.js (when the shell is already open) and from
+  // the browser's own Back button after a tab switch.
+  window.addEventListener('hashchange', () => {
+    const tab = tabFromLocation();
+    if (tab && frames[tab]) switchTab(tab);
+  });
+
+  // The hash is checked before the path because that is how
+  // shared/standalone-redirect.js hands over the tab when a page is loaded
+  // directly: it can only navigate to /app.html, so the tab travels out-of-path.
+  function tabFromLocation() {
+    const from = location.hash ? location.hash.slice(1) : location.pathname;
+    if (from.indexOf('lights') !== -1) return 'lights';
+    if (from.indexOf('settings') !== -1) return 'settings';
+    return 'sync';
+  }
+
   // Honour the URL only if that tab exists in this build; otherwise fall back
   // to whatever single frame there is. A lights-only deployment opened at
   // /sync.html used to land on a frame that does not exist and show nothing.
-  //
-  // The hash is checked first because that is how shared/standalone-redirect.js
-  // hands over the tab when someone loads a page directly: it can only send us
-  // to /app.html, so the tab has to travel out-of-path.
-  const from = location.hash ? location.hash.slice(1) : location.pathname;
-  const wanted = from.indexOf('lights') !== -1 ? 'lights'
-    : (from.indexOf('settings') !== -1 ? 'settings' : 'sync');
+  const wanted = tabFromLocation();
   const initial = frames[wanted] ? wanted : active;
   if (initial) {
     frames[initial].classList.add('active');

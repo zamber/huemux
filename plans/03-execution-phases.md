@@ -20,7 +20,8 @@ reviewable commit or small series, and to leave `main` working.
 | 9 | Android M3 — MediaProjection sync | **done, device-tested** |
 | 10 | Android M4 — CI build, signing, distribution | **done (signing awaits a keystore secret)** |
 | 11 | Device feedback — shell integrity, capture quality, recording | **device-tested; recording reworked in 12** |
-| 12 | Recording without a second mirror, host diagnostics | **built, untested on a device** |
+| 12 | Recording without a second mirror, host diagnostics | **device-tested; file output reworked in 13** |
+| 13 | File output — native save, share sheet, reported locations | **built, untested on a device** |
 
 ---
 
@@ -275,3 +276,28 @@ its own bug report.
 **Done when** a device confirms: recording at "match capture" produces a
 playable file, the resolution slider does not crash and is locked while
 recording, and a failed recording leaves a specific reason in the host section.
+
+## Phase 13 — File output
+
+From testing alpha.14. Both items are about a file existing but being
+unreachable.
+
+**Files do not travel through navigations.** The diagnostics download broke
+when its navigation moved into an iframe in Phase 11, because a WebView's
+DownloadListener does not fire there. Rather than choosing between a navigation
+that can blank the page and an iframe that cannot download, the page now
+fetches its own text over loopback and `MainActivity.saveTextFile` writes it to
+Downloads via MediaStore. Non-Android browsers use an ordinary `<a download>`.
+
+**A saved file reports where it went.** Both recorders expose the resolved
+location and a share URI; `shareLastFile` opens the system share sheet for the
+most recent recording or saved report. Phase 12 reported only a filename, which
+left "did it save?" unanswerable from the UI.
+
+**Not done:** a save dialog (ACTION_CREATE_DOCUMENT) before recording. It makes
+recording start asynchronous — the same activity-result handshake `startCapture`
+needs — and the share sheet covers the actual need. Revisit if choosing the
+destination up front turns out to matter.
+
+**Done when** a device confirms: the diagnostics button writes a file to
+Downloads and Share sends it, and a finished recording names its location.

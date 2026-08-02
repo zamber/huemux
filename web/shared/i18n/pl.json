@@ -112,9 +112,10 @@
     "recordStop": "Zatrzymaj nagrywanie",
     "recordNeedsSync": "Najpierw uruchom synchronizację — nagrywanie korzysta z tego samego przechwytywania.",
     "recordInProgress": "Nagrywanie…",
-    "recordSaved": "Zapisano w Movies/HueMux/{name}",
+    "recordSaved": "Zapisano w {name}",
     "recordingHint": "Nagrywa w trakcie synchronizacji, do Movies/HueMux. „Jak przechwytywanie” koduje klatki, które synchronizacja i tak już pobiera, więc nie wymaga niczego dodatkowego od urządzenia i jest tak ostre, jak rozdzielczość powyżej. „Pełna rozdzielczość” kopiuje ekran drugi raz w jego własnej rozdzielczości, na co część urządzeń nie pozwala.",
-    "captureScaleLocked": "Zablokowane podczas nagrywania — film jest kodowany w rozmiarze z chwili startu."
+    "captureScaleLocked": "Zablokowane podczas nagrywania — film jest kodowany w rozmiarze z chwili startu.",
+    "recordShare": "Udostępnij"
   },
   "lights": {
     "filterAll": "Wszystkie",
@@ -164,6 +165,9 @@
     "diagnosticsCopied": "Skopiowano do schowka.",
     "diagnosticsSelectManually": "Schowek niedostępny na niezabezpieczonej stronie — tekst jest zaznaczony poniżej, skopiuj go ręcznie.",
     "diagnosticsDownloading": "Pobieranie…",
-    "diagnosticsDownloadHint": "Jeśli nic się nie pobrało, użyj Pokaż lub Kopiuj."
+    "diagnosticsDownloadHint": "Jeśli nic się nie pobrało, użyj Pokaż lub Kopiuj.",
+    "diagnosticsShare": "Udostępnij",
+    "diagnosticsSaved": "Zapisano w ",
+    "diagnosticsDownloadFailed": "Nie udało się zapisać pliku."
   }
 }

@@ -1,11 +1,13 @@
 package com.huemux.app
 
 import android.annotation.SuppressLint
+import android.content.ContentValues
 import android.content.Intent
 import android.media.projection.MediaProjectionManager
 import android.net.Uri
 import android.net.wifi.WifiManager
 import android.os.Build
+import android.provider.MediaStore
 import android.os.Bundle
 import android.util.Log
 import android.view.ViewGroup
@@ -294,6 +296,10 @@ class MainActivity : AppCompatActivity() {
                 put("scaleLocked", svc?.isRecording() == true)
                 put("quality", recordingQuality().name.lowercase())
                 put("lastRecording", svc?.lastRecordingName() ?: "")
+                // The full location, not just the filename: a recording the
+                // user cannot find has not really been saved.
+                put("lastLocation", svc?.lastRecordingLocation() ?: "")
+                put("canShare", (svc?.lastRecordingUri() != null) || lastSavedUri != null)
             }.toString()
         }
 
@@ -329,6 +335,61 @@ class MainActivity : AppCompatActivity() {
             return result(err == null, err ?: "")
         }
 
+        /**
+         * Writes [text] to the device's Downloads folder and returns the
+         * location, as JSON.
+         *
+         * The web page cannot save a file on its own here. A WebView ignores a
+         * download unless a DownloadListener handles it, and the listener does
+         * not fire for a navigation started inside an iframe — which is how
+         * the diagnostics button broke: it was moved into a throwaway iframe
+         * to stop a failed download replacing the Settings page, and that
+         * silently removed the only mechanism that made it work.
+         *
+         * Doing the write in Kotlin removes the listener from the path
+         * completely. The page fetches its own text over loopback, which
+         * always works, and hands it here.
+         */
+        @JavascriptInterface
+        fun saveTextFile(name: String, text: String): String {
+            return try {
+                val where = writeToDownloads(name, text)
+                lastSavedUri = where.second
+                result(true, "", where.first)
+            } catch (e: Exception) {
+                Log.e(TAG, "saving $name", e)
+                Mobile.logHost("save: $name failed: ${e.message}")
+                result(false, e.message ?: e.toString())
+            }
+        }
+
+        /**
+         * Opens the system share sheet for the last file this app saved or
+         * recorded. Without it, a file in Downloads or Movies is findable only
+         * by knowing where to look — which is the state that made a recording
+         * feel like it had gone nowhere.
+         */
+        @JavascriptInterface
+        fun shareLastFile(): String {
+            val uri = lastSavedUri ?: ScreenCaptureService.instance?.lastRecordingUri()
+            if (uri == null) return result(false, "nothing has been saved yet")
+            return try {
+                val mime = if (uri.toString().endsWith(".mp4")) "video/mp4" else "text/plain"
+                val send = Intent(Intent.ACTION_SEND).apply {
+                    type = mime
+                    putExtra(Intent.EXTRA_STREAM, uri)
+                    addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                }
+                runOnUiThread {
+                    startActivity(Intent.createChooser(send, getString(R.string.share_file)))
+                }
+                result(true, "")
+            } catch (e: Exception) {
+                Log.e(TAG, "sharing", e)
+                result(false, e.message ?: e.toString())
+            }
+        }
+
         @JavascriptInterface
         fun stopRecording(): String {
             val svc = ScreenCaptureService.instance ?: return result(false, "not recording")
@@ -343,6 +404,51 @@ class MainActivity : AppCompatActivity() {
             put("error", error)
             put("name", name)
         }.toString()
+
+    /**
+     * The last file saved through the bridge, for the share sheet.
+     *
+     * @Volatile because @JavascriptInterface methods run on the WebView's own
+     * bridge thread, not the UI thread, so this is written and read off-main.
+     */
+    @Volatile
+    private var lastSavedUri: Uri? = null
+
+    /**
+     * Writes a text file to the public Downloads folder. Returns a
+     * human-readable location and the URI to share.
+     *
+     * MediaStore from Android 10, where an app cannot write shared storage by
+     * path; an app-scoped file below that, because asking for
+     * WRITE_EXTERNAL_STORAGE to save a log is not a reasonable trade.
+     */
+    private fun writeToDownloads(name: String, text: String): Pair<String, Uri?> {
+        val bytes = text.toByteArray(Charsets.UTF_8)
+        if (Build.VERSION.SDK_INT >= 29) {
+            val values = ContentValues().apply {
+                put(MediaStore.Downloads.DISPLAY_NAME, name)
+                put(MediaStore.Downloads.MIME_TYPE, "text/plain")
+                put(MediaStore.Downloads.IS_PENDING, 1)
+            }
+            val uri = contentResolver.insert(MediaStore.Downloads.EXTERNAL_CONTENT_URI, values)
+                ?: throw IllegalStateException("MediaStore refused the entry")
+            contentResolver.openOutputStream(uri).use { out ->
+                out ?: throw IllegalStateException("MediaStore gave no stream")
+                out.write(bytes)
+            }
+            contentResolver.update(
+                uri, ContentValues().apply { put(MediaStore.Downloads.IS_PENDING, 0) }, null, null,
+            )
+            Mobile.logHost("save: wrote Download/$name (${bytes.size} bytes)")
+            return Pair("Download/$name", uri)
+        }
+        val dir = getExternalFilesDir(null) ?: throw IllegalStateException("no external files dir")
+        dir.mkdirs()
+        val f = java.io.File(dir, name)
+        f.writeBytes(bytes)
+        Mobile.logHost("save: wrote ${f.absolutePath} (${bytes.size} bytes)")
+        return Pair(f.absolutePath, null)
+    }
 
     private fun prefs() = getSharedPreferences(PREFS, MODE_PRIVATE)
 
