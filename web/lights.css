@@ -128,6 +128,19 @@ body { margin: 0; }
 .icon-btn:hover { border-color: var(--border-strong); color: var(--ink); }
 .icon-btn.active { border: 2px solid var(--ink); background: rgba(127,127,127,0.12); color: var(--ink); }
 
+/* The 20px icon is right on a phone, where each CSS pixel is ~2.5 physical
+   pixels, and reads tiny in a desktop window on a large monitor where the
+   same icon is 20 physical pixels inside a 44px button — the button is
+   sized for a finger, the icon is not. This is a DPI question, not a width
+   question: a resized Electron window is still a 1x display, and a tablet
+   can be wide and 2x. So the bump keys off pixel density — displays at
+   ~1.25x or below (every desktop monitor, Windows 125% scaling) get the
+   larger icon; phones and HiDPI laptops keep the 20px. */
+@media (max-resolution: 1.5dppx) {
+  .icon-btn svg { width: 24px; height: 24px; }
+  .light-card-head h3 svg { width: 24px; height: 24px; }
+}
+
 .scenes-section { margin-bottom: 1.1rem; }
 .scenes-section h2 { font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.04em; color: var(--ink-muted); margin: 0 0 0.5rem; }
 
