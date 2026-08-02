@@ -3,19 +3,17 @@
 package main
 
 import (
-	"bufio"
 	"context"
 	"encoding/hex"
 	"flag"
 	"fmt"
 	"log"
 	"os"
-	"os/exec"
 	"os/signal"
-	"runtime"
 	"syscall"
 	"time"
 
+	"github.com/zamber/huemux/cmd/shared"
 	"github.com/zamber/huemux/internal/appconfig"
 	"github.com/zamber/huemux/internal/config"
 	"github.com/zamber/huemux/internal/debuglog"
@@ -109,11 +107,11 @@ func runWithFlags(args []string) {
 
 	dir, err := config.Dir()
 	if err != nil {
-		fatalf("resolving config dir: %v", err)
+		shared.Fatalf("huemux", "resolving config dir: %v", err)
 	}
 	cfg, err := appconfig.Resolve(dir, cfgFlags)
 	if err != nil {
-		fatalf("%v", err)
+		shared.Fatalf("huemux", "%v", err)
 	}
 	for _, w := range cfg.Warnings() {
 		fmt.Fprintln(os.Stderr, "huemux: warning: "+w)
@@ -166,20 +164,20 @@ func cmdPair(args []string) {
 
 	info, err := hue.BridgeConfig(ctx, bridgeIP)
 	if err != nil {
-		fatalf("could not contact a bridge at %s: %v", bridgeIP, err)
+		shared.Fatalf("huemux", "could not contact a bridge at %s: %v", bridgeIP, err)
 	}
 	if !hue.SupportsEntertainment(info) {
-		fatalf("the bridge at %s (model %s) is too old to support Entertainment areas — this needs a square (v2) bridge", bridgeIP, info.ModelID)
+		shared.Fatalf("huemux", "the bridge at %s (model %s) is too old to support Entertainment areas — this needs a square (v2) bridge", bridgeIP, info.ModelID)
 	}
 
 	fmt.Printf("found bridge %q (id %s). Press the link button on the bridge now — waiting up to 60s...\n", info.Name, info.BridgeID)
 
 	username, clientkey, err := hue.Pair(ctx, bridgeIP, fmt.Sprintf("huemux#%s", hostname()), 60*time.Second)
 	if err != nil {
-		fatalf("pairing failed: %v", err)
+		shared.Fatalf("huemux", "pairing failed: %v", err)
 	}
 	if _, err := hex.DecodeString(clientkey); err != nil || len(clientkey) != 32 {
-		fatalf("bridge returned an unexpected clientkey (expected 32 hex chars, got %d): this is a bridge-side surprise, not a bug in the hex decode below", len(clientkey))
+		shared.Fatalf("huemux", "bridge returned an unexpected clientkey (expected 32 hex chars, got %d): this is a bridge-side surprise, not a bug in the hex decode below", len(clientkey))
 	}
 
 	if err := config.SaveBridge(config.Bridge{
@@ -188,7 +186,7 @@ func cmdPair(args []string) {
 		Username:  username,
 		ClientKey: clientkey,
 	}); err != nil {
-		fatalf("saving config: %v", err)
+		shared.Fatalf("huemux", "saving config: %v", err)
 	}
 
 	fmt.Println("paired. Run `huemux areas` to see your entertainment areas.")
@@ -205,7 +203,7 @@ func cmdAreas(args []string) {
 
 	areas, err := client.ListEntertainmentConfigurations(ctx)
 	if err != nil {
-		fatalf("listing entertainment areas: %v", err)
+		shared.Fatalf("huemux", "listing entertainment areas: %v", err)
 	}
 	if len(areas) == 0 {
 		fmt.Println("no entertainment areas found. Create one in the Hue app: Settings → Entertainment areas.")
@@ -224,7 +222,7 @@ func cmdAreas(args []string) {
 
 func cmdTest(args []string) {
 	if len(args) == 0 {
-		fatalf("usage: huemux test <area-id>")
+		shared.Fatalf("huemux", "usage: huemux test <area-id>")
 	}
 	areaID := args[0]
 	bridge := mustLoadBridge()
@@ -235,20 +233,20 @@ func cmdTest(args []string) {
 
 	cfg, err := client.GetEntertainmentConfiguration(ctx, areaID)
 	if err != nil {
-		fatalf("fetching area: %v", err)
+		shared.Fatalf("huemux", "fetching area: %v", err)
 	}
 	if cfg.IsActive() {
-		fatalf("area is already being streamed to by another application")
+		shared.Fatalf("huemux", "area is already being streamed to by another application")
 	}
 	if len(cfg.Channels) == 0 {
-		fatalf("area %s has no channels", areaID)
+		shared.Fatalf("huemux", "area %s has no channels", areaID)
 	}
 	fmt.Printf("area %q: %d channels\n", cfg.Metadata.Name, len(cfg.Channels))
 
 	turnOnChannelLights(ctx, client, cfg.Channels)
 
 	if err := client.StartStreaming(ctx, areaID); err != nil {
-		fatalf("PUT action=start: %v", err)
+		shared.Fatalf("huemux", "PUT action=start: %v", err)
 	}
 	fmt.Println("streaming started on the bridge, dialing DTLS...")
 
@@ -261,7 +259,7 @@ func cmdTest(args []string) {
 	})
 	if err != nil {
 		_ = client.StopStreaming(ctx, areaID)
-		fatalf("dtls handshake: %v", err)
+		shared.Fatalf("huemux", "dtls handshake: %v", err)
 	}
 	fmt.Println("handshake OK. Running output loop...")
 
@@ -325,7 +323,7 @@ func cmdTest(args []string) {
 	_ = client.StopStreaming(context.Background(), areaID)
 
 	if failed {
-		fatalf("milestone 2 test failed: output loop exited early (see error above)")
+		shared.Fatalf("huemux", "milestone 2 test failed: output loop exited early (see error above)")
 	}
 	fmt.Println("done. If the lights held color for the full 60s and then faded out cleanly, milestone 2 passes.")
 }
@@ -370,11 +368,11 @@ func cmdRun(cfg appconfig.Config, verbose bool) {
 
 	store, err := config.NewStore()
 	if err != nil {
-		fatalf("loading settings: %v", err)
+		shared.Fatalf("huemux", "loading settings: %v", err)
 	}
 	favorites, err := config.NewFavoritesStore()
 	if err != nil {
-		fatalf("loading favorites: %v", err)
+		shared.Fatalf("huemux", "loading favorites: %v", err)
 	}
 
 	// No pairing required up front: if config.LoadBridge fails (not paired
@@ -390,7 +388,7 @@ func cmdRun(cfg appconfig.Config, verbose bool) {
 	srv := server.New(cfg, store, favorites, eng, lights)
 	url, err := srv.ListenAndServe()
 	if err != nil {
-		fatalf("starting server: %v", err)
+		shared.Fatalf("huemux", "starting server: %v", err)
 	}
 
 	fmt.Println("huemux " + version + "  " + url)
@@ -400,7 +398,7 @@ func cmdRun(cfg appconfig.Config, verbose bool) {
 	if !srv.Paired() {
 		fmt.Println("not paired yet — open the URL above to pair with your bridge")
 	}
-	openBrowser(url)
+	shared.OpenBrowser(url)
 
 	printer := ui.NewPrinter(url)
 	printer.Verbose = verbose
@@ -409,7 +407,7 @@ func cmdRun(cfg appconfig.Config, verbose bool) {
 	signal.Notify(sigCh, os.Interrupt, syscall.SIGTERM)
 
 	stdinCh := make(chan string, 1)
-	go readStdinCommands(stdinCh)
+	go shared.ReadStdinCommands(stdinCh)
 
 	renderTick := time.NewTicker(250 * time.Millisecond) // 4 Hz per ROADMAP Milestone 9
 	defer renderTick.Stop()
@@ -418,11 +416,11 @@ func cmdRun(cfg appconfig.Config, verbose bool) {
 	for {
 		select {
 		case <-sigCh:
-			shutdown(srv.Engine(), store)
+			shared.Shutdown(srv.Engine(), store)
 			return
 		case cmd := <-stdinCh:
 			if cmd == "q" {
-				shutdown(srv.Engine(), store)
+				shared.Shutdown(srv.Engine(), store)
 				return
 			}
 			eng := srv.Engine()
@@ -478,46 +476,10 @@ func profileSummary(cfg appconfig.Config) string {
 	}
 }
 
-func shutdown(eng *engine.Engine, store *config.Store) {
-	if eng != nil {
-		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-		defer cancel()
-		eng.Stop(ctx)
-	}
-	store.Flush()
-}
-
-func readStdinCommands(out chan<- string) {
-	// A line-buffered "q"/"r"/"b" rather than raw single-keypress input:
-	// avoids a terminal-raw-mode dependency for a control surface that has
-	// no exit test riding on it (the browser UI is the primary control
-	// path). Press Enter after the letter.
-	scanner := bufio.NewScanner(os.Stdin)
-	for scanner.Scan() {
-		line := scanner.Text()
-		if len(line) > 0 {
-			out <- line[:1]
-		}
-	}
-}
-
-func openBrowser(url string) {
-	var cmd *exec.Cmd
-	switch runtime.GOOS {
-	case "darwin":
-		cmd = exec.Command("open", url)
-	case "windows":
-		cmd = exec.Command("rundll32", "url.dll,FileProtocolHandler", url)
-	default:
-		cmd = exec.Command("xdg-open", url)
-	}
-	_ = cmd.Start() // best-effort; the URL is printed regardless
-}
-
 func mustLoadBridge() config.Bridge {
 	b, err := config.LoadBridge()
 	if err != nil {
-		fatalf("not paired yet (or config unreadable: %v). Run: huemux pair <bridge-ip>", err)
+		shared.Fatalf("huemux", "not paired yet (or config unreadable: %v). Run: huemux pair <bridge-ip>", err)
 	}
 	return b
 }
@@ -528,9 +490,4 @@ func hostname() string {
 		return "unknown"
 	}
 	return h
-}
-
-func fatalf(format string, args ...any) {
-	fmt.Fprintf(os.Stderr, "huemux: "+format+"\n", args...)
-	os.Exit(1)
 }
