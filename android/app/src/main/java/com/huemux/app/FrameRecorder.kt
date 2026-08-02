@@ -14,6 +14,7 @@ import android.provider.MediaStore
 import android.util.Log
 import com.huemux.mobile.Mobile
 import java.io.File
+import java.nio.ByteBuffer
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -173,38 +174,53 @@ class FrameRecorder(private val ctx: Context) {
     }
 
     /**
-     * Encodes one captured frame. [rgb] is tightly packed RGB of [srcW] x
-     * [srcH] — the same buffer being handed to the colour engine, which is why
-     * this must not retain it.
+     * Encodes one captured frame, read straight from the capture surface.
      *
-     * Every failure here is swallowed after being logged once: a recorder that
+     * Takes the [ByteBuffer] rather than an RGB array on purpose. The previous
+     * shape had the capture service build a full-resolution tightly-packed RGB
+     * copy for the colour engine and hand the same array here — so recording
+     * rode along on a buffer that only existed because the pipeline was being
+     * fed at full resolution, which is exactly the coupling that made raising
+     * the capture resolution slow the lights down. The pipeline now gets a
+     * downscaled frame and this reads the original.
+     *
+     * [row] is a scratch buffer owned by the caller, one row wide. Rows are
+     * pulled in bulk: `get(byte[], off, len)` is a memcpy, whereas the
+     * per-pixel `get(int)` this replaced cost three bounds-checked native
+     * reads per pixel.
+     *
+     * Every failure is swallowed after being logged once. A recorder that
      * throws into the capture path would take screen sync down with it, and
      * sync is the thing worth protecting.
      */
     @Synchronized
-    fun onFrame(rgb: ByteArray, srcW: Int, srcH: Int) {
+    fun onFrame(
+        buf: ByteBuffer, row: ByteArray, rowStride: Int, pixelStride: Int, srcW: Int, srcH: Int,
+    ) {
         val c = codec ?: return
         if (!isRecording) return
-        // A capture-size change while recording would silently corrupt every
-        // subsequent frame, since the conversion below trusts these.
+        // The encoder is configured for the size it started at; a capture
+        // resized underneath it would corrupt every subsequent frame. The
+        // resolution control is locked while recording, so this is a guard
+        // against a path that should not exist rather than an expected case.
         if (srcW < encW || srcH < encH) return
 
         try {
             val index = c.dequeueInputBuffer(0)
             if (index < 0) {
-                // No free input buffer. Dropping this frame is correct: the
+                // No free input buffer. Dropping the frame is correct: the
                 // alternative is blocking the capture thread, which delays the
                 // lights for the benefit of the recording.
                 drain(false)
                 return
             }
-            val buf = c.getInputBuffer(index) ?: return
-            val dst = yuv ?: return
-            rgbToYuv(rgb, srcW, dst)
-            buf.clear()
-            buf.put(dst, 0, dst.size)
+            val dst = c.getInputBuffer(index) ?: return
+            val yuvBuf = yuv ?: return
+            rgbaToYuv(buf, row, rowStride, pixelStride, yuvBuf)
+            dst.clear()
+            dst.put(yuvBuf, 0, yuvBuf.size)
             val ptsUs = (System.nanoTime() - startNs) / 1000
-            c.queueInputBuffer(index, 0, dst.size, ptsUs, 0)
+            c.queueInputBuffer(index, 0, yuvBuf.size, ptsUs, 0)
             framesIn++
             drain(false)
         } catch (e: Exception) {
@@ -324,31 +340,36 @@ class FrameRecorder(private val ctx: Context) {
     }
 
     /**
-     * Converts tightly-packed RGB to the encoder's chosen YUV layout, cropping
-     * to [encW] x [encH] from the top-left. [srcStrideW] is the source frame's
-     * width, which may be wider than the crop.
+     * Converts the captured RGBA surface to the encoder's YUV layout, cropping
+     * to [encW] x [encH] from the top-left.
      *
      * Chroma is sampled from the top-left pixel of each 2x2 block rather than
-     * averaged. Averaging is four times the work for a difference that is
-     * invisible on screen content, which is flat colour and hard edges.
+     * averaged: four times the work for a difference invisible on screen
+     * content, which is flat colour and hard edges.
      */
-    private fun rgbToYuv(rgb: ByteArray, srcStrideW: Int, out: ByteArray) {
+    private fun rgbaToYuv(
+        buf: ByteBuffer, row: ByteArray, rowStride: Int, pixelStride: Int, out: ByteArray,
+    ) {
         val planar = colorFormat == MediaCodecInfo.CodecCapabilities.COLOR_FormatYUV420Planar
         val frameSize = encW * encH
         val chromaSize = frameSize / 4
+        val rowBytes = encW * pixelStride
         var yi = 0
-        for (row in 0 until encH) {
-            var si = row * srcStrideW * 3
+        for (r in 0 until encH) {
+            buf.position(r * rowStride)
+            buf.get(row, 0, rowBytes)
+            val evenRow = (r and 1) == 0
+            var si = 0
             for (col in 0 until encW) {
-                val r = rgb[si].toInt() and 0xff
-                val g = rgb[si + 1].toInt() and 0xff
-                val b = rgb[si + 2].toInt() and 0xff
-                si += 3
-                out[yi++] = (((66 * r + 129 * g + 25 * b + 128) shr 8) + 16).toByte()
-                if ((row and 1) == 0 && (col and 1) == 0) {
-                    val u = ((-38 * r - 74 * g + 112 * b + 128) shr 8) + 128
-                    val v = ((112 * r - 94 * g - 18 * b + 128) shr 8) + 128
-                    val ci = (row / 2) * (encW / 2) + (col / 2)
+                val rr = row[si].toInt() and 0xff
+                val gg = row[si + 1].toInt() and 0xff
+                val bb = row[si + 2].toInt() and 0xff
+                si += pixelStride
+                out[yi++] = (((66 * rr + 129 * gg + 25 * bb + 128) shr 8) + 16).toByte()
+                if (evenRow && (col and 1) == 0) {
+                    val u = ((-38 * rr - 74 * gg + 112 * bb + 128) shr 8) + 128
+                    val v = ((112 * rr - 94 * gg - 18 * bb + 128) shr 8) + 128
+                    val ci = (r / 2) * (encW / 2) + (col / 2)
                     if (planar) {
                         out[frameSize + ci] = clamp(u)
                         out[frameSize + chromaSize + ci] = clamp(v)

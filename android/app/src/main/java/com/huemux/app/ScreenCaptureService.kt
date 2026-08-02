@@ -132,7 +132,6 @@ class ScreenCaptureService : Service() {
         reader?.close()
         display = null
         reader = null
-        rgbScratch = null
         startCapture()
     }
 
@@ -190,6 +189,7 @@ class ScreenCaptureService : Service() {
         sb.append('\n')
         val m = resources.displayMetrics
         sb.append("display               ${m.widthPixels}x${m.heightPixels} @${m.densityDpi}dpi\n")
+        sb.append("colour pipeline       ${pipelineW}x$pipelineH (capped at $PIPELINE_LONG_EDGE)\n")
         sb.append("recording             ")
         sb.append(
             when {
@@ -255,7 +255,40 @@ class ScreenCaptureService : Service() {
         )
     }
 
-    /** Packs one RGBA image into tightly-packed RGB and hands it to Go. */
+    /**
+     * Splits one captured frame between the two consumers that want it.
+     *
+     * ## Why this is not one buffer any more
+     *
+     * The colour engine reduces every frame to a 64x36 grid. It does not care
+     * how big the frame was. The recorder cares a great deal. Those are
+     * opposite requirements, and this used to serve both from a single
+     * full-resolution RGB copy, which meant the expensive path ran whether or
+     * not anything needed it:
+     *
+     *   - a per-pixel copy of the whole frame — at 942x1920 that is 1.8M
+     *     iterations doing three bounds-checked ByteBuffer.get(int) calls
+     *     each, 5.4M native reads per frame, for data that was about to be
+     *     averaged down to 2304 cells;
+     *   - a 5.4MB array across the JNI boundary, copied again on the Go side;
+     *   - then the recorder converting that same 5.4MB to YUV.
+     *
+     * Raising the capture resolution for a recording therefore slowed the
+     * lights down, which is the wrong way round: the resolution exists for the
+     * video, and the colour pipeline should be indifferent to it.
+     *
+     * Now the frame is read once per consumer, in bulk rows, and each gets
+     * what it actually needs:
+     *
+     *   colour engine   downsampled to [PIPELINE_LONG_EDGE] with 2x2
+     *                   averaging — still ~7x oversampled per grid cell
+     *   recorder        the full-resolution image, converted straight to YUV
+     *                   with no RGB intermediate
+     *
+     * Bulk row reads are the other half. `buf.get(byte[], off, len)` is a
+     * memcpy; `buf.get(int)` in a loop is not, and that difference dominated
+     * everything else here.
+     */
     private fun pushImage(image: android.media.Image) {
         val plane = image.planes[0]
         val buf: ByteBuffer = plane.buffer
@@ -264,29 +297,101 @@ class ScreenCaptureService : Service() {
         val w = image.width
         val h = image.height
 
-        // rowStride usually exceeds width*4: the surface is padded to a
-        // hardware-friendly alignment. Copying row by row rather than assuming
-        // a packed buffer is what keeps the image from shearing diagonally.
-        val need = w * h * 3
-        var out = rgbScratch
+        // The display produces frames as fast as it composites, ~60/s. The
+        // bridge is fed at 20Hz and the encoder is configured for 30. Encoding
+        // and averaging frames that nothing will consume is pure heat.
+        val now = android.os.SystemClock.elapsedRealtime()
+        val rec = frameRecorder
+        val wantRecord = rec != null && rec.isRecording && now - lastRecordMs >= MIN_FRAME_INTERVAL_MS
+        val wantPipeline = now - lastPipelineMs >= MIN_FRAME_INTERVAL_MS
+        if (!wantPipeline && !wantRecord) return
+
+        val rowBytes = w * pixelStride
+        var row = rowScratch
+        if (row == null || row.size < rowBytes) {
+            row = ByteArray(rowBytes)
+            rowScratch = row
+        }
+
+        if (wantPipeline) {
+            lastPipelineMs = now
+            pushDownscaled(buf, row, rowStride, pixelStride, w, h)
+        }
+        if (wantRecord) {
+            lastRecordMs = now
+            rec!!.onFrame(buf, row, rowStride, pixelStride, w, h)
+        }
+    }
+
+    /**
+     * Averages the frame down to at most [PIPELINE_LONG_EDGE] on its long edge
+     * and hands that to Go.
+     *
+     * 2x2 averaging rather than nearest sampling. Nearest is cheaper and looks
+     * identical on flat content, but on text and fine patterns it aliases, and
+     * since the engine's zones average whatever they are given, aliasing
+     * arrives as colours that shimmer while the screen is still.
+     */
+    private fun pushDownscaled(
+        buf: ByteBuffer, row: ByteArray, rowStride: Int, pixelStride: Int, w: Int, h: Int,
+    ) {
+        val step = pipelineStep(w, h)
+        val sw = w / step
+        val sh = h / step
+        if (sw < 2 || sh < 2) return
+
+        val need = sw * sh * 3
+        var out = pipelineScratch
         if (out == null || out.size != need) {
             out = ByteArray(need)
-            rgbScratch = out
+            pipelineScratch = out
         }
+
+        // A second row buffer only when there is a second row to average.
+        var row2 = if (step > 1) {
+            var r = rowScratch2
+            if (r == null || r.size < w * pixelStride) {
+                r = ByteArray(w * pixelStride)
+                rowScratch2 = r
+            }
+            r
+        } else null
+
         var o = 0
-        for (y in 0 until h) {
-            var rowStart = y * rowStride
-            for (x in 0 until w) {
-                val i = rowStart + x * pixelStride
-                out[o++] = buf.get(i)
-                out[o++] = buf.get(i + 1)
-                out[o++] = buf.get(i + 2)
+        for (y in 0 until sh) {
+            val srcY = y * step
+            buf.position(srcY * rowStride)
+            buf.get(row, 0, w * pixelStride)
+            // The bottom edge may have no row beneath it. row2 still holds
+            // the previous iteration's pixels, so averaging against it there
+            // would smear one row's colours into the next — drop to single-row
+            // sampling for that row instead.
+            var second = row2
+            if (second != null) {
+                if (srcY + 1 < h) {
+                    buf.position((srcY + 1) * rowStride)
+                    buf.get(second, 0, w * pixelStride)
+                } else {
+                    second = null
+                }
+            }
+            for (x in 0 until sw) {
+                val i = x * step * pixelStride
+                val j = if (i + pixelStride < w * pixelStride) i + pixelStride else i
+                if (second != null) {
+                    out[o++] = avg4(row[i], row[j], second[i], second[j])
+                    out[o++] = avg4(row[i + 1], row[j + 1], second[i + 1], second[j + 1])
+                    out[o++] = avg4(row[i + 2], row[j + 2], second[i + 2], second[j + 2])
+                } else {
+                    out[o++] = row[i]
+                    out[o++] = row[i + 1]
+                    out[o++] = row[i + 2]
+                }
             }
         }
-        Mobile.pushFrame(w.toLong(), h.toLong(), out)
-        // Same buffer, same thread, straight after the engine has copied it.
-        // FrameRecorder must not retain `out` — it is reused for every frame.
-        frameRecorder?.let { if (it.isRecording) it.onFrame(out, w, h) }
+        pipelineW = sw
+        pipelineH = sh
+        Mobile.pushFrame(sw.toLong(), sh.toLong(), out)
     }
 
     private fun buildNotification(): Notification {
@@ -333,7 +438,7 @@ class ScreenCaptureService : Service() {
         pipeline?.post {
             display?.release()
             reader?.close()
-            display = null; reader = null; rgbScratch = null
+            display = null; reader = null
         }
         t?.quitSafely()
         try {
@@ -352,7 +457,14 @@ class ScreenCaptureService : Service() {
         super.onDestroy()
     }
 
-    private var rgbScratch: ByteArray? = null
+    /** One captured row, reused. Bulk reads land here instead of per-pixel gets. */
+    private var rowScratch: ByteArray? = null
+
+    /** The row below it, for the colour pipeline's 2x2 averaging. */
+    private var rowScratch2: ByteArray? = null
+    private var pipelineScratch: ByteArray? = null
+    private var lastPipelineMs = 0L
+    private var lastRecordMs = 0L
     private var frameRecorder: FrameRecorder? = null
 
     companion object {
@@ -376,6 +488,43 @@ class ScreenCaptureService : Service() {
             private set
 
         const val TAG = "HueMuxCapture"
+
+        /**
+         * Longest edge the colour engine is fed. It reduces to a 64x36 grid,
+         * so 480 leaves roughly seven samples per grid cell in each axis —
+         * more than enough to average stably, and a fraction of the work of
+         * handing it a 1920-pixel frame it will throw away.
+         */
+        const val PIPELINE_LONG_EDGE = 480
+
+        /**
+         * Floor on the gap between frames handed to either consumer, ~30/s.
+         * The display composites at ~60, the bridge is fed at 20Hz and the
+         * encoder is configured for 30, so the frames above this rate are
+         * work nothing consumes.
+         */
+        const val MIN_FRAME_INTERVAL_MS = 33L
+
+        /** Integer downscale factor that keeps the long edge within budget. */
+        fun pipelineStep(w: Int, h: Int): Int {
+            val longEdge = maxOf(w, h)
+            if (longEdge <= PIPELINE_LONG_EDGE) return 1
+            return (longEdge + PIPELINE_LONG_EDGE - 1) / PIPELINE_LONG_EDGE
+        }
+
+        /** Mean of four sample bytes, kept unsigned. */
+        fun avg4(a: Byte, b: Byte, c: Byte, d: Byte): Byte {
+            val sum = (a.toInt() and 0xff) + (b.toInt() and 0xff) +
+                (c.toInt() and 0xff) + (d.toInt() and 0xff)
+            return (sum shr 2).toByte()
+        }
+
+        /** Size actually handed to the colour engine, for diagnostics. */
+        @Volatile
+        var pipelineW: Int = 0
+
+        @Volatile
+        var pipelineH: Int = 0
         const val ACTION_STOP = "com.huemux.app.STOP_CAPTURE"
         const val ACTION_RECONFIGURE = "com.huemux.app.RECONFIGURE_CAPTURE"
         const val EXTRA_RESULT_CODE = "resultCode"

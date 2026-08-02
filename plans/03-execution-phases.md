@@ -24,6 +24,7 @@ reviewable commit or small series, and to leave `main` working.
 | 13 | File output — native save, share sheet, reported locations | **built, untested on a device** |
 | 14 | Long-press suppression | **built, untested on a device** |
 | 15 | Capture lifecycle; full-res recording removed | **built, untested on a device** |
+| 16 | Split frame path — pipeline downscale, direct encode | **built, unmeasured on a device** |
 
 ---
 
@@ -345,3 +346,30 @@ appears whenever capture is running.
 
 **Done when** a device confirms: stopping from either tab ends both the stream
 and the capture, and no state leaves the capture running with no way to stop it.
+
+## Phase 16 — Splitting the frame path
+
+Reported as sluggishness at a raised capture resolution; the log showed inbound
+fps at 4.1.
+
+One full-resolution RGB buffer served both the colour engine and the recorder.
+The engine reduces to 64x36 and is indifferent to frame size, so at 942x1920
+every frame cost 5.4M bounds-checked ByteBuffer.get(int) calls, a 5.4MB JNI
+transfer, and a second copy in Go — to produce 2304 cells. Raising the
+resolution for a video slowed the lights, which inverts the intent.
+
+Now read once per consumer, in bulk rows: the engine gets a 2x2-averaged
+downscale capped at `PIPELINE_LONG_EDGE` (480, ~7 samples per grid cell per
+axis), and `FrameRecorder` converts the capture surface straight to YUV with no
+RGB intermediate. Both are capped at ~30/s against a ~60/s compositor and a
+20Hz output.
+
+Downscaling is unconditional. It is invisible to the engine, so an option would
+only be a way to choose the slow path.
+
+Verified by modelling the index arithmetic in Python against padded and packed
+strides and odd dimensions — the only way to check bounds here without an SDK.
+It caught a stale row averaged into the bottom edge and an undeclared buffer.
+
+**Done when** a device shows inbound fps holding up with the recording
+resolution at 100%, and recordings still look right.

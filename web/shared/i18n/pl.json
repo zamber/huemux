@@ -102,8 +102,8 @@
       "busyHeldBy": "zajęte przez inną aplikację ({app})"
     },
     "deviceCapture": "To urządzenie",
-    "captureScale": "Rozdzielczość przechwytywania",
-    "captureScaleHint": "Jaka część rzeczywistej rozdzielczości ekranu jest kopiowana. Potok kolorów i tak redukuje wszystko do siatki 64×36, więc wyższa wartość nic nie daje samej synchronizacji — podnieś ją tylko na czas nagrywania i potem zmniejsz: większa kopia ekranu ciągle zużywa baterię.",
+    "captureScale": "Rozdzielczość nagrywania",
+    "captureScaleHint": "Jaka część rzeczywistej rozdzielczości ekranu jest kopiowana. Nie wpływa na synchronizację świateł — ta zawsze korzysta z pomniejszonej kopii — więc zmienia tylko ostrość nagrania i zużycie baterii przez samą kopię ekranu. Zostaw nisko, jeśli nie nagrywasz.",
     "captureWhenRunning": "rozmiar po uruchomieniu synchronizacji",
     "recording": "Nagrywanie ekranu",
     "recordStart": "Rozpocznij nagrywanie",
