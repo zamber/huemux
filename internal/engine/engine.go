@@ -63,6 +63,7 @@ type Engine struct {
 	store  *config.Store
 	bridge config.Bridge
 
+	selectMu     sync.Mutex // serializes SelectArea/Stop so concurrent select_area messages cannot orphan a stream
 	mu           sync.Mutex
 	areaCfg      hue.EntertainmentConfiguration
 	zones        []pipeline.Zone
@@ -108,7 +109,9 @@ func (e *Engine) ListAreas(ctx context.Context) ([]hue.EntertainmentConfiguratio
 // its zones, resolves each zone's light for click-to-identify, and starts
 // streaming.
 func (e *Engine) SelectArea(ctx context.Context, areaID string) error {
-	e.Stop(ctx)
+	e.selectMu.Lock()
+	defer e.selectMu.Unlock()
+	e.stopLocked(ctx)
 
 	cfg, err := e.client.GetEntertainmentConfiguration(ctx, areaID)
 	if err != nil {
@@ -221,6 +224,14 @@ func zoneOptsFromSettings(s config.AreaSettings) pipeline.ZoneOpts {
 // Stop ends the current stream cleanly (fade to black, happens inside
 // Stream.Run's shutdown path) and releases the area.
 func (e *Engine) Stop(ctx context.Context) {
+	e.selectMu.Lock()
+	defer e.selectMu.Unlock()
+	e.stopLocked(ctx)
+}
+
+// stopLocked is the shared Stop body; it must only be called with selectMu
+// held (Stop and SelectArea both serialize on it).
+func (e *Engine) stopLocked(ctx context.Context) {
 	e.mu.Lock()
 	cancel := e.cancel
 	stream := e.stream
