@@ -1,0 +1,18 @@
+HueMux controls Philips Hue lights from your phone and syncs them to whatever is on your screen. Everything happens on your own network — it talks to the bridge directly, with no cloud account, no telemetry and no Hue Sync app.
+
+<b>Screen sync</b>
+Mirrors your screen and streams the colours to a Hue Entertainment area over the bridge's own DTLS protocol, in real time. Adjustable reactivity, brightness and saturation, several sampling modes, and a live preview showing which light is reading which part of the screen.
+
+<b>Light control</b>
+Every room, light and scene on the bridge: on/off, brightness, colour, and favourites for the ones you actually use. Rooms can be controlled as a group.
+
+<b>Screen recording</b>
+Record what is on screen while sync runs, saved to your Movies folder. Useful for showing what the lights were reacting to.
+
+<b>Privacy</b>
+No account. No analytics. No advertising identifier. Nothing leaves your device except the light commands going to your own bridge. Screen capture only runs while you start it, and Android shows its own indicator the whole time.
+
+<b>Free software</b>
+GPL-3.0-or-later. Source, issues and releases at https://github.com/zamber/huemux
+
+Not affiliated with, endorsed by, or sponsored by Signify N.V. Philips and Hue are trademarks of Signify Holding.

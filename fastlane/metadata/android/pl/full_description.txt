@@ -1,0 +1,18 @@
+HueMux steruje światłami Philips Hue z telefonu i synchronizuje je z tym, co jest na ekranie. Wszystko dzieje się w Twojej sieci — aplikacja łączy się z mostkiem bezpośrednio, bez konta w chmurze, bez telemetrii i bez aplikacji Hue Sync.
+
+<b>Synchronizacja ekranu</b>
+Kopiuje obraz z ekranu i przesyła kolory do strefy rozrywki Hue przez protokół DTLS mostka, w czasie rzeczywistym. Regulowana reaktywność, jasność i nasycenie, kilka trybów próbkowania oraz podgląd na żywo pokazujący, która lampa odczytuje którą część ekranu.
+
+<b>Sterowanie światłami</b>
+Wszystkie pokoje, światła i sceny z mostka: włączanie, jasność, kolor i ulubione. Pokojami można sterować grupowo.
+
+<b>Nagrywanie ekranu</b>
+Nagrywa obraz w trakcie synchronizacji, zapis do folderu Filmy. Przydatne, by pokazać, na co reagowały światła.
+
+<b>Prywatność</b>
+Bez konta. Bez analityki. Bez identyfikatora reklamowego. Poza poleceniami wysyłanymi do Twojego własnego mostka nic nie opuszcza urządzenia. Przechwytywanie ekranu działa tylko wtedy, gdy je uruchomisz, a Android przez cały czas pokazuje własny wskaźnik.
+
+<b>Wolne oprogramowanie</b>
+GPL-3.0-or-later. Kod źródłowy i wydania: https://github.com/zamber/huemux
+
+Niepowiązane z Signify N.V., nieautoryzowane ani niesponsorowane przez tę firmę. Philips i Hue są znakami towarowymi Signify Holding.

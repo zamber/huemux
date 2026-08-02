@@ -1,0 +1,7 @@
+First properly signed release. Alpha builds before this were debug-signed, so
+this one must be installed over an uninstall — later updates are ordinary.
+
+Every earlier release also shipped the same version code, which meant Android
+would have refused to update them at all. Both are fixed.
+
+The project is now GPL-3.0-or-later; it had no licence file before.

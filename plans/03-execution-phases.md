@@ -31,8 +31,8 @@ reviewable commit or small series, and to leave `main` working.
 | **R1** | **Release infrastructure — artifact signing, key custody** | **done (Windows/macOS gated on certificates)** |
 | **R2** | **Release infrastructure — workflow split + gated environments** | **done** |
 | **R3** | **Release infrastructure — automated test gate** | **deferred: revisit when leaving 0.0.x** |
-| C1 | Attribution + About screen | **not started** |
-| C2 | IzzyOnDroid | **not started** |
+| C1 | Attribution + About screen | **done** |
+| C2 | IzzyOnDroid | **prepared — needs screenshots, then submit** |
 | C3 | Scoop, Homebrew tap, AUR | **not started** |
 | C4 | Flathub | **not started** |
 | C5 | F-Droid main repo | **not started** |
@@ -531,10 +531,21 @@ disclaimer.
 **Done when** the About screen shows every licence with no network, and CI
 fails on a deliberately-added copyleft dependency.
 
-## C2 — IzzyOnDroid
+## C2 — IzzyOnDroid — **prepared**
 
-The lowest-friction Android store: it accepts the APK already built rather than
-building from source. Needs Fastlane-structured metadata in the repo.
+Metadata is in `fastlane/` in both English and Polish, and the app now has a
+real launcher icon: it had been shipping `@android:drawable/ic_menu_compass`, a
+stock system drawable, which no store accepts and which is not stable API. The
+replacement is an adaptive vector — no density buckets, about a kilobyte, and
+it doubles as the Android 13+ themed icon.
+
+**Blocking submission:** screenshots and a 512x512 `icon.png`. The screenshots
+are deliberately not taken from the existing ones, which show the bridge's LAN
+address that this repo does not carry.
+
+**Then:** open an issue at gitlab.com/IzzyOnDroid/repo with the repo URL and
+the APK naming pattern; they track releases from there. See PUBLISHING.md
+§2A.2.
 
 ## C3 — Scoop, Homebrew tap, AUR
 
