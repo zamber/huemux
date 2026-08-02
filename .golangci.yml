@@ -1,0 +1,22 @@
+version: "2"
+linters:
+  enable:
+    - govet
+    - staticcheck
+    - errcheck
+    - gosec
+    - ineffassign
+    - unused
+    - misspell
+  settings:
+    errcheck:
+      exclude-functions:
+        - (*github.com/zamber/huemux/internal/server.Conn).WriteMessage
+        - (*os.File).Close
+        - (*os.File).Write
+    gosec:
+      excludes:
+        - G402  # TLS InsecureSkipVerify — intentionally skipped for bridge
+formatters:
+  enable:
+    - gofmt

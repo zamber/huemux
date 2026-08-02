@@ -138,6 +138,14 @@ jobs:
           go vet ./...
           go test ./...
 
+      # Same gate as vet/test. The linters and their settings live in
+      # .golangci.yml; a release should not be published with findings the
+      # repository has already agreed to enforce.
+      - name: Lint
+        uses: golangci/golangci-lint-action@v9
+        with:
+          version: v2.12.2
+
       # Attribution is a licence condition, not a nicety — MIT, BSD and
       # Apache-2.0 all require it. This fails if a dependency was added without
       # regenerating the file, or if one arrives under a licence that is not

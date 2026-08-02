@@ -66,6 +66,14 @@ jobs:
       - name: Test the mobile facade
         run: go test ./mobile/... -count=1
 
+      # Same gate as the compile/test steps above: .golangci.yml defines the
+      # linters and their settings, and the whole core (including mobile/)
+      # must be clean of them.
+      - name: Lint
+        uses: golangci/golangci-lint-action@v9
+        with:
+          version: v2.12.2
+
   # The real artifact. Slower, and only worth running on main or on demand.
   aar:
     runs-on: ubuntu-latest
