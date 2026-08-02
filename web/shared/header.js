@@ -110,10 +110,14 @@ class HueMuxHeader extends HTMLElement {
       html += '<a href="/sync.html" data-tab="sync" data-i18n="nav.sync"' +
         (active === 'sync' ? ' class="active"' : '') + '>Sync</a>';
     }
-    // With one feature tab there is nothing to navigate between, so a single
-    // permanently-active link would just be noise — but Settings still needs
-    // a way in, so it is always present.
-    if (!(f.lights && f.sync)) html = '';
+    // Every tab that exists gets a link, including when there is only one.
+    //
+    // A single feature tab used to render no link at all, on the reasoning
+    // that a permanently-active link is noise. It is worse than noise: with
+    // the nav showing only Settings, opening Settings under a lights-only or
+    // sync-only profile left nothing on screen that could go back, and the
+    // profile control is on that very page — so the way out was to change the
+    // profile you had just come to change.
     html += '<a href="/settings.html" data-tab="settings" data-i18n="nav.settings"' +
       (active === 'settings' ? ' class="active"' : '') + '>Settings</a>';
     nav.innerHTML = html;
