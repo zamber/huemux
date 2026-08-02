@@ -477,9 +477,11 @@ property of the environment and cannot be switched on by an expression.
 Token permissions are read-only by default; only `publish` gets
 `contents: write`.
 
-**Remaining:** the duplicate repository-level secrets are still in place as a
-fallback and should be deleted once a stable release has gone through the
-gated path.
+Proven on v0.0.2-alpha.21: the APK came out release-signed (so the
+environment-scoped keystore was readable from the job that names it), the
+published `SHA256SUMS.asc` verifies against the committed public key, and the
+alpha published unattended. The duplicate repository-level secrets have since
+been deleted, so the signing keys now exist in exactly one place on GitHub.
 
 ## R3 — Automated test gate — **deferred**
 
