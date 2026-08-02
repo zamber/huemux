@@ -1089,6 +1089,22 @@ els.grid.addEventListener('input', (e) => {
 
 els.stopStreamingBtn.addEventListener('click', () => {
   send({ type: 'stop' });
+  // Stopping the stream is not the same as stopping the capture, and on
+  // Android this button used to do only the first. The screen-capture service
+  // kept running with no stream to feed: the notification stayed up, the
+  // screen was still being mirrored, and the Sync tab — seeing no stream —
+  // showed "Start", so there was nothing left in the app that could stop it.
+  // The user had to go to Android's own recording indicator.
+  //
+  // Called directly rather than routed through the Sync page, which may not
+  // even be loaded under a lights-only profile. The bridge is reachable from
+  // any frame of the app; on desktop it simply is not there.
+  try {
+    const n = window.HueMuxNative || (window.top && window.top.HueMuxNative);
+    if (n && typeof n.stopCapture === 'function') n.stopCapture();
+  } catch (e) {
+    // Nothing to recover: the stream stop above has already been sent.
+  }
 });
 
 els.filterList.addEventListener('click', (e) => {

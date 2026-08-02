@@ -138,67 +138,44 @@ class ScreenCaptureService : Service() {
 
     /**
      * Starts recording, if capture is running. Returns null on success or a
-     * message for the UI. Recording is deliberately subordinate to capture: it
-     * needs the same projection, and it must never be able to interfere with
-     * the sync stream that projection exists for.
+     * message for the UI.
      *
-     * Two implementations, chosen by quality:
+     * There is one implementation. Recording encodes the frames already
+     * flowing to the colour engine ([FrameRecorder]), so it needs nothing from
+     * the system that screen sync has not already been granted.
      *
-     *  - CAPTURE encodes the frames already flowing to the colour engine
-     *    ([FrameRecorder]). No second virtual display, so it cannot fail for
-     *    want of one — which is how the first version failed on real hardware.
-     *  - NATIVE mirrors the display again at full resolution
-     *    ([ScreenRecorder]), which is the only way to record more detail than
-     *    the pipeline captures, and which some devices will refuse.
+     * A second mode used to exist, which mirrored the display again at its
+     * native resolution for a sharper video. It is gone because it cannot
+     * work: from Android 14 a MediaProjection permits exactly one
+     * VirtualDisplay, and asking for a second does not fail — it ends the
+     * projection. The device log showed the whole capture session dying 365ms
+     * after the request, with no error anywhere, which is precisely what that
+     * rule produces. Recording at full resolution is done by raising the
+     * capture resolution instead, which reaches the same encoder by a route
+     * the platform allows.
      */
     @Synchronized
-    fun startRecording(quality: ScreenRecorder.Quality): String? {
-        val p = projection ?: return "screen capture is not running"
-        if (frameRecorder?.isRecording == true || screenRecorder?.isRecording == true) {
-            return "already recording"
-        }
-        Mobile.logHost("record: start requested quality=${quality.name.lowercase()} capture=${capturedW}x$capturedH")
-
-        if (quality == ScreenRecorder.Quality.CAPTURE) {
-            if (capturedW <= 0 || capturedH <= 0) return "screen capture is not running"
-            val rec = frameRecorder ?: FrameRecorder(applicationContext).also { frameRecorder = it }
-            return rec.start(capturedW, capturedH)
-        }
-
-        val rec = screenRecorder ?: ScreenRecorder(applicationContext).also { screenRecorder = it }
-        val metrics = resources.displayMetrics
-        return rec.start(
-            p, quality,
-            capturedW, capturedH,
-            metrics.widthPixels.coerceAtLeast(1), metrics.heightPixels.coerceAtLeast(1),
-            metrics.densityDpi,
-        )
+    fun startRecording(): String? {
+        if (projection == null) return "screen capture is not running"
+        if (frameRecorder?.isRecording == true) return "already recording"
+        if (capturedW <= 0 || capturedH <= 0) return "screen capture is not running"
+        Mobile.logHost("record: start requested capture=${capturedW}x$capturedH")
+        val rec = frameRecorder ?: FrameRecorder(applicationContext).also { frameRecorder = it }
+        return rec.start(capturedW, capturedH)
     }
 
     @Synchronized
-    fun stopRecording(): String? {
-        if (frameRecorder?.isRecording == true) return frameRecorder?.stop()
-        if (screenRecorder?.isRecording == true) return screenRecorder?.stop()
-        return null
-    }
+    fun stopRecording(): String? = frameRecorder?.stop()
 
-    fun isRecording(): Boolean =
-        frameRecorder?.isRecording == true || screenRecorder?.isRecording == true
+    fun isRecording(): Boolean = frameRecorder?.isRecording == true
 
-    fun lastRecordingName(): String {
-        val f = frameRecorder?.lastOutput ?: ""
-        return if (f.isNotEmpty()) f else (screenRecorder?.lastOutput ?: "")
-    }
+    fun lastRecordingName(): String = frameRecorder?.lastOutput ?: ""
 
     /** Where the last recording went, in words, for the UI to show verbatim. */
-    fun lastRecordingLocation(): String {
-        val f = frameRecorder?.lastLocation ?: ""
-        return if (f.isNotEmpty()) f else (screenRecorder?.lastLocation ?: "")
-    }
+    fun lastRecordingLocation(): String = frameRecorder?.lastLocation ?: ""
 
     /** The last recording's URI, for the share sheet. */
-    fun lastRecordingUri(): android.net.Uri? =
-        frameRecorder?.lastUri ?: screenRecorder?.lastUri
+    fun lastRecordingUri(): android.net.Uri? = frameRecorder?.lastUri
 
     /**
      * A one-line summary for the diagnostics report. Everything about capture
@@ -216,8 +193,7 @@ class ScreenCaptureService : Service() {
         sb.append("recording             ")
         sb.append(
             when {
-                frameRecorder?.isRecording == true -> "frame encoder · " + (frameRecorder?.stats() ?: "")
-                screenRecorder?.isRecording == true -> "second display"
+                frameRecorder?.isRecording == true -> "recording · " + (frameRecorder?.stats() ?: "")
                 else -> "stopped"
             }
         )
@@ -344,12 +320,10 @@ class ScreenCaptureService : Service() {
         // away invisible in the gallery and undeletable from it.
         try {
             if (frameRecorder?.isRecording == true) frameRecorder?.stop()
-            if (screenRecorder?.isRecording == true) screenRecorder?.stop()
         } catch (e: Exception) {
             Log.w(TAG, "recorder stop during shutdown", e)
         }
         frameRecorder = null
-        screenRecorder = null
 
         // Tear the pipeline down on its own thread, for the same reason the
         // rebuild runs there: a frame callback may be in flight right now, and
@@ -380,7 +354,6 @@ class ScreenCaptureService : Service() {
 
     private var rgbScratch: ByteArray? = null
     private var frameRecorder: FrameRecorder? = null
-    private var screenRecorder: ScreenRecorder? = null
 
     companion object {
         /**
