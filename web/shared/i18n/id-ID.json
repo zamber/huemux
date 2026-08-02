@@ -140,7 +140,7 @@
     "listenHint": "127.0.0.1 menjaga HueMux hanya dapat diakses dari mesin ini. Apa pun yang lain mengeksposnya ke jaringan Anda — atur autentikasi di bawah jika Anda melakukan itu. Port 0 memilih port kosong pertama dari 7654.",
     "auth": "Autentikasi",
     "authHint": "Tiga kata yang mudah diingat. Koneksi dari mesin ini tidak pernah diminta.",
-    "tokenPlaceholder": "mis. otter.beacon.willow",
+    "tokenPlaceholder": "mis. otter.beacon.willow.cougar",
     "tokenSet": "(tidak berubah — ketik untuk ganti)",
     "generate": "Hasilkan",
     "tls": "TLS",

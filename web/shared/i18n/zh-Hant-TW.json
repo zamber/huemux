@@ -140,7 +140,7 @@
     "listenHint": "127.0.0.1 會使 HueMux 只能從此電腦存取。任何其他位址都會將其公開至您的網路 — 如果您這樣做，請在下方設定驗證。連接埠 0 會從 7654 選擇第一個可用連接埠。",
     "auth": "驗證",
     "authHint": "三個容易記住的單詞。此電腦的連線永遠不會要求此項。",
-    "tokenPlaceholder": "例如 otter.beacon.willow",
+    "tokenPlaceholder": "例如 otter.beacon.willow.cougar",
     "tokenSet": "（未變更 — 輸入以取代）",
     "generate": "產生",
     "tls": "TLS",

@@ -140,7 +140,7 @@
     "listenHint": "127.0.0.1 udržuje HueMux dostupný pouze z tohoto počítače. Jakákoli jiná adresa jej vystavuje vaší síti — pokud tak učiníte, nastavte ověřování níže. Port 0 vybere první volný port od 7654.",
     "auth": "Ověřování",
     "authHint": "Tři lehce zapamatovatelná slova. Připojení z tohoto počítače o něj nikdy nepožádáno.",
-    "tokenPlaceholder": "např. otter.beacon.willow",
+    "tokenPlaceholder": "např. otter.beacon.willow.cougar",
     "tokenSet": "(beze změn — zadejte pro výměnu)",
     "generate": "Vytvořit",
     "tls": "TLS",

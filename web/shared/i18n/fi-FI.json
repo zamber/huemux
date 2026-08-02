@@ -140,7 +140,7 @@
     "listenHint": "127.0.0.1 pitää HueMuxin saavutettavissa vain tältä koneelta. Mikä tahansa muu osoite paljastaa sen verkkoosi — aseta todentaminen alla, jos teet niin. Portti 0 valitsee ensimmäisen vapaan portin 7654:sta.",
     "auth": "Todennus",
     "authHint": "Kolme helposti muistettavaa sanaa. Yhteydet tältä koneelta eivät koskaan kysy sitä.",
-    "tokenPlaceholder": "esim. otter.beacon.willow",
+    "tokenPlaceholder": "esim. otter.beacon.willow.cougar",
     "tokenSet": "(muuttumaton — kirjoita korvataksesi)",
     "generate": "Luo",
     "tls": "TLS",

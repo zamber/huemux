@@ -140,7 +140,7 @@
     "listenHint": "127.0.0.1 使 HueMux 只能从此计算机访问。任何其他地址都会将其暴露给网络 — 如果这样做，请在下面设置身份验证。端口 0 从 7654 开始选择第一个可用端口。",
     "auth": "身份验证",
     "authHint": "三个容易记住的单词。来自此计算机的连接永远不会被要求。",
-    "tokenPlaceholder": "例如: otter.beacon.willow",
+    "tokenPlaceholder": "例如: otter.beacon.willow.cougar",
     "tokenSet": "(未更改 — 输入以替换)",
     "generate": "生成",
     "tls": "TLS",

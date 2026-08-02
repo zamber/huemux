@@ -140,7 +140,7 @@
     "listenHint": "127.0.0.1 torna o HueMux acessível apenas deste computador. Qualquer outra coisa o expõe à sua rede — configure autenticação abaixo se fizer isso. Porta 0 escolhe a primeira porta livre a partir de 7654.",
     "auth": "Autenticação",
     "authHint": "Três palavras fáceis de lembrar. Conexões deste computador nunca as solicitam.",
-    "tokenPlaceholder": "p. ex. otter.beacon.willow",
+    "tokenPlaceholder": "p. ex. otter.beacon.willow.cougar",
     "tokenSet": "(inalterado — digite para substituir)",
     "generate": "Gerar",
     "tls": "TLS",

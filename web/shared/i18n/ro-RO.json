@@ -140,7 +140,7 @@
     "listenHint": "127.0.0.1 păstrează HueMux accesibil doar din acest calculator. Orice altă adresă o expune rețelei dvs — setați autentificarea mai jos dacă faceți asta. Portul 0 alege primul port liber de la 7654.",
     "auth": "Autentificare",
     "authHint": "Trei cuvinte ușor de reținut. Conexiunile de pe acest calculator nu vi se cer niciodată.",
-    "tokenPlaceholder": "de ex. otter.beacon.willow",
+    "tokenPlaceholder": "de ex. otter.beacon.willow.cougar",
     "tokenSet": "(neschimbat — tastați pentru a înlocui)",
     "generate": "Generează",
     "tls": "TLS",
