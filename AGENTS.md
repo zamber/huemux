@@ -99,6 +99,58 @@ Run each server instance on a known port and confirm the URL it printed. Two
 test servers will silently take 7654 and 7655, and curling the wrong one
 produces confident, wrong conclusions.
 
+## UX rules
+
+These are settled decisions, not preferences to relitigate. They come from the
+person who uses this on a phone every day; where a rule breaks a platform
+convention, that is deliberate and the reason is given.
+
+**Contrast carries meaning, colour does not.** State is shown with weight,
+fill, outline and opacity — a selected row is full-strength ink and 600 weight
+against muted ink, an active toggle is filled rather than tinted, a disabled
+control is dimmed. `--accent` exists but is decoration, never the only thing
+distinguishing two states. Anything that reads as "the blue one is on" fails
+in the simple theme, in bright sun, and for anyone colour-blind.
+
+**Outlines over fills.** Controls are defined by their border. `.hm-dropdown
+> summary` is a 2px ink outline; buttons are outlined until they represent a
+running state, at which point they invert to a solid ink fill. This is what
+keeps the UI legible against the near-black surface.
+
+**Fira Code everywhere, including form controls.** It is self-hosted in
+`web/shared/fonts/` — no CDN, since this runs on a LAN with no guaranteed
+internet. Browsers do not inherit `font-family` into `button`/`input`/`select`,
+so `shared/theme.css` sets `font-family: inherit` on them explicitly; a new
+control that looks subtly wrong is almost always missing that.
+
+**Dropdowns anchor to their trigger — never a bottom sheet.** Use
+`shared/dropdown.{css,js}` (`.hm-dropdown` / `.hm-dropdown-panel` /
+`.hm-dropdown-item`). On a phone the panel is full-bleed with 44px+ rows like a
+sheet, but it opens directly beneath the control that owns it and dismisses on
+an outside tap, Escape, or picking an item.
+
+This is a deliberate break with the mobile convention, and the bottom sheet it
+replaced is why: it appeared at the opposite end of the screen from the finger
+that opened it, so it was easy to miss entirely; it implied a modality it never
+had; and it sat beneath the fixed bottom nav, which silently ate the last rows
+of a long list. Phones are large enough that the top of the screen is
+reachable, and keeping a menu next to its control is worth more than the
+shorter thumb travel.
+
+Native `<select>` elements are the exception and stay native — the OS picker is
+centred, unobscured, and accessible for free. The rule is about menus this code
+draws itself.
+
+**The bottom nav is fixed and everything must clear it.** `shared/header.css`
+puts `padding-bottom` on `body` rather than on each page's container, precisely
+so a new page cannot forget. Anything positioned near the bottom of the
+viewport needs to sit above `z-index: 40` or account for the bar's height.
+
+**Two independent settings get two controls.** Palette (system/light/dark) and
+visual effects (on/off) were once a single five-state cycle behind one button;
+it read as a random loop and took five taps to undo one. If two things are
+orthogonal, model them orthogonally in storage, in the DOM, and in the UI.
+
 ## Conventions worth not rediscovering
 
 - `internal/config` owns feature data (bridge credentials, per-area tuning,

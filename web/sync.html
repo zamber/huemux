@@ -111,6 +111,47 @@
       <label><input type="checkbox" data-setting="letterbox" data-type="bool"> <span data-i18n="sync.letterbox">Ignore black bars</span></label>
     </div>
 
+    <!-- Device capture. Hidden unless the native bridge is present: these
+         control Android's MediaProjection directly and mean nothing in a
+         browser, where getDisplayMedia owns the resolution. Unhidden by
+         app.js once window.HueMuxNative is confirmed. -->
+    <section id="device-capture" hidden>
+      <h2 data-i18n="sync.deviceCapture">This device</h2>
+
+      <div class="control">
+        <label>
+          <span data-i18n="sync.captureScale">Capture resolution</span>
+          (<span id="capture-scale-readout"></span>)
+        </label>
+        <input type="range" id="capture-scale" min="5" max="100" step="5">
+        <p class="hint" data-i18n="sync.captureScaleHint">
+          How much of the screen's real resolution to mirror. The colour
+          pipeline reduces everything to a 64×36 grid, so higher buys nothing
+          for sync itself — raise it only when recording, and put it back
+          after: a bigger mirror costs battery continuously.
+        </p>
+      </div>
+
+      <div class="control">
+        <label data-i18n="sync.recording">Screen recording</label>
+        <select id="record-quality">
+          <option value="capture" data-i18n="sync.recordQualityCapture">Match capture — cheap</option>
+          <option value="native" data-i18n="sync.recordQualityNative">Full resolution — better video</option>
+        </select>
+        <div class="record-row">
+          <button type="button" id="record-btn" data-i18n="sync.recordStart">Start recording</button>
+          <span id="record-status" class="hint"></span>
+        </div>
+        <p class="hint" data-i18n="sync.recordingHint">
+          Records while sync runs, to Movies/HueMux. Recording always needs a
+          second screen mirror of its own — Android gives a mirror exactly one
+          destination, and this one's is already the colour pipeline. "Match
+          capture" reuses the size set above; "full resolution" is a second
+          full-size encode, which not every device will agree to.
+        </p>
+      </div>
+    </section>
+
     <details>
       <summary data-i18n="sync.advanced">Advanced</summary>
 

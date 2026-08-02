@@ -18,6 +18,7 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
 import com.huemux.mobile.Mobile
+import org.json.JSONObject
 
 /**
  * Hosts the HueMux UI.
@@ -120,6 +121,13 @@ class MainActivity : AppCompatActivity() {
                 )
             }
         }
+
+        // The capture scale lives in a @Volatile companion field on the
+        // service, which is process state and resets to its default every cold
+        // start. Restore the user's choice here, before anything can start a
+        // capture with the wrong one.
+        ScreenCaptureService.captureScale =
+            prefs().getFloat(PREF_SCALE, ScreenCaptureService.captureScale).coerceIn(0.05f, 1.0f)
 
         acquireMulticastLock()
         startServer()
@@ -247,9 +255,100 @@ class MainActivity : AppCompatActivity() {
                 }
             }
         }
+
+        // --- capture quality and recording -------------------------------
+        //
+        // These return JSON strings rather than posting results back through
+        // window.__huemux* callbacks, because unlike startCapture they are all
+        // answerable immediately: no consent dialog, no activity result. The
+        // page treats each one as a synchronous call.
+
+        /**
+         * Everything the page needs to render the capture/recording controls:
+         * the requested scale, the size that scale actually produced, the
+         * display's own size, and whether a recording is running.
+         */
+        @JavascriptInterface
+        fun captureState(): String {
+            val svc = ScreenCaptureService.instance
+            val m = resources.displayMetrics
+            return JSONObject().apply {
+                put("scale", ScreenCaptureService.captureScale.toDouble())
+                put("capturing", svc != null)
+                put("captureW", ScreenCaptureService.capturedW)
+                put("captureH", ScreenCaptureService.capturedH)
+                put("displayW", m.widthPixels)
+                put("displayH", m.heightPixels)
+                put("capLongEdge", ScreenCaptureService.CAP_LONG_EDGE)
+                put("recording", svc?.isRecording() == true)
+                put("quality", recordingQuality().name.lowercase())
+                put("lastRecording", svc?.lastRecordingName() ?: "")
+            }.toString()
+        }
+
+        /**
+         * Sets the fraction of the display resolution to capture. Applied to a
+         * running capture immediately — waiting for the next start would make
+         * the control look broken while you drag it.
+         */
+        @JavascriptInterface
+        fun setCaptureScale(scale: Double) {
+            val v = scale.toFloat().coerceIn(0.05f, 1.0f)
+            ScreenCaptureService.captureScale = v
+            prefs().edit().putFloat(PREF_SCALE, v).apply()
+            ScreenCaptureService.requestReconfigure(this@MainActivity)
+        }
+
+        /** Remembers which recording quality the UI last chose. */
+        @JavascriptInterface
+        fun setRecordingQuality(quality: String) {
+            val q = parseQuality(quality)
+            prefs().edit().putString(PREF_QUALITY, q.name).apply()
+        }
+
+        @JavascriptInterface
+        fun startRecording(quality: String): String {
+            val q = parseQuality(quality)
+            prefs().edit().putString(PREF_QUALITY, q.name).apply()
+            val svc = ScreenCaptureService.instance
+                ?: return result(false, "start screen sync first — recording mirrors the same capture")
+            val err = svc.startRecording(q)
+            return result(err == null, err ?: "")
+        }
+
+        @JavascriptInterface
+        fun stopRecording(): String {
+            val svc = ScreenCaptureService.instance ?: return result(false, "not recording")
+            val err = svc.stopRecording()
+            return result(err == null, err ?: "", svc.lastRecordingName())
+        }
     }
+
+    private fun result(ok: Boolean, error: String, name: String = ""): String =
+        JSONObject().apply {
+            put("ok", ok)
+            put("error", error)
+            put("name", name)
+        }.toString()
+
+    private fun prefs() = getSharedPreferences(PREFS, MODE_PRIVATE)
+
+    private fun recordingQuality(): ScreenRecorder.Quality =
+        parseQuality(prefs().getString(PREF_QUALITY, null))
+
+    /**
+     * Unknown values fall back to CAPTURE rather than throwing. The default
+     * matters: it is the cheap mode that reuses the size the pipeline already
+     * asked for, and the one that cannot fail for want of encoder headroom.
+     */
+    private fun parseQuality(s: String?): ScreenRecorder.Quality =
+        if (s.equals("native", ignoreCase = true)) ScreenRecorder.Quality.NATIVE
+        else ScreenRecorder.Quality.CAPTURE
 
     private companion object {
         const val TAG = "HueMux"
+        const val PREFS = "huemux"
+        const val PREF_SCALE = "captureScale"
+        const val PREF_QUALITY = "recordingQuality"
     }
 }

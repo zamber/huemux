@@ -9,6 +9,12 @@ const els = {
   startBtn: document.getElementById('start-btn'),
   stopBtn: document.getElementById('stop-btn'),
   changeSourceBtn: document.getElementById('change-source-btn'),
+  deviceCapture: document.getElementById('device-capture'),
+  captureScale: document.getElementById('capture-scale'),
+  captureScaleReadout: document.getElementById('capture-scale-readout'),
+  recordQuality: document.getElementById('record-quality'),
+  recordBtn: document.getElementById('record-btn'),
+  recordStatus: document.getElementById('record-status'),
   areaWarning: document.getElementById('area-warning'),
   preview: document.getElementById('preview'),
   liveBadge: document.getElementById('live-badge'),
@@ -290,6 +296,9 @@ function renderSyncButtons() {
   els.changeSourceBtn.hidden = !streaming;
   // Changing source is meaningless where the OS picks it for us.
   if (nativeCapture) els.changeSourceBtn.hidden = true;
+  // Starting or stopping sync is also what makes recording possible or not,
+  // and what gives the effective capture size a value to show.
+  refreshCaptureState();
 }
 
 // True when a stream is running and this client is the one feeding it — i.e.
@@ -683,6 +692,130 @@ document.querySelectorAll('[data-preset-reactivity]').forEach((btn) => {
     slider.dispatchEvent(new Event('input'));
   });
 });
+
+// --- device capture: resolution and recording -----------------------------
+//
+// Android only. Both controls talk straight to MainActivity's bridge rather
+// than through the Go server, because both are properties of *this device's*
+// screen mirror — a second client connected to the same server has its own,
+// and the server has no business holding one device's capture preferences.
+//
+// Every method here returns a JSON string synchronously (see NativeBridge):
+// none of them needs a consent dialog or an activity result, unlike
+// startCapture, so none of them needs the callback handshake that one has.
+
+function nativeBridge() {
+  const n = window.HueMuxNative;
+  return (n && typeof n.captureState === 'function') ? n : null;
+}
+
+function readCaptureState() {
+  const n = nativeBridge();
+  if (!n) return null;
+  try {
+    return JSON.parse(n.captureState());
+  } catch (e) {
+    console.warn('captureState failed', e);
+    return null;
+  }
+}
+
+// The effective size is worth showing rather than just the percentage: the
+// long edge is capped, so past a certain point dragging the slider changes the
+// number and nothing else, and without the size on screen that looks like the
+// control is broken.
+function renderCaptureState(st) {
+  if (!st) return;
+  els.captureScale.value = String(Math.round(st.scale * 100));
+  const pct = Math.round(st.scale * 100) + '%';
+  const size = st.capturing && st.captureW
+    ? `${pct} · ${st.captureW}x${st.captureH}`
+    : `${pct} · ${HueMuxI18n.t('sync.captureWhenRunning')}`;
+  els.captureScaleReadout.textContent = size;
+
+  els.recordQuality.value = st.quality === 'native' ? 'native' : 'capture';
+  els.recordBtn.classList.toggle('recording', !!st.recording);
+  els.recordBtn.textContent = HueMuxI18n.t(st.recording ? 'sync.recordStop' : 'sync.recordStart');
+  // Recording mirrors the capture projection, so there is nothing to record
+  // until sync is running. Saying so on the disabled control beats letting
+  // someone tap it and read an error.
+  els.recordBtn.disabled = !st.capturing && !st.recording;
+  // Only ever *replaces* the status line, never blanks it. This runs on every
+  // status push, and an error the user is still reading ("this device would
+  // not give a second screen mirror") must not be wiped a second later by a
+  // routine refresh. The click handler clears it deliberately instead.
+  if (!st.recording && !st.capturing) {
+    els.recordStatus.textContent = HueMuxI18n.t('sync.recordNeedsSync');
+  } else if (st.recording) {
+    els.recordStatus.textContent = HueMuxI18n.t('sync.recordInProgress');
+  }
+}
+
+function refreshCaptureState() {
+  const st = readCaptureState();
+  if (st) renderCaptureState(st);
+}
+
+if (nativeBridge()) {
+  els.deviceCapture.hidden = false;
+  refreshCaptureState();
+
+  els.captureScale.addEventListener('input', () => {
+    // Live, not on release: this rebuilds the capture display each time, which
+    // is cheap enough (one ImageReader plus one VirtualDisplay) and makes the
+    // effective-size readout follow the finger.
+    const n = nativeBridge();
+    if (!n) return;
+    try {
+      n.setCaptureScale(Number(els.captureScale.value) / 100);
+    } catch (e) {
+      console.warn('setCaptureScale failed', e);
+    }
+    // The service resizes asynchronously; ask again once it has.
+    setTimeout(refreshCaptureState, 150);
+    refreshCaptureState();
+  });
+
+  els.recordQuality.addEventListener('change', () => {
+    const n = nativeBridge();
+    if (!n) return;
+    try {
+      n.setRecordingQuality(els.recordQuality.value);
+    } catch (e) {
+      console.warn('setRecordingQuality failed', e);
+    }
+  });
+
+  els.recordBtn.addEventListener('click', () => {
+    const n = nativeBridge();
+    if (!n) return;
+    const st = readCaptureState();
+    els.recordStatus.textContent = '';
+    let res;
+    try {
+      res = JSON.parse(st && st.recording ? n.stopRecording() : n.startRecording(els.recordQuality.value));
+    } catch (e) {
+      els.recordStatus.textContent = String(e);
+      return;
+    }
+    if (!res.ok) {
+      // The native side already phrases these for a person — a device that
+      // will not give a second mirror, an encode size it will not accept.
+      // Repeating it verbatim beats inventing a vaguer one here.
+      els.recordStatus.textContent = res.error;
+    } else if (res.name) {
+      els.recordStatus.textContent = HueMuxI18n.t('sync.recordSaved', { name: res.name });
+    } else {
+      els.recordStatus.textContent = '';
+    }
+    refreshCaptureState();
+  });
+
+  // Capture can start or stop without this block being involved (the Start
+  // button, the system's own stop, the service being reclaimed), and each
+  // changes what these controls should say.
+  document.addEventListener('huemux:langchange', refreshCaptureState);
+}
 
 // Before anything asynchronous: the three sync buttons all start visible
 // because none of them has `hidden` set in the markup, and the first thing
