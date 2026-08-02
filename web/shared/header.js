@@ -68,7 +68,10 @@ class HueMuxHeader extends HTMLElement {
         // and a direct link to lights.html would navigate the top window out
         // of the shell and tear down every frame in it. data-tab lets the
         // click be intercepted into a tab switch when that tab exists.
-        '<a class="ls-brand" href="/" data-tab="lights" data-i18n="app.name">HueMux</a>' +
+        '<a class="ls-brand" href="/" data-tab="lights">' +
+          '<img class="ls-brand-mark" id="ls-brand-mark" alt="" width="22" height="22">' +
+          '<span data-i18n="app.name">HueMux</span>' +
+        '</a>' +
         '<nav class="ls-nav"></nav>' +
         '<div class="ls-header-actions">' +
           '<button type="button" id="ls-theme-btn" class="ls-icon-btn"></button>' +
@@ -77,6 +80,7 @@ class HueMuxHeader extends HTMLElement {
         '</div>' +
       '</div>';
 
+    this._brandMark = this.querySelector('#ls-brand-mark');
     this._themeBtn = this.querySelector('#ls-theme-btn');
     this._simpleBtn = this.querySelector('#ls-simple-btn');
     this._langBtn = this.querySelector('#ls-lang-btn');
@@ -137,6 +141,14 @@ class HueMuxHeader extends HTMLElement {
     const titleKeys = {
       system: 'theme.titleSystem', light: 'theme.titleLight', dark: 'theme.titleDark',
     };
+    // The mark's convergence node is white on dark and near-black on light,
+    // so it needs the resolved palette rather than the chosen one — "system"
+    // has to become an actual colour before an image can be picked.
+    if (this._brandMark) {
+      const dark = !has || HueMuxTheme.resolved() === 'dark';
+      this._brandMark.src = dark ? '/shared/icon-mark.svg' : '/shared/icon-mark-light.svg';
+    }
+
     this._themeBtn.textContent = icons[choice] || icons.system;
     const title = HueMuxI18n.t(titleKeys[choice] || titleKeys.system);
     this._themeBtn.setAttribute('title', title);

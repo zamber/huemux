@@ -10,6 +10,9 @@ huemux-header { display: block; }
 }
 
 .ls-brand {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
   font-weight: 600;
   font-size: 1rem;
   color: var(--ink);
@@ -123,4 +126,14 @@ huemux-header { display: block; }
   body {
     padding-bottom: calc(4.2rem + env(safe-area-inset-bottom, 0px));
   }
+}
+
+/* The mark sits at cap height beside the wordmark. Fixed pixel size rather
+   than em: it is a drawing with its own optical weight, and scaling it with
+   the font makes it either thin or overbearing at the extremes. */
+.ls-brand-mark {
+  display: block;
+  width: 22px;
+  height: 22px;
+  flex: 0 0 auto;
 }
