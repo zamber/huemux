@@ -29,8 +29,8 @@ reviewable commit or small series, and to leave `main` working.
 | 18 | `LICENSE` (GPL-3.0-or-later) + Android signing | **done** |
 | 19 | Obtainium — README line, works with current CI | **done — verify on alpha.20** |
 | **R1** | **Release infrastructure — artifact signing, key custody** | **done (Windows/macOS gated on certificates)** |
-| **R2** | **Release infrastructure — workflow split + `release` environment** | **not started** |
-| **R3** | **Release infrastructure — automated test gate** | **not started** |
+| **R2** | **Release infrastructure — workflow split + gated environments** | **done** |
+| **R3** | **Release infrastructure — automated test gate** | **deferred: revisit when leaving 0.0.x** |
 | C1 | Attribution + About screen | **not started** |
 | C2 | IzzyOnDroid | **not started** |
 | C3 | Scoop, Homebrew tap, AUR | **not started** |
@@ -453,22 +453,45 @@ Key custody: keys live outside the repo at `~/.huemux-signing/` (0700, files
 for the copy that does not depend on an account. The Android keystore is
 unrecoverable if lost, so one copy is not a backup.
 
-## R2 — Workflow split and the `release` environment
+## R2 — Workflow split and gated environments — **done**
 
-Split into `build` (no secrets) → `sign` → `publish`, with publish gated on a
-GitHub Environment carrying a required reviewer. Two properties worth having
-before there are several channels to publish to:
+Four jobs: `build` (no secrets) and `android` (keystore) run in parallel,
+`sign` adds the GPG signature, `publish` creates the release.
 
-- No credential is reachable from a pull request, including a fork's.
-- A mistyped tag waits for a human instead of shipping.
+Signing secrets moved from repository scope into a `signing` environment, so
+only a job naming it can read them. That was not theoretical: `android.yml` has
+a `pull_request` trigger, and a branch PR could previously have read the app
+signing key.
 
-Also key each channel's target off the existing pre-release test, so an alpha
-can never reach a stable channel.
+The approval gate is keyed to the tag, because alphas are the development loop
+here and must not need a human each time:
 
-**Done when** a fork's PR cannot read a signing secret, and a tag push pauses
-for approval before anything leaves the repo.
+| Tag | Environment | Behaviour |
+|---|---|---|
+| `v0.1.0-alpha.3` | `release-prerelease` | publishes unattended |
+| `v0.1.0` | `release-stable` | waits for a reviewer |
 
-## R3 — Automated test gate
+Two environments rather than one condition, because a required reviewer is a
+property of the environment and cannot be switched on by an expression.
+
+Token permissions are read-only by default; only `publish` gets
+`contents: write`.
+
+**Remaining:** the duplicate repository-level secrets are still in place as a
+fallback and should be deleted once a stable release has gone through the
+gated path.
+
+## R3 — Automated test gate — **deferred**
+
+Deliberately parked while the project is 0.0.x and shaped by fast user
+feedback: the loop is a device in the maintainer's hand, and a test suite
+written against a UI that is still changing weekly would mostly measure churn.
+Revisit on leaving 0.0.x, when the shape has settled and regressions start
+costing more than the tests would.
+
+The analysis below stands and is what to pick up then.
+
+### What it should cover
 
 Currently the release runs `go vet` and `go test`, which covers the Go core and
 nothing else. The parts that have broken most often in this project — the
