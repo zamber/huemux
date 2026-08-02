@@ -1,0 +1,87 @@
+# Builds the Linux desktop build as an AppImage and publishes it to a
+# "continuous" GitHub release — the AppImage community's convention for a
+# stable, always-latest download URL:
+#
+#   https://github.com/zamber/huemux/releases/download/continuous/huemux-x86_64.AppImage
+#
+# The URL never changes between builds; the asset under it does. Combined
+# with the embedded update information and the .zsync file uploaded
+# alongside, `./huemux-x86_64.AppImage --appimage-update` (or the
+# AppImageUpdate tool) can update the image in place without a browser.
+#
+# Triggered on every push to main, not on tags: every release is a tag on a
+# main commit, and the branch push precedes the tag, so tagging would only
+# add duplicate runs. Building on main also keeps the channel fresh between
+# releases.
+name: AppImage
+
+on:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: write
+
+jobs:
+  appimage:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        # git describe needs the tags for the version string.
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-go@v7
+        with:
+          go-version-file: go.mod
+
+      - name: Build desktop binary
+        run: make dist-desktop
+
+      - name: Install appimagetool (and zsyncmake for the update metadata)
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y zsync
+          # appimagetool is itself an AppImage; --appimage-extract-and-run
+          # runs it without FUSE, which GitHub-hosted runners lack.
+          curl -sL -o "$RUNNER_TEMP/appimagetool" \
+            https://github.com/AppImage/appimagetool/releases/download/continuous/appimagetool-x86_64.AppImage
+          chmod +x "$RUNNER_TEMP/appimagetool"
+
+      - name: Assemble AppDir
+        run: |
+          mkdir -p AppDir/usr/bin
+          cp dist/huemux-desktop-linux-amd64 AppDir/usr/bin/huemux-desktop
+          cp packaging/appimage/AppRun AppDir/AppRun
+          cp packaging/appimage/huemux.desktop AppDir/huemux.desktop
+          # The store icon is the canonical 512x512 render of the same
+          # geometry every other format comes from (scripts/gen-icon.py).
+          cp fastlane/metadata/android/en-US/images/icon.png AppDir/huemux.png
+
+      - name: Build AppImage
+        run: |
+          # --file-url makes appimagetool emit the .zsync file alongside the
+          # AppImage (it runs zsyncmake internally), with the URL the update
+          # client will fetch deltas from baked in.
+          "$RUNNER_TEMP/appimagetool" --appimage-extract-and-run \
+            --no-appstream \
+            --updateinformation "gh-releases-zsync|zamber|huemux|continuous|huemux-x86_64.AppImage" \
+            --file-url "https://github.com/zamber/huemux/releases/download/continuous/huemux-x86_64.AppImage" \
+            AppDir huemux-x86_64.AppImage
+
+      - name: Ensure continuous release exists
+        run: |
+          gh release view continuous >/dev/null 2>&1 || \
+            gh release create continuous \
+              --title "Continuous AppImage builds" \
+              --notes "The latest AppImage, always at the same URL. Update in place with: ./huemux-x86_64.AppImage --appimage-update"
+        env:
+          GH_TOKEN: ${{ github.token }}
+
+      - name: Publish to continuous release
+        run: |
+          gh release upload continuous --clobber \
+            huemux-x86_64.AppImage huemux-x86_64.AppImage.zsync
+        env:
+          GH_TOKEN: ${{ github.token }}

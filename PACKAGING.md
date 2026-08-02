@@ -249,30 +249,55 @@ wasted review-queue time otherwise.
 
 ## AppImage
 
-Simpler than Flatpak — no sandboxing/permission model, just a portable,
-self-mounting executable. Given the binary is already fully static:
+A portable, self-mounting executable — no sandbox/permission model, no
+install step, and cheap to produce because the binary is fully static
+(the only thing it fetches at first run is Electron itself, into the user's
+cache, exactly as the tarball does).
 
-1. Build an `AppDir` (a plain directory tree):
-   ```
-   HueMux.AppDir/
-     AppRun -> usr/bin/huemux-desktop   # symlink, or a tiny shell shim
-     huemux-desktop.desktop
-     huemux-desktop.png
-     usr/bin/huemux-desktop
-   ```
-2. Run `appimagetool HueMux.AppDir HueMux-x86_64.AppImage` (or
-   [`linuxdeploy`](https://github.com/linuxdeploy/linuxdeploy) if you want
-   its extra validation/desktop-integration helpers — its library-bundling
-   feature specifically isn't needed here since there are no dynamic deps
-   to bundle).
-3. Ship the resulting single file as another release asset; users
-   `chmod +x` and run it directly, no install step.
+**Built and published automatically** by `.github/workflows/appimage.yml`
+on every push to `main`. The AppDir layout lives in the repo at
+`packaging/appimage/` (AppRun shim + `huemux.desktop`; the icon is the
+same 512px render used by the store listing). The workflow:
 
-Same `.desktop`/icon gap as Flatpak applies here (one pair of assets serves
-both targets). This is the lowest-effort Linux packaging option of the
-three (formula/Flatpak/AppImage) — reasonable first thing to automate in
-`release.yml` on `ubuntu-latest` (`appimagetool` is a single downloadable
-binary, no special runner needed) before tackling Flatpak/Homebrew.
+1. builds `dist/huemux-desktop-linux-amd64` via `make dist-desktop`;
+2. runs `appimagetool` (downloaded, run with `--appimage-extract-and-run`
+   since runners lack FUSE) with the update-information string and
+   `--file-url` baked in, which also emits the `.zsync` delta file;
+3. uploads both to the **`continuous` release** (created on first run).
+
+### The continuous channel
+
+The AppImage community's convention for "always the latest, always the
+same URL":
+
+```
+https://github.com/zamber/huemux/releases/download/continuous/huemux-x86_64.AppImage
+```
+
+The asset under that URL is replaced on every build (`gh release upload
+--clobber`), so the URL never changes while its contents track `main`.
+The embedded update information (`gh-releases-zsync|zamber|huemux|
+continuous|huemux-x86_64.AppImage`) plus the uploaded `.zsync` file means
+the image can update itself in place:
+
+```sh
+./huemux-x86_64.AppImage --appimage-update   # or the AppImageUpdate GUI
+```
+
+Triggered on `main` pushes rather than tags deliberately: every release is
+a tag on a main commit, and the branch push precedes the tag, so gating on
+tags would only add duplicate runs — while building on main keeps the
+channel fresh even between releases.
+
+The desktop shell needs a display at runtime; the AppImage itself does not
+need FUSE (the runtime falls back to `--appimage-extract-and-run`), so it
+runs on any modern distro and even in containers with a display.
+
+Not on the versioned releases by design — the versioned release already
+carries the plain `huemux-desktop-linux-amd64` tarball-style binary, and
+the channel is what Linux users should use for the desktop build. If a
+versioned AppImage is ever wanted (e.g. for AppImageHub ingestion), it is
+a two-line addition to `release.yml`.
 
 ## Release artifact signing (GPG)
 

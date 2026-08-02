@@ -1,0 +1,9 @@
+[Desktop Entry]
+Type=Application
+Name=HueMux
+Comment=Screen-synced lights for Philips Hue
+Exec=huemux-desktop
+Icon=huemux
+Terminal=false
+Categories=Utility;AudioVideo;
+StartupWMClass=huemux

@@ -1,0 +1,9 @@
+#!/bin/sh
+# AppImage entry point. The AppImage runtime executes this instead of
+# mounting/booting anything itself — it just has to find the binary inside
+# $APPDIR. Standard pattern: resolve the script's real location (the AppImage
+# is mounted elsewhere by FUSE, so $0 is not reliable) and exec the binary
+# from the layout below it.
+SELF=$(readlink -f "$0")
+HERE=${SELF%/*}
+exec "$HERE/usr/bin/huemux-desktop" "$@"
