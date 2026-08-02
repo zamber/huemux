@@ -50,6 +50,13 @@ jobs:
       - name: Third-party licences are current
         run: scripts/gen-third-party-licenses.sh --check
 
+      # Translations are machine-produced, so the failures worth guarding are
+      # the mechanical ones: a missing key renders as a raw key path, a mangled
+      # {placeholder} is a substitution that silently never happens, and a bidi
+      # control character is invisible in an editor while corrupting layout.
+      - name: Translations are structurally sound
+        run: scripts/check-i18n.py
+
       - name: Cross-compile for android/arm64
         run: |
           # No NDK needed for this — it only proves the Go side has no
