@@ -226,23 +226,29 @@ build**, rather than building from source on its own infrastructure.
 
 **Ready (as of 2026-08-02):** licence, signed releases with a stable key,
 an incrementing `versionCode`, a real launcher icon, the 512x512
-`icon.png`, and listing text in English and Polish.
+`icon.png`, listing text in English and Polish, and screenshots in
+`fastlane/metadata/android/en-US/images/phoneScreenshots/` (taken by the
+user on-device; the earlier candidates showed the bridge's LAN address).
 
-**Remaining before submission:** screenshots in
-`fastlane/metadata/android/{en-US,pl}/images/phoneScreenshots/`. The user
-takes fresh ones (the earlier candidates showed the bridge's LAN address,
-and the repo is public). Guidance is in `fastlane/README.md`.
+**Submission location (updated 2026-08-02):** the old
+<https://gitlab.com/IzzyOnDroid/repo> is **archived**; app inclusion
+requests now go to the issue tracker at
+<https://codeberg.org/IzzyOnDroid/repodata/issues> — template "App
+Inclusion Request" (`app-inclusion-request.yaml`). Fields: source code
+URL, licence, categories, summary/description, CLI build instructions,
+and an AI-assistance declaration (the project is Claude-Code-built —
+disclose it, as the app's own tests and release history attest).
 
-**To submit**, open a request at
-<https://gitlab.com/IzzyOnDroid/repo/-/issues> with:
+**Reviewer checklist** (what they check against the repo):
+- `short_description.txt` under 80 chars — currently 73 ✓
+- sensible `full_description.txt`, properly proportioned listing ✓
+- releases tagged with names matching versionName or versionCode ✓
+- a developer-attached `.apk` on the most recent release, under 30 MB —
+  currently 15.7 MB ✓
 
-- the repository URL,
-- confirmation the app is FOSS with no proprietary dependencies,
-- the APK asset naming pattern from the releases page.
-
-They then track GitHub releases automatically. Their scanner also reports
-non-free trackers and libraries; HueMux has none, and it is worth keeping that
-true — an analytics SDK would be flagged publicly on the listing.
+Their scanner also reports non-free trackers and libraries; HueMux has
+none, and it is worth keeping that true — an analytics SDK would be
+flagged publicly on the listing.
 
 Once accepted, users add the IzzyOnDroid repo in their F-Droid client and
 HueMux updates like any other app.
