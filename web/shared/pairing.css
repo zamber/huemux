@@ -12,7 +12,7 @@ huemux-pairing {
      card and the manual-IP field touching both sides. */
   margin: 2rem auto;
   padding: 0 1rem;
-  text-align: left;
+  text-align: start;
   box-sizing: border-box;
 }
 huemux-pairing[hidden] { display: none; }

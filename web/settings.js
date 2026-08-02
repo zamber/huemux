@@ -355,3 +355,39 @@ about.btn.addEventListener('click', () => {
       about.text.hidden = false;
     });
 });
+
+// ---------- language and direction ----------
+
+const langEls = {
+  lang: document.getElementById('set-lang'),
+  dir: document.getElementById('set-dir'),
+};
+
+function renderLangOptions() {
+  const sys = document.createElement('option');
+  sys.value = '';
+  sys.textContent = t('settings.languageSystem', 'System');
+  langEls.lang.replaceChildren(sys);
+  for (const loc of HueMuxI18n.LOCALES) {
+    const o = document.createElement('option');
+    o.value = loc.tag;
+    // Its own name, not an English one — see the LOCALES comment in i18n.js.
+    o.textContent = loc.name;
+    langEls.lang.appendChild(o);
+  }
+  langEls.lang.value = HueMuxI18n.current() || '';
+  langEls.dir.value = HueMuxI18n.dirOverride() || '';
+}
+
+langEls.lang.addEventListener('change', () => {
+  HueMuxI18n.setLang(langEls.lang.value || 'system');
+});
+
+langEls.dir.addEventListener('change', () => {
+  HueMuxI18n.setDirOverride(langEls.dir.value || null);
+});
+
+// Re-rendered on language change so "System" is itself translated, and so the
+// selection survives a change made from another frame of the shell.
+document.addEventListener('huemux:langchange', renderLangOptions);
+renderLangOptions();

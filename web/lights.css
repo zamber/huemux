@@ -9,7 +9,7 @@ body { margin: 0; }
 
 .dot {
   width: 10px; height: 10px; border-radius: 50%; background: var(--danger);
-  display: inline-block; margin-left: auto;
+  display: inline-block; margin-inline-start: auto;
 }
 .dot.ok { background: var(--success); }
 .dot.warn { background: var(--warning); }

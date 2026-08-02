@@ -14,11 +14,6 @@
     "titleEffectsOn": "Visual effects: on — click for the simpler, faster look",
     "titleEffectsOff": "Visual effects: off — click to bring back gradients and shadows"
   },
-  "lang": {
-    "titleSystem": "Language: system (click to change)",
-    "titleEn": "Language: English (click to change)",
-    "titlePl": "Language: Polish (click to change)"
-  },
   "pairing": {
     "heading": "Pair with your Hue bridge",
     "searching": "Searching for a bridge on your network…",
@@ -174,7 +169,15 @@
     "tlsOff": "Off",
     "tlsSelfsigned": "Self-signed certificate",
     "tlsFiles": "Certificate files",
-    "saving": "Saving…"
+    "saving": "Saving…",
+    "language": "Language",
+    "languageSystem": "System",
+    "languageHint": "\"System\" follows your device. Translations other than English are machine generated — corrections are welcome on the issue tracker.",
+    "direction": "Text direction",
+    "directionAuto": "Follow the language",
+    "directionLtr": "Left to right",
+    "directionRtl": "Right to left",
+    "directionHint": "Normally follows the language — only Arabic is right to left. Forcing it is for checking that the mirrored layout is correct without having to read the language it belongs to."
   },
   "about": {
     "heading": "About",

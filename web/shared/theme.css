@@ -352,13 +352,13 @@ input[type=checkbox], input[type=radio] {
 .scene-chip-star:only-child, .scene-chip-main:only-child { border-radius: 999px; }
 .scene-chip-main:hover { background: var(--card-hover); }
 .scene-swatches { display: flex; }
-.scene-swatch { width: 14px; height: 14px; border-radius: 50%; border: 1px solid var(--border); margin-left: -6px; }
-.scene-swatch:first-child { margin-left: 0; }
+.scene-swatch { width: 14px; height: 14px; border-radius: 50%; border: 1px solid var(--border); margin-inline-start: -6px; }
+.scene-swatch:first-child { margin-inline-start: 0; }
 .scene-dynamic-badge { color: var(--accent); font-size: 0.9rem; }
 
 .scene-chip-star {
   display: flex; align-items: center; justify-content: center;
-  width: 32px; height: 32px; flex-shrink: 0; margin-right: 0.25rem;
+  width: 32px; height: 32px; flex-shrink: 0; margin-inline-end: 0.25rem;
   border-radius: 50%; cursor: pointer; color: var(--ink-muted);
 }
 .scene-chip-star svg { width: 16px; height: 16px; }
@@ -411,8 +411,8 @@ html[data-simple] .light-card-gradient {
 }
 html[data-simple] .light-card {
   transition: none;
-  border-left-width: 4px;
-  border-left-color: var(--card-accent, var(--border));
+  border-inline-start-width: 4px;
+  border-inline-start-color: var(--card-accent, var(--border));
 }
 html[data-simple] .light-card:hover {
   transform: none;
@@ -435,3 +435,41 @@ html[data-simple] .scene-chip,
 html[data-simple] .icon-btn {
   transition: none;
 }
+
+/* ── Right-to-left ────────────────────────────────────────────────────────
+   Most of the mirroring is free: the layout uses logical properties
+   (inset-inline, margin-inline-start, text-align: start), so `dir="rtl"` on
+   the root flips it without any rules here.
+
+   These are the exceptions — things that are genuinely physical rather than
+   directional, and must NOT be mirrored:
+
+   - The brand mark is a drawing. Its strands sweep one way because that is
+     what the drawing is, not because of reading order, and a flipped logo is
+     a different logo.
+   - Progress and range tracks fill from the value's start, which in RTL is
+     the right. Browsers handle `input[type=range]` under dir=rtl already; the
+     rule below just makes sure nothing overrides that.
+   - The disclosure caret rotates about its own centre, so it needs no
+     handling, but it is listed here because it looks like it should. */
+[dir="rtl"] .ls-brand-mark { transform: none; }
+
+/* Numbers, addresses and version strings stay left-to-right inside an RTL
+   sentence. Without this an IP renders with its octets reordered, which is not
+   a translation issue — it is a wrong address on screen. */
+[dir="rtl"] .bridge-ip,
+[dir="rtl"] #about-version,
+[dir="rtl"] #about-source,
+[dir="rtl"] .about-grid dd,
+[dir="rtl"] #diag-text,
+[dir="rtl"] #about-licences-text,
+[dir="rtl"] input[type="number"],
+[dir="rtl"] input[type="text"] {
+  direction: ltr;
+  text-align: start;
+}
+
+/* The diagnostics and licence dumps are preformatted English; forcing LTR on
+   the block keeps their alignment sane inside a mirrored page. */
+[dir="rtl"] #diag-text,
+[dir="rtl"] #about-licences-text { text-align: left; }

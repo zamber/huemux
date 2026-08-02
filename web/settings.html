@@ -107,6 +107,31 @@
     </div>
   </form>
 
+  <!-- Language and direction. Above Diagnostics because someone who has landed
+       in the wrong language needs this before anything else on the page, and
+       the language names are written in their own language so it is findable
+       without being able to read the rest of the UI. -->
+  <section class="setting" id="language">
+    <label for="set-lang" data-i18n="settings.language">Language</label>
+    <select id="set-lang"></select>
+    <p class="hint" data-i18n="settings.languageHint">
+      "System" follows your device. Translations other than English are machine
+      generated — corrections are welcome on the issue tracker.
+    </p>
+
+    <label for="set-dir" data-i18n="settings.direction">Text direction</label>
+    <select id="set-dir">
+      <option value="" data-i18n="settings.directionAuto">Follow the language</option>
+      <option value="ltr" data-i18n="settings.directionLtr">Left to right</option>
+      <option value="rtl" data-i18n="settings.directionRtl">Right to left</option>
+    </select>
+    <p class="hint" data-i18n="settings.directionHint">
+      Normally follows the language — only Arabic is right to left. Forcing it
+      is for checking that the mirrored layout is correct without having to
+      read the language it belongs to.
+    </p>
+  </section>
+
   <section class="setting" id="diagnostics">
     <label data-i18n="settings.diagnostics">Diagnostics</label>
     <p class="hint" data-i18n="settings.diagnosticsHint">
