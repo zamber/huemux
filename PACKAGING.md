@@ -288,9 +288,23 @@ have shipped so far. Its two limits: Android refuses to upgrade between
 differently-signed builds (so a later signed release needs an uninstall
 first), and no store will accept it.
 
-To ship signed builds, create a keystore **once** and keep it safe — losing it
-means never being able to update the app for existing installs, since Android
-identifies an app by its signature:
+**This is now set up.** The keystore lives at `~/.huemux-signing/huemux.jks`
+on the maintainer's machine, with its password beside it, and the four secrets
+below are configured on the repository. Key fingerprint (SHA-256), for
+verifying a downloaded APK is genuinely ours:
+
+```
+43:44:0F:03:F8:DF:CF:E2:23:C9:20:8F:5A:98:14:E2:4C:69:1C:84:DD:41:4A:DF:F7:C6:C4:ED:8E:E9:D0:60
+```
+
+> **Back that directory up, offline, now.** Android identifies an app by its
+> signing key. Losing this file means no existing install can ever be updated
+> again — not by you, not by anyone — and the only recovery is publishing under
+> a new application ID and asking every user to reinstall. It is valid until
+> 2053; treat it like the only copy of a house key.
+
+To create one from scratch (already done — kept for reference and for anyone
+forking this):
 
 ```sh
 keytool -genkeypair -v \

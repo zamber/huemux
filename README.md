@@ -62,6 +62,27 @@ Work in progress, and the design docs behind it, live in
 [`plans/03-execution-phases.md`](plans/03-execution-phases.md) for what is
 actually being built right now.
 
+### Android: install and stay updated with Obtainium
+
+[Obtainium](https://github.com/ImranR98/Obtainium) installs Android apps
+straight from their GitHub releases and checks for updates there, so no app
+store is involved.
+
+1. Install Obtainium.
+2. **Add App**, and paste `https://github.com/zamber/huemux`.
+3. Enable **Include prereleases** to follow alpha builds; leave it off for
+   stable only.
+
+Updates then arrive the same way every later release does. Desktop and server
+builds are plain binaries on the
+[releases page](https://github.com/zamber/huemux/releases).
+
+> **One-time reinstall, from the first signed release onward.** Alpha builds up
+> to and including `v0.0.2-alpha.19` were debug-signed. Android identifies an
+> app by its signing key and refuses to upgrade across a change of key, so the
+> first properly signed release has to be installed over an uninstall. After
+> that, upgrades are ordinary.
+
 ## Configuration
 
 Optional. With no configuration at all, HueMux runs exactly as it always has:
@@ -333,12 +354,39 @@ network.
 
 ## Licence
 
-Code: MIT.
+**GPL-3.0-or-later.** Full text in [LICENSE](LICENSE).
+
+In short: use it, modify it, redistribute it — but a version you distribute
+has to come with its source under the same terms. That is deliberate. This is
+a small app that is easy to repackage with ads bolted on, and copyleft makes
+that straightforward to act on.
+
+> **This is a change.** Earlier revisions of this file said "Code: MIT", but no
+> `LICENSE` file was ever committed, so nothing was actually granted — a public
+> repository with no licence is all rights reserved. GPL-3.0-or-later is the
+> first licence this project has actually had. If you took a copy while the
+> README said MIT and relied on that, get in touch rather than assuming either
+> answer.
+
+Note for packagers: GPL-**2.0** would not have worked here. AndroidX is
+Apache-2.0, which is compatible with GPLv3 and not with GPLv2.
+
+### Third-party components
+
+Every dependency is permissively licensed and compatible with the above:
+`pion/dtls` and `go-astilectron` (MIT), `golang.org/x/*` and the Go standard
+library (BSD-3-Clause), AndroidX (Apache-2.0), and Electron in the desktop
+build (MIT, over Chromium's BSD and an LGPL ffmpeg).
 
 The bundled UI font, [Fira Code](https://github.com/tonsky/FiraCode)
-(`web/shared/fonts/`), is under a separate license — the
-[SIL Open Font License 1.1](web/shared/fonts/LICENSE-OFL.txt), not MIT. The
-OFL permits embedding/bundling the font with software under any license
-(including MIT) at no cost; it only restricts selling the font *by itself*
-and requires renamed derivatives. Bundling it here doesn't relicense it —
-the font files remain OFL, the app's own code remains MIT.
+(`web/shared/fonts/`), is under the
+[SIL Open Font License 1.1](web/shared/fonts/LICENSE-OFL.txt). The OFL permits
+bundling the font with software under any licence at no cost; it restricts
+selling the font *by itself* and requires renamed derivatives. Bundling it here
+does not relicense it — the font files stay OFL, the app's code is GPL.
+
+### Trademark
+
+Not affiliated with, endorsed by, or sponsored by Signify N.V. Philips and Hue
+are trademarks of Signify Holding. This project is an independent client that
+talks to the bridge's local API.
