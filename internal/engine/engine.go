@@ -408,9 +408,10 @@ func (e *Engine) snapshotLocked(zones []pipeline.Zone, colors map[uint8][3]byte)
 	var sent uint64
 	var lastErr string
 	if e.stream != nil {
-		sent = e.stream.Sent
-		if e.stream.LastError != nil {
-			lastErr = e.stream.LastError.Error()
+		var streamErr error
+		sent, streamErr = e.stream.Stats()
+		if streamErr != nil {
+			lastErr = streamErr.Error()
 		}
 	}
 
