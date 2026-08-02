@@ -810,6 +810,7 @@ func (s *Server) handleControlMessage(conn *Conn, payload []byte) {
 			log.Printf("huemux: bad settings payload: %v", err)
 			return
 		}
+		settings = settings.Validate()
 		eng.UpdateSettings(settings)
 	case "identify":
 		if msg.LightRID != "" {

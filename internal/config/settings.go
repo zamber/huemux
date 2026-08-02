@@ -84,6 +84,17 @@ func DefaultAreaSettings(configurationType string) AreaSettings {
 	}
 }
 
+// Validate clamps fields to safe ranges and returns the (possibly modified)
+// settings. WebSocket settings arrive from the browser without any client-side
+// authority, so anything that would feed a hardware rate or allocation must be
+// bounded here.
+func (s AreaSettings) Validate() AreaSettings {
+	if s.OutputHz < 1 || s.OutputHz > 25 {
+		s.OutputHz = 20
+	}
+	return s
+}
+
 // Store persists per-area settings to a single JSON file, debounced so a
 // slider being dragged doesn't turn into a filesystem write per frame.
 type Store struct {

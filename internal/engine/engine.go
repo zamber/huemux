@@ -318,7 +318,7 @@ func (e *Engine) outputLoop(ctx context.Context) {
 	e.mu.Lock()
 	hz := e.settings.OutputHz
 	e.mu.Unlock()
-	if hz <= 0 {
+	if hz < 1 || hz > 25 {
 		hz = 20
 	}
 	t := time.NewTicker(time.Second / time.Duration(hz))
