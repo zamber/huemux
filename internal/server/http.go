@@ -243,12 +243,31 @@ func (s *Server) runLightEventBroadcast(ctx context.Context, lights *lightctl.Se
 // broadcast sends raw to every currently connected WS client (frame source
 // and UI tabs alike — favorite/light-event pushes are relevant to any open
 // tab, not just the one that triggered them).
+//
+// Each write is bounded by a short deadline: a client that stops reading (a
+// backgrounded mobile tab, say) fills its TCP buffer, and an unbounded
+// WriteMessage would block here while holding s.mu — stalling status pushes,
+// frame-source claims and grid-frame admission for every other client.
+// A connection that cannot take the write within the deadline is evicted;
+// its own status loop will keep failing fast and it will come back on the
+// next page load.
 func (s *Server) broadcast(raw []byte) {
 	s.mu.Lock()
+	defer s.mu.Unlock()
 	for conn := range s.uiConns {
-		_ = conn.WriteMessage(opText, raw)
+		_ = conn.SetWriteDeadline(time.Now().Add(2 * time.Second))
+		if err := conn.WriteMessage(opText, raw); err != nil {
+			// Evicted, and the deadline stays armed so its remaining writes
+			// (pushStatusLoop) fail fast instead of blocking that goroutine.
+			delete(s.uiConns, conn)
+			continue
+		}
+		// Clear the deadline after a successful write. A deadline armed at
+		// time t lapses at t+2s; left in place, every later 1 Hz status push
+		// to this (healthy) client would fail immediately as a timeout until
+		// the next broadcast re-armed it — the very staleness this bounds.
+		_ = conn.SetWriteDeadline(time.Time{})
 	}
-	s.mu.Unlock()
 }
 
 type lightEventWire struct {

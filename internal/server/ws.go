@@ -13,6 +13,7 @@ import (
 	"net/url"
 	"strings"
 	"sync"
+	"time"
 )
 
 // A hand-rolled WebSocket server. The only client is our own page on
@@ -247,6 +248,13 @@ func (c *Conn) readFrame() (fin bool, opcode byte, payload []byte, err error) {
 // WriteMessage sends one unfragmented message of the given opcode.
 func (c *Conn) WriteMessage(opcode byte, payload []byte) error {
 	return c.writeFrame(opcode, payload)
+}
+
+// SetWriteDeadline sets the write deadline on the underlying connection.
+// broadcast() uses it to bound how long one stalled reader may delay the
+// other clients' pushes. The zero value clears the deadline.
+func (c *Conn) SetWriteDeadline(t time.Time) error {
+	return c.rwc.SetWriteDeadline(t)
 }
 
 func (c *Conn) writeFrame(opcode byte, payload []byte) error {
