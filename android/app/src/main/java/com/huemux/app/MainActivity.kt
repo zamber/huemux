@@ -42,6 +42,10 @@ class MainActivity : AppCompatActivity() {
 
     private lateinit var webView: WebView
     private var multicastLock: WifiManager.MulticastLock? = null
+    // The host the server is running on — captured from the initial URL so
+    // in-app navigation stays in the WebView regardless of whether the server
+    // is on loopback, a LAN address, or a Tailscale IP.
+    private var appHost: String? = null
 
     @SuppressLint("SetJavaScriptEnabled")
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -58,22 +62,27 @@ class MainActivity : AppCompatActivity() {
             // silently forgets both on every launch.
             settings.domStorageEnabled = true
             // HueMuxNative is injected into every page this WebView renders,
-            // so no page outside the app's own loopback origin may ever be
-            // rendered here: its JavaScript would have full access to screen
-            // capture, the Downloads folder, and the share sheet. Anything not
-            // on 127.0.0.1/localhost leaves the WebView for the system
-            // browser, which has no such bridge.
+            // so no page outside the app's own origin may ever be rendered
+            // here: its JavaScript would have full access to screen capture,
+            // the Downloads folder, and the share sheet. Navigation to any
+            // other host leaves the WebView for the system browser, which has
+            // no such bridge.
+            //
+            // The app's own host is captured from the initial server URL
+            // (startServer below) rather than hardcoded to 127.0.0.1 — the
+            // server may be on a LAN or Tailscale address when connecting to
+            // a remote instance.
             webViewClient = object : WebViewClient() {
                 override fun shouldOverrideUrlLoading(
                     view: WebView,
                     request: WebResourceRequest,
                 ): Boolean {
                     val host = request.url.host ?: ""
-                    if (host != "127.0.0.1" && host != "localhost") {
-                        view.context.startActivity(Intent(Intent.ACTION_VIEW, request.url))
-                        return true
+                    if (host == appHost || host == "127.0.0.1" || host == "localhost") {
+                        return false
                     }
-                    return false
+                    view.context.startActivity(Intent(Intent.ACTION_VIEW, request.url))
+                    return true
                 }
             }
 
@@ -180,6 +189,7 @@ class MainActivity : AppCompatActivity() {
             Mobile.setVersion(BuildConfig.VERSION_NAME)
             val url = Mobile.start(filesDir.absolutePath)
             Log.i(TAG, "huemux server started at $url")
+            appHost = Uri.parse(url).host
             webView.loadUrl(url)
         } catch (e: Exception) {
             // A dead server means a blank WebView and no clue why, so say so
