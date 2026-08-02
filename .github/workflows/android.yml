@@ -16,19 +16,9 @@ name: Android
 on:
   push:
     branches: [main]
-    paths:
-      - 'mobile/**'
-      - 'internal/**'
-      - 'web/**'
-      - 'go.mod'
-      - 'go.sum'
-      - '.github/workflows/android.yml'
+    # no paths filter — always run the verify check
   pull_request:
-    paths:
-      - 'mobile/**'
-      - 'internal/**'
-      - 'go.mod'
-      - 'go.sum'
+    # no paths filter — always run the verify check
   workflow_dispatch:
 
 permissions:
