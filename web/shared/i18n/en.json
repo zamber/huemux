@@ -102,8 +102,8 @@
       "busyHeldBy": "held by another application ({app})"
     },
     "deviceCapture": "This device",
-    "captureScale": "Capture resolution",
-    "captureScaleHint": "How much of the screen's real resolution to mirror. The colour pipeline reduces everything to a 64×36 grid, so higher buys nothing for sync itself — raise it only when recording, and put it back after: a bigger mirror costs battery continuously.",
+    "captureScale": "Recording resolution",
+    "captureScaleHint": "How much of the screen's real resolution to mirror. Light sync is unaffected by this — it always works from a downscaled copy — so this only changes how sharp a recording is, and how much battery the mirror itself costs. Leave it low unless you are recording.",
     "captureWhenRunning": "size shown once sync is running",
     "recording": "Screen recording",
     "recordStart": "Start recording",

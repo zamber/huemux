@@ -121,15 +121,15 @@
 
       <div class="control">
         <label>
-          <span data-i18n="sync.captureScale">Capture resolution</span>
+          <span data-i18n="sync.captureScale">Recording resolution</span>
           (<span id="capture-scale-readout"></span>)
         </label>
         <input type="range" id="capture-scale" min="5" max="100" step="5">
         <p class="hint" data-i18n="sync.captureScaleHint">
-          How much of the screen's real resolution to mirror. The colour
-          pipeline reduces everything to a 64×36 grid, so higher buys nothing
-          for sync itself — raise it only when recording, and put it back
-          after: a bigger mirror costs battery continuously.
+          How much of the screen's real resolution to mirror. Light sync is
+          unaffected by this — it always works from a downscaled copy — so this
+          only changes how sharp a recording is, and how much battery the
+          mirror itself costs. Leave it low unless you are recording.
         </p>
       </div>
 
