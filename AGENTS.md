@@ -6,11 +6,13 @@ in [PACKAGING.md](PACKAGING.md); store submission, accounts and the legal
 prerequisites are in [PUBLISHING.md](PUBLISHING.md); designs for unstarted work
 are in [plans/](plans/).
 
-Two things are unresolved and block distribution: there is **no `LICENSE`
-file** (a public repo without one is all rights reserved, so no packager may
-redistribute it), and the project name contains **Signify's "Hue"
-trademark**. Both are cheaper to settle before there are store listings and an
-installed base. See PUBLISHING.md §0.
+One thing blocks distribution: there is **no `LICENSE` file**, and a public
+repo without one is all rights reserved, so no packager may redistribute it.
+GPL-3.0-or-later is the recommendation — see PUBLISHING.md §0.1, which also
+covers why GPL-2.0 specifically would not work here.
+
+Publishing is planned FOSS-first (Obtainium, IzzyOnDroid, Flathub, F-Droid),
+none of which needs money or approval. PUBLISHING.md has the order.
 
 ## Commands
 
