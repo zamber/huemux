@@ -149,6 +149,54 @@ button, input, select, textarea, optgroup {
   font-family: inherit;
 }
 
+/* ── Buttons ───────────────────────────────────────────────────────────────
+   One canonical button, defined here because theme.css is the only stylesheet
+   every page loads.
+
+   It had to be: the same <huemux-pairing> component rendered with filled blue
+   buttons on Sync and browser-default grey ones on Lights, because style.css
+   carried a global `button` rule and only Sync loads it. Settings got the
+   defaults too. A shared component cannot look different depending on which
+   page mounted it.
+
+   Outlined rather than filled, per the UI's own rule that contrast carries
+   meaning: a filled button claims to be the primary action, and most of these
+   are not. `.primary` opts in to the filled treatment for the one action on a
+   screen that deserves it. */
+button {
+  padding: 0.5rem 0.9rem;
+  background: var(--card);
+  color: var(--ink);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  font-size: 0.85rem;
+  line-height: 1.2;
+  cursor: pointer;
+  transition: background-color 0.15s ease, border-color 0.15s ease, transform 0.1s ease;
+}
+button:hover { background: var(--card-hover); border-color: var(--border-strong); }
+button:active { transform: scale(0.98); }
+
+/* Dimmed rather than recoloured. A disabled button that changes colour reads
+   as a different kind of button rather than the same one unavailable. */
+button:disabled { opacity: 0.45; cursor: not-allowed; }
+button:disabled:hover { background: var(--card); border-color: var(--border); }
+
+/* Inverted, not tinted — the strongest contrast available in either theme,
+   and it survives the simple theme and a colour-blind reader alike. */
+button.primary {
+  background: var(--ink);
+  color: var(--surface);
+  border-color: var(--ink);
+}
+button.primary:hover { background: var(--ink); border-color: var(--ink); opacity: 0.88; }
+
+/* 44px minimum where the pointer is actually a finger. Not applied on desktop,
+   where it would make every button look inflated. */
+@media (pointer: coarse) {
+  button { min-height: 44px; }
+}
+
 /* ── Long press does nothing here, so it should look like nothing ──────────
    Holding a control in the Android WebView tinted it blue and then, if held,
    put it into a stuck half-selected state. That is the platform's press

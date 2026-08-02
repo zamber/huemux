@@ -64,14 +64,9 @@ input[type=range] { width: 100%; }
 }
 .presets button:hover { background: var(--card-hover); }
 
-button {
-  padding: 0.45rem 0.9rem; background: var(--accent); color: #fff; border: none;
-  border-radius: 5px; cursor: pointer; font-size: 0.85rem;
-}
-button:hover { background: var(--accent-hover); }
-button:disabled { background: var(--surface-alt); color: var(--ink-muted); cursor: not-allowed; }
-#stop-btn, #change-source-btn { background: var(--surface-alt); color: var(--ink); }
-#stop-btn:hover, #change-source-btn:hover { background: var(--card-hover); }
+/* The global button rule that used to live here is now in shared/theme.css.
+   It was filled-accent and sync-only, which is why the shared pairing panel
+   looked like a different component depending on which page showed it. */
 
 /* Pairing panel styling lives in shared/pairing.css now that <huemux-pairing>
    is shared with lights.html. This one rule stays here because it is about

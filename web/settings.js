@@ -16,7 +16,6 @@ const els = {
   token: document.getElementById('set-token'),
   tokenGen: document.getElementById('set-token-gen'),
   tls: document.getElementById('set-tls'),
-  save: document.getElementById('set-save'),
   result: document.getElementById('set-result'),
 };
 
@@ -83,49 +82,99 @@ els.tokenGen.addEventListener('click', () => {
   if (els.auth.value === 'none') els.auth.value = 'token';
 });
 
-els.form.addEventListener('submit', (ev) => {
-  ev.preventDefault();
-  els.save.disabled = true;
-  els.result.textContent = '';
+// ---------- applying changes ----------
+//
+// Every field applies as it changes; there is no Save button.
+//
+// A Save button in a settings screen with four fields is a second step that
+// exists only to be forgotten. It also lies about failure: with one submit for
+// the whole form, a rejected port makes it look as though nothing was saved,
+// when in fact nothing was *sent*. Applying per field means the error lands on
+// the field that caused it and everything else is already stored.
+//
+// Validation stays entirely server-side — appconfig.Validate is the single
+// source of truth and re-implementing its rules here is how the two drift.
 
+let applyTimer = null;
+let inFlight = false;
+let pendingAgain = false;
+
+function currentBody() {
   const body = {
     profile: els.profile.value,
     listen: { host: els.host.value.trim(), port: Number(els.port.value) },
     auth: { mode: els.auth.value },
     tls: { mode: els.tls.value },
   };
-  // Only send a token when one was typed, so saving an unrelated setting
+  // Only send a token when one was typed, so changing an unrelated setting
   // does not wipe the existing credential.
   const typed = els.token.value.trim();
   if (typed) body.auth.token = typed;
+  return body;
+}
+
+function say(msg, bad) {
+  els.result.textContent = msg;
+  els.result.className = bad ? 'hint warning' : 'hint';
+}
+
+function apply() {
+  // One request at a time. Two PATCHes racing on the same document can commit
+  // out of order, and the loser silently wins — the field the user changed
+  // last would be the one that did not stick.
+  if (inFlight) { pendingAgain = true; return; }
+  inFlight = true;
+  say(t('settings.saving', 'Saving…'));
 
   fetch('/api/config', {
     method: 'PATCH',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(body),
+    body: JSON.stringify(currentBody()),
   })
     .then((r) => r.text().then((text) => ({ ok: r.ok, text })))
     .then(({ ok, text }) => {
       if (!ok) {
-        // The server's validation message is more specific than anything
-        // this page could invent.
-        els.result.textContent = text.trim();
-        els.result.className = 'hint warning';
+        // The server's message names the offending field; anything this page
+        // invented would be vaguer.
+        say(text.trim(), true);
         return;
       }
       const res = JSON.parse(text);
-      els.result.textContent = res.restart_required
+      say(res.restart_required
         ? t('settings.savedRestart', 'Saved — restart HueMux for this to take effect.')
-        : t('settings.saved', 'Saved.');
-      els.result.className = 'hint';
+        : t('settings.saved', 'Saved.'));
       els.token.value = '';
       load();
     })
-    .catch((e) => {
-      els.result.textContent = String(e);
-      els.result.className = 'hint warning';
-    })
-    .finally(() => { els.save.disabled = false; });
+    .catch((e) => say(String(e), true))
+    .finally(() => {
+      inFlight = false;
+      if (pendingAgain) { pendingAgain = false; apply(); }
+    });
+}
+
+// Selects commit on change and go immediately. Text and number fields debounce,
+// because applying on every keystroke would PATCH a half-typed address and show
+// its rejection while the user is still typing it.
+function scheduleApply(immediate) {
+  clearTimeout(applyTimer);
+  if (immediate) { apply(); return; }
+  applyTimer = setTimeout(apply, 600);
+}
+
+[els.profile, els.auth, els.tls].forEach((el) =>
+  el.addEventListener('change', () => scheduleApply(true)));
+[els.host, els.port, els.token].forEach((el) => {
+  el.addEventListener('input', () => scheduleApply(false));
+  // Leaving a field is an unambiguous "I am done with this one".
+  el.addEventListener('blur', () => scheduleApply(true));
+});
+
+els.form.addEventListener('submit', (ev) => {
+  // Nothing submits, but a form still does on Enter, and letting it navigate
+  // would blank the page.
+  ev.preventDefault();
+  scheduleApply(true);
 });
 
 load();

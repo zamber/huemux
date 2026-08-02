@@ -150,7 +150,6 @@
     "generate": "Generuj",
     "tls": "TLS",
     "tlsHint": "HueMux nie pozyskuje certyfikatów. „files” używa tych, które dostarczysz — z Tailscale lub własnej domeny.",
-    "save": "Zapisz",
     "saved": "Zapisano.",
     "savedRestart": "Zapisano — uruchom HueMux ponownie, aby zmiany zadziałały.",
     "loadFailed": "Nie udało się wczytać ustawień: ",
@@ -166,7 +165,16 @@
     "diagnosticsDownloadHint": "Jeśli nic się nie pobrało, użyj Pokaż lub Kopiuj.",
     "diagnosticsShare": "Udostępnij",
     "diagnosticsSaved": "Zapisano w ",
-    "diagnosticsDownloadFailed": "Nie udało się zapisać pliku."
+    "diagnosticsDownloadFailed": "Nie udało się zapisać pliku.",
+    "profileFull": "Pełny — światła i synchronizacja ekranu",
+    "profileLights": "Tylko światła",
+    "profileSync": "Tylko synchronizacja ekranu",
+    "authNone": "Brak",
+    "authToken": "Token",
+    "tlsOff": "Wyłączone",
+    "tlsSelfsigned": "Certyfikat samopodpisany",
+    "tlsFiles": "Pliki certyfikatów",
+    "saving": "Zapisywanie…"
   },
   "about": {
     "heading": "O programie",

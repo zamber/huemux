@@ -158,6 +158,8 @@ class HueMuxPairing extends HTMLElement {
     if (b.supported) {
       const btn = document.createElement('button');
       btn.type = 'button';
+      // The one action on this screen the user came here to take.
+      btn.className = 'primary';
       btn.textContent = p.pairing
         ? this._t('pairing.inProgress', 'Pairing…')
         : this._t('pairing.pairAction', 'Pair');

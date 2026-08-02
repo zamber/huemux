@@ -32,25 +32,47 @@ body { margin: 0; }
 .setting .row { display: flex; gap: 0.5rem; margin-bottom: 0.4rem; }
 .setting .row input { flex: 1; min-width: 0; }
 
+/* Inputs match the buttons in shared/theme.css — same border, same radius,
+   same target height. They sit next to each other in the same rows, and two
+   controls a few pixels apart in size and roundness look like a mistake
+   rather than a distinction. */
 #settings input,
 #settings select {
-  padding: 0.45rem;
-  background: var(--surface-alt);
+  padding: 0.5rem 0.7rem;
+  background: var(--card);
   color: var(--ink);
   border: 1px solid var(--border);
-  border-radius: 4px;
+  border-radius: 10px;
   /* 16px stops iOS Safari zooming the viewport on focus. */
   font-size: 16px;
   font-family: inherit;
 }
+#settings input:hover,
+#settings select:hover { border-color: var(--border-strong); }
+#settings input:focus-visible,
+#settings select:focus-visible {
+  outline: none;
+  border-color: var(--ink);
+}
 #settings select { width: 100%; }
 #settings input:disabled,
-#settings select:disabled { opacity: 0.55; }
+#settings select:disabled { opacity: 0.45; }
+
+@media (pointer: coarse) {
+  #settings input,
+  #settings select { min-height: 44px; }
+}
 
 #settings .hint { font-size: 0.82rem; color: var(--ink-muted); margin: 0.3rem 0 0; }
 #settings .warning { color: var(--warn, #c0392b); }
 
-.actions { display: flex; align-items: center; gap: 0.8rem; margin-top: 1.4rem; }
+/* Just the status line now that Save is gone. Reserves its height so the
+   section below does not jump when a message appears. */
+.actions { display: flex; align-items: center; min-height: 1.4rem; margin-top: 1rem; }
+
+/* Rows of buttons wrap on a narrow screen rather than overflowing, and keep
+   an even gap when they do. */
+.setting .row { flex-wrap: wrap; }
 
 /* Diagnostics. The textarea is the fallback that always works: a WebView may
    refuse a download and an insecure origin has no clipboard API, but text on

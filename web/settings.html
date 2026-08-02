@@ -46,9 +46,9 @@
     <section class="setting">
       <label for="set-profile" data-i18n="settings.profile">Profile</label>
       <select id="set-profile">
-        <option value="full">full</option>
-        <option value="lights">lights</option>
-        <option value="sync">sync</option>
+        <option value="full" data-i18n="settings.profileFull">Full — lights and screen sync</option>
+        <option value="lights" data-i18n="settings.profileLights">Lights only</option>
+        <option value="sync" data-i18n="settings.profileSync">Screen sync only</option>
       </select>
       <p class="hint" data-i18n="settings.profileHint">
         Which half of the app runs. "lights" skips screen sync entirely — no
@@ -72,8 +72,8 @@
     <section class="setting">
       <label for="set-auth" data-i18n="settings.auth">Authentication</label>
       <select id="set-auth">
-        <option value="none">none</option>
-        <option value="token">token</option>
+        <option value="none" data-i18n="settings.authNone">None</option>
+        <option value="token" data-i18n="settings.authToken">Token</option>
       </select>
       <div class="row">
         <input type="text" id="set-token" spellcheck="false"
@@ -89,9 +89,9 @@
     <section class="setting">
       <label for="set-tls" data-i18n="settings.tls">TLS</label>
       <select id="set-tls">
-        <option value="off">off</option>
-        <option value="selfsigned">selfsigned</option>
-        <option value="files">files</option>
+        <option value="off" data-i18n="settings.tlsOff">Off</option>
+        <option value="selfsigned" data-i18n="settings.tlsSelfsigned">Self-signed certificate</option>
+        <option value="files" data-i18n="settings.tlsFiles">Certificate files</option>
       </select>
       <p class="hint" data-i18n="settings.tlsHint">
         HueMux does not obtain certificates. "files" uses ones you supply —
@@ -99,9 +99,11 @@
       </p>
     </section>
 
+    <!-- No Save button: every field applies as it changes (see settings.js).
+         The status line stays, because "did that take?" is still a fair
+         question — it just gets answered without being asked. -->
     <div class="actions">
-      <button type="submit" id="set-save" data-i18n="settings.save">Save</button>
-      <span id="set-result" class="hint"></span>
+      <span id="set-result" class="hint" role="status" aria-live="polite"></span>
     </div>
   </form>
 

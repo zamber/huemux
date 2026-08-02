@@ -150,7 +150,6 @@
     "generate": "Generate",
     "tls": "TLS",
     "tlsHint": "HueMux does not obtain certificates. \"files\" uses ones you supply — from Tailscale, or your own domain.",
-    "save": "Save",
     "saved": "Saved.",
     "savedRestart": "Saved — restart HueMux for this to take effect.",
     "loadFailed": "Could not load settings: ",
@@ -166,7 +165,16 @@
     "diagnosticsDownloadHint": "If nothing downloaded, use View or Copy instead.",
     "diagnosticsShare": "Share",
     "diagnosticsSaved": "Saved to ",
-    "diagnosticsDownloadFailed": "Could not save the file."
+    "diagnosticsDownloadFailed": "Could not save the file.",
+    "profileFull": "Full — lights and screen sync",
+    "profileLights": "Lights only",
+    "profileSync": "Screen sync only",
+    "authNone": "None",
+    "authToken": "Token",
+    "tlsOff": "Off",
+    "tlsSelfsigned": "Self-signed certificate",
+    "tlsFiles": "Certificate files",
+    "saving": "Saving…"
   },
   "about": {
     "heading": "About",
