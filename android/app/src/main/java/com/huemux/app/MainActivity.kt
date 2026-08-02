@@ -12,6 +12,7 @@ import android.os.Bundle
 import android.util.Log
 import android.view.ViewGroup
 import android.webkit.JavascriptInterface
+import android.webkit.WebResourceRequest
 import android.webkit.WebView
 import android.webkit.WebViewClient
 import android.widget.TextView
@@ -56,8 +57,25 @@ class MainActivity : AppCompatActivity() {
             // localStorage (web/shared/theme.js, i18n.js). Without this the UI
             // silently forgets both on every launch.
             settings.domStorageEnabled = true
-            // Keep navigation inside the app rather than bouncing to Chrome.
-            webViewClient = WebViewClient()
+            // HueMuxNative is injected into every page this WebView renders,
+            // so no page outside the app's own loopback origin may ever be
+            // rendered here: its JavaScript would have full access to screen
+            // capture, the Downloads folder, and the share sheet. Anything not
+            // on 127.0.0.1/localhost leaves the WebView for the system
+            // browser, which has no such bridge.
+            webViewClient = object : WebViewClient() {
+                override fun shouldOverrideUrlLoading(
+                    view: WebView,
+                    request: WebResourceRequest,
+                ): Boolean {
+                    val host = request.url.host ?: ""
+                    if (host != "127.0.0.1" && host != "localhost") {
+                        view.context.startActivity(Intent(Intent.ACTION_VIEW, request.url))
+                        return true
+                    }
+                    return false
+                }
+            }
 
             // Long press does nothing in this app — every control acts on
             // release — but the WebView still runs the platform gesture:
