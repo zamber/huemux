@@ -162,6 +162,65 @@ jobs:
       - name: Add the APK to SHA256SUMS
         run: cd dist && sha256sum *.apk >> SHA256SUMS && cat SHA256SUMS
 
+      # Sign the checksum file rather than every artifact: one signature
+      # covers all of them, since SHA256SUMS already binds each file's content.
+      # A detached .asc alongside it is the convention every Linux packager and
+      # every wary user already knows how to check.
+      #
+      # Skipped rather than failed when the secret is absent, so a fork still
+      # produces a complete release.
+      - name: Sign SHA256SUMS
+        env:
+          GPG_PRIVATE_KEY: ${{ secrets.GPG_PRIVATE_KEY }}
+          GPG_PASSPHRASE: ${{ secrets.GPG_PASSPHRASE }}
+        run: |
+          if [ -z "$GPG_PRIVATE_KEY" ]; then
+            echo "::notice::No GPG_PRIVATE_KEY secret — release will be unsigned"
+            exit 0
+          fi
+          printf '%s' "$GPG_PRIVATE_KEY" | gpg --batch --import
+          printf '%s' "$GPG_PASSPHRASE" > "$RUNNER_TEMP/pw"
+          gpg --batch --yes --pinentry-mode loopback --passphrase-file "$RUNNER_TEMP/pw" \
+              --armor --detach-sign --output dist/SHA256SUMS.asc dist/SHA256SUMS
+          shred -u "$RUNNER_TEMP/pw"
+          # Prove the signature verifies here, so a broken one is caught now
+          # rather than by the first person who bothers to check it.
+          gpg --verify dist/SHA256SUMS.asc dist/SHA256SUMS
+          cp RELEASE-SIGNING-KEY.asc dist/
+
+      # --- Windows and macOS signing --------------------------------------
+      #
+      # Both are gated on secrets that do not exist yet, and cannot be created
+      # without buying something: Authenticode needs a CA-issued certificate
+      # (Azure Trusted Signing, or an OV/EV cert on a hardware token), and a
+      # Developer ID certificate is issued by Apple to paying members only.
+      # Self-signed is not a cheaper version of either — it satisfies neither
+      # SmartScreen nor Gatekeeper, so it is a key to manage for no benefit.
+      #
+      # The steps are wired now so that the day a certificate exists the only
+      # change is adding secrets. See PUBLISHING.md.
+      - name: Sign Windows binaries
+        env:
+          AZURE_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
+        run: |
+          if [ -z "$AZURE_CLIENT_ID" ]; then
+            echo "::notice::No Windows signing certificate configured — .exe files are unsigned"
+            exit 0
+          fi
+          echo "::error::Windows signing secrets are set but the signing step is not implemented yet"
+          exit 1
+
+      - name: Notarize macOS binaries
+        env:
+          APPLE_API_KEY_ID: ${{ secrets.APPLE_API_KEY_ID }}
+        run: |
+          if [ -z "$APPLE_API_KEY_ID" ]; then
+            echo "::notice::No Apple Developer credentials configured — macOS builds are unsigned"
+            exit 0
+          fi
+          echo "::error::Apple signing secrets are set but the notarization step is not implemented yet"
+          exit 1
+
       - name: Create GitHub release
         uses: softprops/action-gh-release@v3
         with:

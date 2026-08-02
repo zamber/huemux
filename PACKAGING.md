@@ -274,6 +274,62 @@ three (formula/Flatpak/AppImage) — reasonable first thing to automate in
 `release.yml` on `ubuntu-latest` (`appimagetool` is a single downloadable
 binary, no special runner needed) before tackling Flatpak/Homebrew.
 
+## Release artifact signing (GPG)
+
+Every release carries `SHA256SUMS.asc`, a detached signature over the checksum
+file. One signature covers every artifact, since the checksums already bind
+each file's contents.
+
+The public key is committed as `RELEASE-SIGNING-KEY.asc` and copied into each
+release. To verify a download:
+
+```sh
+gpg --import RELEASE-SIGNING-KEY.asc
+gpg --verify SHA256SUMS.asc SHA256SUMS
+sha256sum -c SHA256SUMS --ignore-missing
+```
+
+Key: `06AD E5FB 119C D5D9 EF49  2FA0 8C1D 68E7 C991 0D5E`, expires 2031.
+Secrets `GPG_PRIVATE_KEY` and `GPG_PASSPHRASE` on the repo; private material at
+`~/.huemux-signing/`, never in the repo. A revocation certificate is stored
+with it, for the case where the key leaks.
+
+## Windows and macOS signing — not set up, and not self-serve
+
+Both steps exist in `release.yml` and are gated on secrets that do not exist.
+Neither certificate can be generated locally, which is why this is a purchase
+decision rather than a task:
+
+- **Windows (Authenticode)** needs a CA-issued certificate — Azure Trusted
+  Signing (pay-as-you-go, no hardware token, works from CI) or an OV/EV cert,
+  which since 2023 must live on a hardware token and is painful to use from CI.
+- **macOS (Developer ID)** is issued by Apple to Developer Program members
+  only, at $99/year.
+
+A self-signed certificate is not a cheaper version of either. SmartScreen and
+Gatekeeper both ignore it, so it buys nothing and adds a key to look after.
+Until then, Windows and macOS artifacts ship unsigned and users see the
+platform's warning — which is the honest state, and no worse than it was.
+
+Both steps **fail the build** if their secrets appear without the
+implementation, rather than silently producing unsigned artifacts.
+
+## Key custody
+
+Signing material lives at `~/.huemux-signing/` (0700, files 0600) on the
+maintainer's machine, outside the repo:
+
+| File | If lost |
+|---|---|
+| `huemux.jks` + `password.txt` | **Unrecoverable.** No published install can ever be updated again; recovery means a new application ID and every user reinstalling. |
+| `gpg-private.asc` + `gpg-passphrase.txt` | Recoverable but disruptive — rotate, republish the public key, re-announce. |
+| `revocation-certificate.rev` | Needed to revoke the GPG key if it leaks. |
+
+That directory also holds `backup-to-bitwarden.sh` (vault copy; run it after
+unlocking the vault yourself) and `OFFLINE-BACKUP.md` (the copy that does not
+depend on an account). Both copies matter: a vault is a single point of failure
+for a key that cannot be regenerated.
+
 ## Android
 
 The APK is built by `.github/workflows/release.yml` and attached to each

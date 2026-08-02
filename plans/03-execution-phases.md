@@ -26,18 +26,20 @@ reviewable commit or small series, and to leave `main` working.
 | 15 | Capture lifecycle; full-res recording removed | **built, untested on a device** |
 | 16 | Split frame path — pipeline downscale, direct encode | **device-confirmed: snappy at 100% recording resolution** |
 | 17 | Restricted-profile nav, sticky heading, encoder tail | **built, untested on a device** |
-| 18 | `LICENSE` (GPL-3.0-or-later) + consistent Android signing | **done — first signed release pending** |
-| 19 | Obtainium — README line, works with current CI | **documented; needs one signed release to verify** |
-| 20 | Attribution + About screen | **not started** |
-| 21 | IzzyOnDroid | **not started** |
-| 22 | Scoop, Homebrew tap, AUR | **not started** |
-| 23 | Flathub | **not started** |
-| 24 | F-Droid main repo | **not started** |
-| 25 | Release workflow split + `release` environment | **not started** |
-| 26 | Privacy policy + store declarations | **not started** |
-| 27 | Windows signing, then winget | **not started** |
-| 28 | macOS notarization, then Homebrew cask | **not started** |
-| 29 | Google Play | **not started** |
+| 18 | `LICENSE` (GPL-3.0-or-later) + Android signing | **done** |
+| 19 | Obtainium — README line, works with current CI | **done — verify on alpha.20** |
+| **R1** | **Release infrastructure — artifact signing, key custody** | **done (Windows/macOS gated on certificates)** |
+| **R2** | **Release infrastructure — workflow split + `release` environment** | **not started** |
+| **R3** | **Release infrastructure — automated test gate** | **not started** |
+| C1 | Attribution + About screen | **not started** |
+| C2 | IzzyOnDroid | **not started** |
+| C3 | Scoop, Homebrew tap, AUR | **not started** |
+| C4 | Flathub | **not started** |
+| C5 | F-Droid main repo | **not started** |
+| C6 | Privacy policy + store declarations | **not started** |
+| C7 | Windows certificate, then winget | **blocked: needs a purchased certificate** |
+| C8 | macOS notarization, then Homebrew cask | **blocked: needs Apple Developer membership** |
+| C9 | Google Play | **not started** |
 
 ---
 
@@ -414,129 +416,133 @@ heading covers what scrolls under it, and `in == out` on a recording.
 
 ---
 
-# Publishing phases (18–29)
+# Release infrastructure (R) and channels (C)
 
-Full detail — every legal obligation, every channel's requirements, and the
-secrets each one needs — is in [PUBLISHING.md](../PUBLISHING.md). This is the
-running order and the acceptance criteria.
+Renumbered from a single 18–29 chain into two tracks, because the chain implied
+a false dependency: the channels barely depend on each other, and serialising
+them means the slowest one blocks the rest.
 
-**FOSS channels first**, which is also cheapest-first. Nothing before phase 27
-costs money or needs anyone's approval, and there is a real gap to fill: the
-free-software Hue app selection is thin.
+- **R1–R3 come first** and are shared by everything. Once they are done, any
+  channel can be worked on without touching release plumbing again.
+- **C1–C9 are then parallel.** C1 is a soft prerequisite for the store
+  channels (they want an About screen and attribution), and C7/C8 are blocked
+  on purchases rather than on effort. Nothing else has an ordering constraint.
 
-One thing blocks all of it and is not code: **there is no `LICENSE` file**. A
-public repo without one is all rights reserved, so no packager may
-redistribute it.
+Full detail is in [PUBLISHING.md](../PUBLISHING.md).
 
-## Phase 18 — `LICENSE`, and consistent Android signing
+## R1 — Artifact signing and key custody — **done**
 
-GPL-3.0-or-later. It permits the FOSS channels, makes verbatim repackaging
-straightforward to act on, and is compatible with every dependency — note that
-GPL-2.0 would *not* be, since AndroidX is Apache-2.0.
+Android releases are signed (phase 18). Release artifacts are covered by a
+detached GPG signature over `SHA256SUMS`, which is the convention Linux
+packagers and wary users already know how to check; the public key is committed
+as `RELEASE-SIGNING-KEY.asc` and shipped with every release.
 
-Ship a real signing key at the same time (PACKAGING.md). Android refuses to
-upgrade across a signature change, so every install made before this is a
-reinstall later.
+Windows and macOS signing steps are wired into the workflow but gated on
+secrets that do not exist, because neither can be self-issued:
 
-**Done when** `LICENSE` is committed and a tagged release produces a
-consistently signed APK.
+- **Authenticode** needs a CA-issued certificate — Azure Trusted Signing, or an
+  OV/EV cert on a hardware token. A self-signed certificate satisfies nothing
+  and is a key to manage for no benefit.
+- **Developer ID** is issued by Apple to paying members only.
 
-## Phase 19 — Obtainium
+Both fail loudly if their secrets appear before the implementation does, rather
+than silently producing unsigned output.
 
-A README line. Obtainium installs from GitHub Releases and tracks updates from
-them, which `release.yml` already produces. Needs phase 18's signing to be
-useful, and nothing else.
+Key custody: keys live outside the repo at `~/.huemux-signing/` (0700, files
+0600), with `backup-to-bitwarden.sh` for the vault copy and `OFFLINE-BACKUP.md`
+for the copy that does not depend on an account. The Android keystore is
+unrecoverable if lost, so one copy is not a backup.
 
-**Done when** the app installs and self-updates through Obtainium.
+## R2 — Workflow split and the `release` environment
 
-## Phase 20 — Attribution and About screen
+Split into `build` (no secrets) → `sign` → `publish`, with publish gated on a
+GitHub Environment carrying a required reviewer. Two properties worth having
+before there are several channels to publish to:
+
+- No credential is reachable from a pull request, including a fork's.
+- A mistyped tag waits for a human instead of shipping.
+
+Also key each channel's target off the existing pre-release test, so an alpha
+can never reach a stable channel.
+
+**Done when** a fork's PR cannot read a signing secret, and a tag push pauses
+for approval before anything leaves the repo.
+
+## R3 — Automated test gate
+
+Currently the release runs `go vet` and `go test`, which covers the Go core and
+nothing else. The parts that have broken most often in this project — the
+frontend and the Android half — have no automated coverage at all, and every
+regression so far was found by hand on a device.
+
+What is missing, in the order it pays off:
+
+1. **A server smoke test in CI.** Start the built binary, assert it serves
+   `/app.html`, `/api/config` and the embedded assets, and exits cleanly. Would
+   have caught nothing so far, but it is the floor.
+2. **Frontend unit tests.** There is no build step and no test runner. `node
+   --test` against the pure-logic modules (`theme.js`'s palette/effects split,
+   `slider-touch.js`'s gesture rules, `dropdown.js`'s dismissal) needs no
+   bundler and would have caught the slider bug that shipped in alpha.14.
+3. **A headless browser check.** The shell's frame integrity, the standalone
+   redirect, and the lights cache are all exactly what Playwright is for, and
+   all three have regressed at least once.
+4. **Kotlin compilation in CI on every push**, not only on a tag. The Android
+   half is currently compiled for the first time by a release build, which is
+   the worst possible moment to discover a syntax error.
+5. **A device checklist** in the repo for what genuinely cannot be automated:
+   MediaProjection consent, recording playback, upgrade-over-install.
+
+**Done when** items 1, 2 and 4 run on every push and a release cannot be cut
+with any of them failing.
+
+## C1 — Attribution and About screen
 
 `THIRD_PARTY_LICENSES` generated by `go-licenses`, with `go-licenses check` in
-CI so an incompatible dependency fails the build rather than a store review.
-An About section in Settings showing version, licence, the full third-party
-text served from embedded `web/` (offline devices must still show it), and the
-trademark disclaimer.
+CI. An About section showing version, licence, the full third-party text served
+from embedded `web/` (offline devices must still show it), and the trademark
+disclaimer.
 
 **Done when** the About screen shows every licence with no network, and CI
 fails on a deliberately-added copyleft dependency.
 
-## Phase 21 — IzzyOnDroid
+## C2 — IzzyOnDroid
 
-The first real Android store, and much lower friction than f-droid.org: it
-accepts the APK already built rather than building from source. Needs phase 18
-and Fastlane-structured metadata in the repo.
+The lowest-friction Android store: it accepts the APK already built rather than
+building from source. Needs Fastlane-structured metadata in the repo.
 
-**Done when** the app is in the IzzyOnDroid repo and updates track releases.
-
-## Phase 22 — Scoop, Homebrew tap, AUR
+## C3 — Scoop, Homebrew tap, AUR
 
 No review, no accounts beyond a repo. Also the first proof the release
 artifacts are consumable by something other than a browser.
 
-**Done when** `scoop install`, `brew install` and an AUR helper each work from
-a clean machine.
+## C4 — Flathub
 
-## Phase 23 — Flathub
+Manifest, AppStream metainfo with the SPDX licence, and offline sources — Go
+modules vendored, Electron pre-fetched. The Electron half is the work.
 
-Manifest, AppStream metainfo with the SPDX licence, and offline sources —
-Flatpak builds have no network, so Go modules must be vendored and Electron
-pre-fetched. The Electron half is the work.
+## C5 — F-Droid main repo
 
-**Done when** the Flathub build passes and the app installs from Flathub.
+Built from source on their infrastructure and signed by them. The cost is a
+`gomobile bind` recipe that runs unattended with the NDK.
 
-## Phase 24 — F-Droid main repo
+## C6 — Privacy policy and store declarations
 
-The flagship: built from source on their infrastructure and signed by them, so
-there is no key to lose. The cost is a `gomobile bind` recipe that runs
-unattended with the NDK.
+Not needed by C2–C5. Required from C9, and cheap to do alongside C1.
 
-**Done when** the app is in the F-Droid repo and updates land on a tag.
+## C7 — Windows certificate, then winget — **blocked**
 
-## Phase 25 — Release workflow split
+Azure Trusted Signing is the only option that works cleanly from CI. Requires
+verifying a legal identity and paying. The workflow step is already in place.
 
-`build` (no secrets) → `sign` → `publish`, with publish gated on a `release`
-GitHub Environment carrying a manual approval, so no credential is reachable
-from a pull request and no mistyped tag publishes by itself.
-
-**Done when** a fork's PR cannot read any signing secret, and a tag push waits
-for approval.
-
-## Phase 26 — Privacy policy and store declarations
-
-Needed from here on, not before — the FOSS channels above do not require one. A
-page on the existing `docs/` site, exact about screen capture and recording,
-plus the Data safety answers, the encryption export declaration and the
-`FOREGROUND_SERVICE_MEDIA_PROJECTION` justification, all consistent with each
-other.
-
-**Done when** huemux.com/privacy is live and the four declarations agree.
-
-## Phase 27 — Windows signing, then winget
-
-Azure Trusted Signing is the only option that works cleanly from CI; OV and EV
-certificates now live on hardware tokens. Requires verifying a legal identity.
-
-**Done when** a downloaded release `.exe` runs with no SmartScreen warning.
-
-## Phase 28 — macOS notarization, then Homebrew cask
+## C8 — macOS notarization, then Homebrew cask — **blocked**
 
 Apple Developer Program, Developer ID certificate, `notarytool`, stapling, and
 signing the embedded Electron framework as well as the app.
 
-**Done when** the desktop app opens on a clean Mac without right-click-Open.
+## C9 — Google Play
 
-## Phase 29 — Google Play
-
-Last, most gated, and the only channel where the trademark question has teeth —
-Play carries plenty of third-party apps with "Hue" in the name, but it is also
-the only place a complaint gets actioned quickly. Needs an account and identity
-verification, a closed test held for a continuous period before production
-unlocks, an App Bundle rather than the current APK, Play App Signing, and phase
-26's declarations.
-
-A separate Google account does not reliably insulate a personal one: Google
-terminates associated accounts, inferring association from payment methods,
-phone numbers and devices. See PUBLISHING.md §3.1.
-
-**Done when** the app is on a production track with a staged rollout, and a
-tagged release reaches the internal track without manual steps.
+Most gated. Account and identity verification, a closed test held for a
+continuous period before production unlocks, an App Bundle rather than an APK,
+Play App Signing, and C6's declarations. A separate Google account does not
+reliably insulate a personal one — see PUBLISHING.md §3.1.
