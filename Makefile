@@ -2,7 +2,7 @@ VERSION := $(shell git describe --tags --always --dirty 2>/dev/null || echo dev)
 LDFLAGS := -s -w -X main.version=$(VERSION)
 DIST := dist
 
-.PHONY: dev dist dev-desktop dist-desktop clean fmt vet test
+.PHONY: dev dist dev-desktop dist-desktop clean fmt vet lint test
 
 dev:
 	go build -o huemux ./cmd/huemux
@@ -40,6 +40,9 @@ fmt:
 
 vet:
 	go vet ./...
+
+lint:
+	golangci-lint run ./...
 
 test:
 	go test ./...
