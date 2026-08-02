@@ -149,6 +149,40 @@ button, input, select, textarea, optgroup {
   font-family: inherit;
 }
 
+/* ── Long press does nothing here, so it should look like nothing ──────────
+   Holding a control in the Android WebView tinted it blue and then, if held,
+   put it into a stuck half-selected state. That is the platform's press
+   feedback and its long-press text selection, both of which assume a
+   long-press gesture worth performing. This app has none: every control acts
+   on release.
+
+   Two mechanisms, because they are separate features. The tap highlight is a
+   colour the browser paints over the element; the stuck state is the text
+   selection a long press begins. Disabling one leaves the other.
+
+   MainActivity also consumes long clicks on the WebView itself, which is what
+   suppresses the accompanying haptic tick and the context menu — CSS cannot
+   reach either. */
+:root { -webkit-tap-highlight-color: transparent; }
+
+button, a, summary, label, select,
+input[type=range], input[type=checkbox], input[type=radio],
+.hm-dropdown-item, .light-card, .room-tile, .scene-chip, .filter-item {
+  -webkit-tap-highlight-color: transparent;
+  -webkit-touch-callout: none;
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+/* Text that exists to be read and copied stays selectable. The diagnostics
+   dump in particular is the fallback for every device where a download or the
+   clipboard API fails, and selecting it by hand is the whole point. */
+textarea, input[type=text], input[type=number], input[type=password],
+p, pre, code, .hint, .warning, #diag-text {
+  -webkit-user-select: text;
+  user-select: text;
+}
+
 /* Radial/blurred tint used behind a light's card, colored per-light via an
    inline custom property at render time. Shared here rather than duplicated
    between lights.html (per-light cards) and sync.html (zone preview cards). */

@@ -59,6 +59,20 @@ class MainActivity : AppCompatActivity() {
             // Keep navigation inside the app rather than bouncing to Chrome.
             webViewClient = WebViewClient()
 
+            // Long press does nothing in this app — every control acts on
+            // release — but the WebView still runs the platform gesture:
+            // a haptic tick, then text selection with its context menu, which
+            // left buttons and sliders sitting in a stuck half-selected state
+            // if a finger rested on them. CSS suppresses the tap highlight and
+            // the selection (see the touch block in shared/theme.css); only
+            // this reaches the haptic feedback and the context menu.
+            //
+            // Returning true consumes the event rather than disabling the
+            // listener, so nothing downstream treats it as unhandled.
+            isLongClickable = false
+            setOnLongClickListener { true }
+            isHapticFeedbackEnabled = false
+
             // A WebView ignores downloads unless told what to do with them, so
             // the settings page's "Download diagnostics" button would silently
             // do nothing. Hand the URL to the system, which offers the share

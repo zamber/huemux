@@ -22,6 +22,7 @@ reviewable commit or small series, and to leave `main` working.
 | 11 | Device feedback — shell integrity, capture quality, recording | **device-tested; recording reworked in 12** |
 | 12 | Recording without a second mirror, host diagnostics | **device-tested; file output reworked in 13** |
 | 13 | File output — native save, share sheet, reported locations | **built, untested on a device** |
+| 14 | Long-press suppression | **built, untested on a device** |
 
 ---
 
@@ -301,3 +302,23 @@ destination up front turns out to matter.
 
 **Done when** a device confirms: the diagnostics button writes a file to
 Downloads and Share sends it, and a finished recording names its location.
+
+## Phase 14 — Long-press suppression
+
+Long press has no meaning anywhere in this UI; every control acts on release.
+The platform did not know that, so holding a control produced a tap highlight,
+then a text selection that stuck after the finger lifted.
+
+Disabled, not delayed: a threshold would only postpone a gesture that does
+nothing. Three mechanisms, since disabling one leaves the others —
+`-webkit-tap-highlight-color`, `user-select`/`-webkit-touch-callout`, and the
+Activity consuming long clicks (the only route to the haptic tick and the
+context menu).
+
+The CSS is scoped to controls. Text that exists to be read stays selectable,
+the diagnostics dump above all: hand-selecting it is the documented fallback
+for devices where the download and the clipboard both fail.
+
+**Done when** a device confirms that holding a button or slider produces no
+highlight, no haptic tick, and no stuck state, and that the diagnostics text
+can still be selected by hand.
