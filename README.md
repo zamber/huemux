@@ -189,7 +189,21 @@ desktop). The first time you start sync you'll see your compositor's own
 screen-share consent dialog — that's Wayland's security model, not
 something this app can bypass, unlike X11.
 
-#### AppImage (Linux)
+##### Homebrew / Linuxbrew
+
+macOS and Linux users can install through Homebrew (Linuxbrew on Linux)
+from the [official tap](https://github.com/zamber/homebrew-huemux):
+
+```bash
+brew tap zamber/huemux
+brew install huemux-desktop    # desktop window + real screen capture
+# or: brew install huemux       # plain server, serves the web UI
+```
+
+The formula tracks the latest release automatically — `brew upgrade
+huemux-desktop` after any new release.
+
+### AppImage (Linux)
 
 The simplest way to get the desktop version on Linux: one executable file,
 no install step, no distro packages. The download URL never changes — it

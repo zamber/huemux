@@ -16,15 +16,28 @@ fastlane/metadata/android/<locale>/
     <versionCode>.txt    per-release notes
 ```
 
-## Still to add
+## Screenshots — pending, taken by the user
 
-**Screenshots.** Deliberately absent rather than forgotten: the obvious
-candidates show the bridge's LAN address, and this repository does not carry
-local network details (see AGENTS.md). Take fresh ones with the sync page
-either disconnected or cropped above the status block.
+**How to take them** (phone, portrait, ~9:19 aspect like a real
+screenshot; each file exactly `1.png`, `2.png`, `3.png`, `4.png`):
 
-Four is a good set — lights grid, a room with a colour picker open, the sync
-page mid-stream, and settings.
+1. **Lights grid** — the rooms view with a few lights on. Crop out the
+   top of the screen if it shows the server address.
+2. **Colour picker** — tap a colour-capable bulb so the picker overlay is
+   open over the lights grid.
+3. **Sync mid-stream** — the sync page with sync running and the preview
+   showing zones. The status block at the bottom shows the bridge's LAN
+   address — crop it out or pause the page so it is absent.
+4. **Settings** — the settings page.
+
+Keep the bridge's LAN address and any other private detail out of every
+frame; the repo is public. Save the files into
+`fastlane/metadata/android/en-US/images/phoneScreenshots/` and the same
+into `.../pl/...` — then submit per PUBLISHING.md §2A.2.
+
+Why not the existing `docs/screenshots/`: they were browser captures
+(desktop aspect) and their predecessors showed the bridge's LAN address;
+fresh phone-captured images are what a store listing wants anyway.
 
 ## icon.png — done, and how to redo it
 

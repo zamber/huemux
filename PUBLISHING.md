@@ -224,11 +224,14 @@ build**, rather than building from source on its own infrastructure.
 - Reads Fastlane metadata from the repo, which is in `fastlane/` (see
   `fastlane/README.md`).
 
-**Ready:** licence, signed releases with a stable key, an incrementing
-`versionCode`, a real launcher icon, and listing text in English and Polish.
+**Ready (as of 2026-08-02):** licence, signed releases with a stable key,
+an incrementing `versionCode`, a real launcher icon, the 512x512
+`icon.png`, and listing text in English and Polish.
 
-**Before submitting:** add screenshots and a 512x512 `icon.png` — see
-`fastlane/README.md` for why the existing screenshots cannot be reused as-is.
+**Remaining before submission:** screenshots in
+`fastlane/metadata/android/{en-US,pl}/images/phoneScreenshots/`. The user
+takes fresh ones (the earlier candidates showed the bridge's LAN address,
+and the repo is public). Guidance is in `fastlane/README.md`.
 
 **To submit**, open a request at
 <https://gitlab.com/IzzyOnDroid/repo/-/issues> with:
@@ -285,10 +288,23 @@ consumable.
 A manifest JSON pointing at the release `.exe` and its SHA256. No signing
 required. Publishable today.
 
-### 2B.2 Homebrew tap (macOS + Linux)
+### 2B.2 Homebrew tap (macOS + Linux) — done 2026-08-02
 
-A `homebrew-huemux` repo with a formula — see PACKAGING.md. Users add the tap
-explicitly, so there is no review and no notability threshold.
+**<https://github.com/zamber/homebrew-huemux>** — live. Two formulas:
+`huemux` (plain server) and `huemux-desktop` (GUI), each installing the
+signed release binary for the right OS/arch with `using: :nounzip`.
+Users: `brew tap zamber/huemux && brew install huemux-desktop`.
+
+**Auto-bump:** the tap's `.github/workflows/auto-bump.yml` runs every six
+hours and on demand. `scripts/bump.py` reads the newest release from the
+GitHub API, and rewrites version, asset URLs and SHA256s from the
+release's `SHA256SUMS` (no binary downloads). Hashes are reconciled even
+when the version is current, so a force-pushed release cannot leave the
+tap serving a stale checksum. Uses only the workflow's own
+`GITHUB_TOKEN` — no cross-repo secrets.
+
+Not to be confused with Homebrew core (2C.2), which has review and a
+notability bar.
 
 ### 2B.3 AppImage
 
