@@ -68,7 +68,7 @@ function render(cfg) {
 }
 
 function load() {
-  fetch('/api/config')
+  authFetch('/api/config')
     .then((r) => (r.ok ? r.json() : Promise.reject(new Error('HTTP ' + r.status))))
     .then(render)
     .catch((e) => {
@@ -126,7 +126,7 @@ function apply() {
   inFlight = true;
   say(t('settings.saving', 'Saving…'));
 
-  fetch('/api/config', {
+  authFetch('/api/config', {
     method: 'PATCH',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(currentBody()),
@@ -170,12 +170,25 @@ function scheduleApply(immediate) {
   el.addEventListener('blur', () => scheduleApply(true));
 });
 
+// The token is also a credential every fetch and WebSocket on this device has
+// to send, so persist it to sessionStorage as it is typed — not on save.
+els.token.addEventListener('input', function () {
+  setAuthToken(els.token.value);
+});
+
 els.form.addEventListener('submit', (ev) => {
   // Nothing submits, but a form still does on Enter, and letting it navigate
   // would blank the page.
   ev.preventDefault();
   scheduleApply(true);
 });
+
+// Pre-fill the token field from sessionStorage: a stored token survives a page
+// reload, and showing it beats making the user re-type it to know it is there.
+(function () {
+  var t = getAuthToken();
+  if (t) els.token.value = t;
+})();
 
 load();
 
@@ -197,7 +210,7 @@ const diag = {
 };
 
 function fetchDiagnostics() {
-  return fetch('/api/diagnostics')
+  return authFetch('/api/diagnostics')
     .then((r) => (r.ok ? r.text() : r.text().then((t) => Promise.reject(new Error(t.trim() || ('HTTP ' + r.status))))));
 }
 
@@ -296,7 +309,10 @@ diag.download.addEventListener('click', () => {
   // Everywhere else the server's Content-Disposition and the browser's own
   // download handling are enough.
   const a = document.createElement('a');
-  a.href = '/api/diagnostics';
+  // A navigation cannot carry an Authorization header, so a stored token has
+  // to ride in the URL — the same form the server accepts for WebSockets.
+  const token = getAuthToken();
+  a.href = '/api/diagnostics' + (token ? '?token=' + encodeURIComponent(token) : '');
   a.download = '';
   document.body.appendChild(a);
   a.click();
@@ -317,7 +333,7 @@ const about = {
   text: document.getElementById('about-licences-text'),
 };
 
-fetch('/api/about')
+authFetch('/api/about')
   .then((r) => (r.ok ? r.json() : Promise.reject(new Error('HTTP ' + r.status))))
   .then((a) => {
     about.version.textContent = a.version;
