@@ -73,6 +73,27 @@ rules out the most likely explanation first.
 Restarting also drops every WebSocket, so reload the page rather than trusting
 a tab that was open across the restart.
 
+**And the browser has its own stale copy.** `curl` proves what the *server*
+holds, which is a different question from what the *page* is running. A tab
+that was open before the rebuild will happily keep executing the previous
+version of a script from its HTTP cache, and a plain reload does not always
+evict it — an iframe reloaded from within the shell reliably does not.
+
+This is the same trap as the embedded-assets one, one layer further out, and it
+is worse: it produces a *passing* result for a fix that is not there. It has
+already done so once, on a slider change that was then reported working and was
+not. When a frontend change appears to work, confirm the page is running it:
+
+```js
+// In the frame under test, not the shell.
+await fetch('/shared/slider-touch.js', { cache: 'force-cache' }).then(r => r.text())
+// vs { cache: 'reload' } — if they differ, the test was against the old file.
+```
+
+A `{ cache: 'reload' }` fetch followed by reloading the frame is enough to
+recover. Prefer checking for a string only the *new* version contains, since
+that fails loudly rather than silently agreeing with you.
+
 ## Verifying behavior
 
 The Go side has unit tests; the parts most likely to break do not, so drive
