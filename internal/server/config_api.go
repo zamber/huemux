@@ -78,27 +78,23 @@ func (s *Server) writeConfig(w http.ResponseWriter, r *http.Request) {
 
 // patchConfig applies a partial update and persists it.
 //
-// Loopback-only, and not because of the auth layer — this predates it and
-// stands on its own. Rewriting the listen address or disabling authentication
-// is exactly the operation you would not want reachable from the network it
-// governs, so the check is on where the request physically came from rather
-// than on a credential that could be replayed.
+// Loopback callers are always trusted — they have physical access to the
+// machine. Non-loopback callers are allowed only when auth.mode is "token" and
+// the request carries a valid token.
 //
-// Loopback is not enough on its own, though: any webpage open on this machine
-// can reach 127.0.0.1, and a PATCH from a browser arrives with RemoteAddr set
-// to loopback and no CORS preflight to stop it. So a request that names an
-// Origin must pass the same check the WebSocket handshake does — only our own
-// page, or a page served from the configured listen host, may change the
-// configuration. An absent Origin means a non-browser client (curl and the
-// like), which is fine from loopback.
+// POST was dropped from the allowed methods: PATCH triggers a CORS preflight
+// (unlike POST, which is a "simple method"), so a malicious cross-origin page
+// cannot issue a PATCH without the browser first sending an OPTIONS request
+// that this server rejects by not setting any CORS response headers. The
+// token requirement is defense-in-depth for non-browser clients and for cases
+// where the security model's primary control (loopback binding) is relaxed.
 func (s *Server) patchConfig(w http.ResponseWriter, r *http.Request) {
+	cfg := s.Config()
 	if !isLoopbackRequest(r) {
-		http.Error(w, "configuration can only be changed from the local machine", http.StatusForbidden)
-		return
-	}
-	if origin := r.Header.Get("Origin"); origin != "" && !checkOrigin(r, s.Config().Listen.Host) {
-		http.Error(w, "cross-origin configuration changes are not allowed", http.StatusForbidden)
-		return
+		if cfg.Auth.Mode != appconfig.AuthToken || !appconfig.TokenMatches(requestToken(r), cfg.Auth.Token) {
+			http.Error(w, "configuration can only be changed from the local machine", http.StatusForbidden)
+			return
+		}
 	}
 
 	// Decode over the current config so omitted fields keep their value —

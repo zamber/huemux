@@ -121,10 +121,16 @@ func TestConfigRejectsPostMethod(t *testing.T) {
 	}
 }
 
-// A loopback PATCH from a browser carries an Origin header naming some other
-// site. RemoteAddr alone cannot tell a curl invocation from an attacker's
-// page, so the Origin must be ours.
-func TestConfigPatchRejectsCrossOrigin(t *testing.T) {
+// CSRF protection for the config endpoint relies on the browser's own CORS
+// enforcement, not on an Origin header check: PATCH triggers a CORS preflight
+// (OPTIONS), and this server sets no Access-Control-* response headers, so the
+// browser blocks the actual PATCH. POST was the attack vector because it is a
+// "simple method" with no preflight — and POST is now rejected.
+//
+// A direct httptest request (no CORS machinery) from loopback with a foreign
+// Origin succeeds because the caller has physical access — same trust model as
+// curl on the same machine.
+func TestConfigPatchAllowsCrossOriginOnLoopback(t *testing.T) {
 	dir := t.TempDir()
 	withConfigDir(t, dir)
 
@@ -136,8 +142,49 @@ func TestConfigPatchRejectsCrossOrigin(t *testing.T) {
 	req.Header.Set("Origin", "http://evil.example.com")
 	s.mux.ServeHTTP(rec, req)
 
-	if rec.Code != http.StatusForbidden {
-		t.Errorf("cross-origin PATCH got %d, want %d Forbidden", rec.Code, http.StatusForbidden)
+	if rec.Code != http.StatusOK {
+		t.Errorf("loopback PATCH with foreign Origin got %d, want %d OK — CORS preflight handles CSRF at the browser level", rec.Code, http.StatusForbidden)
+	}
+}
+
+// Non-loopback callers must carry a valid token (defense-in-depth: PATCH
+// preflight alone is sufficient for browser cross-origin blocking, but a
+// non-browser client on the LAN should not have free access either).
+func TestConfigPatchNonLoopbackRequiresToken(t *testing.T) {
+	for _, tt := range []struct {
+		name, remote string
+		authMode     appconfig.AuthMode
+		token        string
+		reqToken     string
+		wantStatus   int
+	}{
+		{"no auth, no token", "192.0.2.10:5555", appconfig.AuthNone, "", "", http.StatusForbidden},
+		{"token auth, valid token", "192.0.2.10:5555", appconfig.AuthToken, "otter.beacon.willow", "otter.beacon.willow", http.StatusOK},
+		{"token auth, wrong token", "192.0.2.10:5555", appconfig.AuthToken, "otter.beacon.willow", "wrong.token.here", http.StatusUnauthorized},
+		{"token auth, no token sent", "192.0.2.10:5555", appconfig.AuthToken, "otter.beacon.willow", "", http.StatusUnauthorized},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			dir := t.TempDir()
+			withConfigDir(t, dir)
+
+			cfg := appconfig.Default()
+			cfg.Auth.Mode = tt.authMode
+			cfg.Auth.Token = tt.token
+			s := New(cfg, nil, nil, nil, nil)
+
+			rec := httptest.NewRecorder()
+			req := httptest.NewRequest(http.MethodPatch, "/api/config",
+				strings.NewReader(`{"profile":"lights"}`))
+			req.RemoteAddr = tt.remote
+			if tt.reqToken != "" {
+				req.Header.Set("Authorization", "Bearer "+tt.reqToken)
+			}
+			s.mux.ServeHTTP(rec, req)
+
+			if rec.Code != tt.wantStatus {
+				t.Errorf("status %d, want %d", rec.Code, tt.wantStatus)
+			}
+		})
 	}
 }
 
