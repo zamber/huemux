@@ -28,51 +28,83 @@ so the order is also roughly the order to do them in.
 
 The repository is public with no licence, which under copyright law means
 **all rights reserved**: nobody may redistribute it, and that includes
-Flathub, Homebrew, F-Droid and anyone packaging it downstream. Several
-channels will refuse the submission outright, and the ones that don't are
-relying on a permission that has not been given.
+F-Droid, Flathub and anyone packaging it downstream. Several channels will
+refuse the submission outright, and the ones that do not are relying on a
+permission that has not been given.
 
-Pick a licence and commit it as `LICENSE` at the repo root. For a project like
-this the realistic choices are:
+#### Recommendation: GPL-3.0-or-later
 
-| Licence | Consequence |
+For a project you want in the FOSS ecosystem and do not want quietly
+repackaged, **GPL-3.0-or-later** is the right fit, and the dependency set
+allows it.
+
+| Option | Fit here |
 |---|---|
-| **MIT** / **BSD-2** | Anyone may do anything, including ship a closed fork. Simplest, and what the Go dependencies already use. |
-| **Apache-2.0** | As MIT plus an explicit patent grant and a `NOTICE` mechanism. The safer default if patents ever matter. |
-| **GPL-3.0** | Forks must stay open. Incompatible with the App Store; fine for Play, F-Droid and Flathub. |
+| **GPL-3.0-or-later** | **Recommended.** A distributed fork must publish its source. Compatible with every dependency below. F-Droid's natural licence. |
+| AGPL-3.0 | GPL plus the network clause. Worth considering only because HueMux *is* a server — it would bind someone who hosted it as a service. Scares off some contributors, and hosting this is an unlikely threat for a LAN app. |
+| GPL-2.0-only | **Do not.** AndroidX is Apache-2.0, which is incompatible with GPLv2 (though fine with GPLv3). Choosing v2 would create a real conflict. |
+| MIT / Apache-2.0 | Simplest, and what the dependencies use — but permits exactly the closed repackaging you want to prevent. |
 
-Also add an SPDX identifier to the AppStream metadata (Flathub requires one)
-and to the Play listing.
+Compatibility is fine: MIT, BSD-3 and Apache-2.0 dependencies can all be
+combined into a GPLv3 work, and Electron's LGPL ffmpeg is compatible too.
+
+#### What a licence does and does not protect against
+
+Your instinct is right that a licence does not stop a rewrite. Copyright covers
+the *expression*, not the idea, and a clean reimplementation has always been
+legal — machine assistance changes the cost of that, not the law.
+
+But that is not the threat that actually happens. What happens to popular FOSS
+apps is **verbatim repackaging**: someone takes the APK, bolts on ads or
+tracking, and publishes it. Against that, GPL is effective and easy to act
+on — the copied code is identical, so infringement is trivial to demonstrate,
+and a takedown needs no lawsuit.
+
+Worth knowing: **the name protects against repackaging better than the licence
+does.** A GPL fork is entitled to the code but never to the trademark, so it
+cannot be called HueMux. That is the lever that removes a malicious clone from
+a store fastest, and it is an argument for a distinctive name that is
+unambiguously yours — see §0.2.
 
 ### 0.2 The name contains someone else's trademark
 
 "Hue" is Signify's trademark for lighting products. `HueMux`, the domain
-`huemux.com`, and the Play listing all use it.
+`huemux.com`, and any store listing all use it.
 
-What is normally fine: saying the app **works with** Philips Hue, in the
-description, using the words descriptively. That is nominative use.
+**In practice this is widely tolerated.** Play carries a long list of
+third-party apps with "Hue" in the name — Hue Essentials, iConnectHue, All 4
+Hue and others have shipped for years. Signify has not gone after the category,
+and describing an app as working with Philips Hue is ordinary nominative use.
+So the earlier framing here was too alarmed: this is a tail risk, not a
+likelihood.
 
-What carries real risk: the trademark inside the **product name**. Both Google
-and Apple action trademark complaints on request from the holder, usually by
-suspending the listing first and asking questions later — which is exactly the
-outcome you are trying to avoid by using a separate account, and a separate
-account does not protect against it.
+What actually gets apps pulled is narrower, and worth avoiding precisely:
 
-Before submitting anywhere:
+- **Logos and badges.** Never use the Philips or Hue logos, or the "Works with
+  Philips Hue" badge. That badge is a certification programme; using it
+  uncertified is straightforward infringement and is the kind of thing that
+  does draw a complaint.
+- **Implying endorsement.** Keep the listing and the About screen clear:
+  *"Not affiliated with, endorsed by, or sponsored by Signify N.V. Philips and
+  Hue are trademarks of Signify Holding."*
+- **Naming that reads as first-party.** "Hue Sync" is Signify's own product
+  name. A name that could be mistaken for theirs is far riskier than one that
+  merely contains the word.
 
-- Never use the Philips or Hue **logos**, or the "Works with Philips Hue"
-  badge. That badge is a certification programme and using it uncertified is a
-  straightforward infringement.
-- Put a disclaimer in the store listing and the About screen: *"Not affiliated
-  with, endorsed by, or sponsored by Signify N.V. Philips and Hue are
-  trademarks of Signify Holding."*
-- Read the Hue Developer Program terms before relying on the API commercially.
-  Local CLIP API use by third-party apps is widespread and tolerated; that is
-  not the same as licensed.
-- **Decide now whether you are willing to rename.** If the answer is no, be
-  aware you are accepting a takedown risk that no amount of account hygiene
-  reduces. If yes, renaming is far cheaper before a store listing, an installed
-  base and a package-manager entry exist than after.
+`HueMux` is a coined compound and reads as third-party, which is the safer end
+of this. Two practical notes rather than a warning:
+
+- Publishing to FOSS channels first (§2A) carries essentially none of this
+  risk — F-Droid and Flathub do not field trademark complaints the way Play
+  does — so the question can be deferred until a Play listing is actually on
+  the table.
+- If HueMux is ever going to be the long-term name, registering it as a
+  trademark in your jurisdiction is what makes §0.1's anti-repackaging argument
+  real. That is a cheap filing compared to what it defends.
+
+Read the Hue Developer Program terms before relying on the API commercially.
+Local CLIP API use by third-party apps is widespread and tolerated; that is not
+the same as licensed.
 
 ---
 
@@ -158,114 +190,150 @@ downside.
 
 ---
 
-## 2. Channels, easiest to hardest
+## 2A. FOSS-first channels — do these
 
-### 2.1 GitHub Releases — done
+Free-software channels, in the order they cost you effort. None of them wants
+money, an identity check, or a trademark opinion, and there is a genuine gap
+here: the FOSS Hue app selection is thin.
 
-Already automated. `release.yml` builds every platform on a `v*` tag and
-attaches the binaries. Everything below is a layer on top of this.
+All of them need §0.1's `LICENSE` file first. That is the whole gate.
 
-### 2.2 F-Droid — easiest real store, and no Google involvement
+### 2A.1 Obtainium — works today, zero effort
 
-The best first store for this app, and the one that sidesteps the entire
-account-ban question.
+Obtainium installs Android apps straight from GitHub Releases and tracks
+updates from them. Nothing to submit and nothing to package: `release.yml`
+already attaches an APK to every tag, which is the entire requirement.
 
-- No account, no fee, no identity check.
-- **F-Droid signs the APK itself**, so no keystore secret is needed and no
-  signing key can be lost.
-- It builds from source, which HueMux already supports.
+The only change worth making is dropping the debug-signed APK for a
+consistently signed one (PACKAGING.md), because Android refuses to upgrade
+across a signature change. Do that once and existing installs upgrade forever.
 
-What it needs:
-- The `LICENSE` file from §0.1. F-Droid will not accept the app without it.
-- A metadata file submitted to `fdroiddata` describing the build.
-- No proprietary dependencies. HueMux qualifies — there is no Firebase, no
-  Play Services, no closed SDK.
-- Fastlane-structured listing text and screenshots in the repo.
+**Add an "Install with Obtainium" line to the README today.** It is the
+cheapest distribution this project will ever get.
 
-The build is the awkward part: F-Droid's builders must run `gomobile bind`,
-which needs the NDK. This is solvable but is the main effort here.
+### 2A.2 IzzyOnDroid — the low-friction F-Droid repo
 
-### 2.3 Scoop (Windows) — no signing, no account
+A well-known third-party repository that F-Droid clients can add, and by far
+the easiest route into the F-Droid ecosystem: **it takes the APK you already
+build**, rather than building from source on its own infrastructure.
 
-A manifest JSON in a bucket repo, pointing at the release `.exe` and its
-SHA256. Users get `scoop install huemux`. Publishable today, needs nothing
-that does not already exist. Scoop does not require code signing.
+- No reproducible build required, which is what makes the main F-Droid repo
+  hard for a `gomobile` project.
+- Requires a FOSS licence, a public source repo, and no proprietary
+  dependencies — all of which are true once §0.1 is done.
+- Wants Fastlane-structured metadata in the repo (`fastlane/metadata/android/`)
+  for the listing text and screenshots.
+- Submission is an issue on their tracker.
 
-### 2.4 Homebrew tap (macOS + Linux) — no approval needed
+Realistically this should be the **first Android store**, before f-droid.org.
 
-A `homebrew-huemux` repo with a formula. See PACKAGING.md for the formula
-itself. Users add the tap explicitly, so there is no review and no notability
-requirement.
+### 2A.3 Flathub — the Linux desktop answer
 
-**Homebrew core** is a different matter and belongs in the hard section —
-it has notability thresholds and requires the cask to be signed and notarized.
+The de-facto Linux app store, and FOSS-friendly by construction. See §2C.3 for
+the build detail; the effort is Electron's offline sources, not the policy.
 
-### 2.5 AppImage — no store at all
+### 2A.4 F-Droid main repo
 
-Covered in PACKAGING.md. Publish alongside the GitHub Release, optionally with
-zsync for delta updates. No signing required, though a detached GPG signature
-is good manners.
+The flagship, and the one with the strongest guarantees: builds from source on
+their infrastructure, **signs the APK itself** (so there is no key to lose),
+and needs no account or fee.
 
-### 2.6 winget (Windows) — wants signing
+The cost is that their builders must run `gomobile bind`, which needs the NDK
+and a build recipe that works unattended. That is the real work, and it is why
+IzzyOnDroid comes first — it gets the app to F-Droid users while this is
+sorted out.
 
-A manifest PR to `microsoft/winget-pkgs`, validated automatically. It will
-accept unsigned installers, but SmartScreen will warn users on first run until
-the binary builds reputation. Better done after §2.9.
+### 2A.5 AUR (Arch)
 
-### 2.7 Flathub — moderate, no money
+A `PKGBUILD` in the Arch User Repository. Community-maintained, no review, no
+account beyond an AUR login. Cheap, and Arch users are a meaningful share of
+the audience for a self-hosted LAN tool.
 
-Needs, beyond PACKAGING.md's manifest:
+### 2A.6 Accrescent
 
-- A reverse-DNS app ID. `com.huemux.HueMux` if the domain is yours, which it
-  is.
-- **AppStream metainfo XML** with a summary, description, screenshots,
-  `<content_rating>`, and the SPDX licence from §0.1. Flathub validates it.
+A newer, security-focused Android store built around modern signing. Small
+audience today, low submission cost, and philosophically aligned. Worth doing
+after IzzyOnDroid, not before.
+
+---
+
+## 2B. No-gatekeeper channels
+
+Not FOSS institutions, but nobody reviews or approves — a manifest in a repo
+and you are done. Cheap wins that also prove the release artifacts are
+consumable.
+
+### 2B.1 Scoop (Windows)
+
+A manifest JSON pointing at the release `.exe` and its SHA256. No signing
+required. Publishable today.
+
+### 2B.2 Homebrew tap (macOS + Linux)
+
+A `homebrew-huemux` repo with a formula — see PACKAGING.md. Users add the tap
+explicitly, so there is no review and no notability threshold.
+
+### 2B.3 AppImage
+
+Covered in PACKAGING.md. Published alongside the GitHub Release, optionally
+with zsync for delta updates. No signing required, though a detached GPG
+signature is good manners.
+
+---
+
+## 2C. Channels with real gates
+
+Everything below wants money, an identity check, or a human reviewer.
+
+### 2C.1 winget (Windows)
+
+A manifest PR to `microsoft/winget-pkgs`, validated automatically. Accepts
+unsigned installers, but SmartScreen warns users until the binary builds
+reputation — so this is better after §2C.4.
+
+### 2C.2 Homebrew core
+
+Notability thresholds (stars, forks, active maintenance) plus, for a cask,
+signed and notarized macOS builds. The self-hosted tap in §2B.2 remains the
+fallback indefinitely.
+
+### 2C.3 Flathub build detail
+
+Beyond PACKAGING.md's manifest:
+
+- A reverse-DNS app ID. `com.huemux.HueMux`, since the domain is yours.
+- **AppStream metainfo XML** with summary, description, screenshots,
+  `<content_rating>` and the SPDX licence from §0.1. Flathub validates it.
 - **Offline builds.** Flatpak builds have no network, so Go modules must be
-  vendored (`go mod vendor`, committed) and Electron's download must be
-  pre-fetched as declared sources. The Electron half is the real work; the
-  plain Go build is straightforward.
+  vendored (`go mod vendor`, committed) and Electron pre-fetched as declared
+  sources. The Electron half is the real work; the plain Go build is easy.
 
-Flathub reviews submissions by hand. Expect a round of comments.
+Reviewed by hand. Expect a round of comments.
 
-### 2.8 macOS notarization — $99/year
+### 2C.4 Windows code signing — money and identity
 
-Required before a Homebrew cask is pleasant to install, and before anyone can
-run the desktop app without right-click-Open gymnastics.
+SmartScreen warns on unsigned executables. Cheapest first:
 
-- Apple Developer Program membership.
-- A Developer ID Application certificate.
-- `codesign` the app and the embedded Electron framework, then `notarytool
-  submit --wait`, then `xcrun stapler staple`.
-- Hardened runtime, with an entitlement for screen recording if the desktop
-  build ever captures on macOS.
-
-### 2.9 Windows code signing — money and identity
-
-SmartScreen shows a scary warning on unsigned executables. Options, cheapest
-first:
-
-- **Azure Trusted Signing** — pay-as-you-go, certificate managed by Microsoft,
-  no hardware token, and it works from CI cleanly. The best fit for this
-  project by a distance.
-- **OV certificate** — must now live on a hardware token (since the 2023 key
-  storage rules), which makes CI signing painful.
+- **Azure Trusted Signing** — pay-as-you-go, Microsoft-managed certificate, no
+  hardware token, works from CI cleanly. The only sane option for this project.
+- **OV certificate** — must live on a hardware token since the 2023 key-storage
+  rules, which makes CI signing painful.
 - **EV certificate** — immediate SmartScreen reputation, most expensive, also
   hardware-bound.
 
-All of them require verifying a legal identity or business.
+All require verifying a legal identity or business.
 
-### 2.10 Homebrew core — notability gate
+### 2C.5 macOS notarization — $99/year
 
-Requires the project to be reasonably well known (stars/forks/watchers
-thresholds, actively maintained, versioned releases) and, for a cask, signed
-and notarized macOS builds. Come back to this once §2.8 is done and the
-project has users.
+Apple Developer Program, a Developer ID Application certificate, `codesign` on
+the app *and* the embedded Electron framework, then `notarytool submit --wait`
+and `xcrun stapler staple`. Hardened runtime, with a screen-recording
+entitlement if the desktop build ever captures on macOS.
 
-### 2.11 Google Play — the hardest, and the one you asked about
+### 2C.6 Google Play
 
+The most gated, and the only channel where §0.2's trademark question has teeth.
 See §3.
-
----
 
 ## 3. Google Play, and the account question
 
@@ -297,7 +365,7 @@ What genuinely reduces linkage — and it reduces, it does not eliminate:
 The honest summary: the risk you are trying to avoid is mostly avoided by not
 tripping policy in the first place, and the highest-probability trip for this
 app is the **trademark in the name** (§0.2), which a separate account does
-nothing about. If avoiding Google entirely is acceptable, **F-Droid (§2.2) is
+nothing about. If avoiding Google entirely is acceptable, **the FOSS channels in §2A are
 the answer** and costs nothing.
 
 ### 3.2 What Play requires, specifically
@@ -410,16 +478,23 @@ Two rules worth encoding in the workflow:
 
 ## 5. Suggested order
 
-1. `LICENSE` file — §0.1. Blocks almost everything else.
-2. Decide the trademark question — §0.2. Cheapest to act on now.
-3. `THIRD_PARTY_LICENSES` generation + CI licence check — §1.1.
-4. About screen — §1.2.
-5. Privacy policy page on huemux.com — §1.3.
-6. Scoop manifest + Homebrew tap — §2.3, §2.4. Quick wins, no gatekeepers.
-7. F-Droid — §2.2. The first real store, and no Google account involved.
-8. Split the release workflow and add the `release` environment — §4.
-9. Flathub — §2.7.
-10. Windows signing via Azure Trusted Signing — §2.9, then winget — §2.6.
-11. macOS notarization — §2.8, then a Homebrew cask.
-12. Google Play — §3. Last, because it is the most gated and the most exposed
-    to the trademark question.
+FOSS channels first, which is also the cheapest-first order. Nothing before
+step 6 costs money or involves anyone's approval.
+
+1. **`LICENSE` — GPL-3.0-or-later** (§0.1). Blocks every FOSS channel below.
+2. **Sign the Android release consistently** (PACKAGING.md). Do it before
+   anyone installs, because Android will not upgrade across a signature change.
+3. **Obtainium** (§2A.1) — a README line. Works with what CI already builds.
+4. `THIRD_PARTY_LICENSES` + CI licence check (§1.1), and the About screen
+   (§1.2). Required by the stores below and honest regardless.
+5. **IzzyOnDroid** (§2A.2) — first real Android store. Takes the existing APK.
+6. Scoop manifest and Homebrew tap (§2B.1, §2B.2), plus AUR (§2A.5). No
+   gatekeepers.
+7. **Flathub** (§2A.3, §2C.3) — the Linux desktop answer.
+8. **F-Droid main repo** (§2A.4) — the flagship, once `gomobile bind` builds
+   unattended on their infrastructure.
+9. Split the release workflow and add the gated `release` environment (§4).
+10. Privacy policy (§1.3) — needed from here on, not before.
+11. Windows signing (§2C.4), then winget (§2C.1).
+12. macOS notarization (§2C.5), then a Homebrew cask (§2C.2).
+13. Google Play (§3) — last, most gated, and the only place §0.2 has teeth.
