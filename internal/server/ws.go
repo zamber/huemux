@@ -32,6 +32,11 @@ const (
 // websocketGUID is fixed by RFC 6455 §1.3.
 const websocketGUID = "258EAFA5-E914-47DA-95CA-C5AB0DC85B11"
 
+// maxFrameSize bounds a single frame's payload allocation so a hostile 64-bit
+// length field cannot OOM the process. The largest legitimate payload is a
+// grid frame at 3 + 255*255*3 = 195,078 bytes — far below this.
+const maxFrameSize = 16 << 20 // 16 MiB
+
 // ErrClosed is returned by ReadMessage once the peer has closed the
 // connection.
 var ErrClosed = errors.New("websocket: connection closed")
@@ -230,6 +235,10 @@ func (c *Conn) readFrame() (fin bool, opcode byte, payload []byte, err error) {
 		if _, err = io.ReadFull(c.br, maskKey[:]); err != nil {
 			return false, 0, nil, err
 		}
+	}
+
+	if length > maxFrameSize {
+		return false, 0, nil, fmt.Errorf("frame too large: %d bytes (max %d)", length, maxFrameSize)
 	}
 
 	payload = make([]byte, length)

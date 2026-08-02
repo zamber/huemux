@@ -628,6 +628,10 @@ func (s *Server) handleGridFrame(conn *Conn, payload []byte) {
 	if len(payload) < want {
 		return
 	}
+	const maxGridPixels = 640 * 360 // ~230k pixels
+	if w < 0 || h < 0 || w*h > maxGridPixels {
+		return
+	}
 	grid := &pipeline.Grid{W: w, H: h, Pix: append([]byte(nil), payload[3:want]...)}
 	eng.SetFrame(grid)
 
