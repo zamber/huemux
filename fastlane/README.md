@@ -26,10 +26,25 @@ either disconnected or cropped above the status block.
 Four is a good set — lights grid, a room with a colour picker open, the sync
 page mid-stream, and settings.
 
-**icon.png.** The launcher icon is a vector
-(`android/app/src/main/res/drawable/ic_launcher_foreground.xml`); stores want a
-512x512 PNG. Render it rather than drawing a second one, so the two cannot
-drift.
+## icon.png — done, and how to redo it
+
+`images/icon.png` is 512x512, opaque, rendered from `web/shared/icon.svg` so it
+cannot drift from the launcher icon. Both come from `scripts/gen-icon.py`.
+
+Rasterising needs a real browser. ImageMagick's SVG renderer ignores gradient
+references on strokes and produces a silhouette in flat black — it looks like a
+bug in the artwork rather than in the tool, which is exactly how it wastes an
+hour. To redo it after an icon change:
+
+```sh
+scripts/gen-icon.py
+# serve the repo and open a page containing:
+#   <img src="/shared/icon.svg" style="display:block;width:512px;height:512px">
+# then screenshot that element at CSS scale.
+```
+
+Check the result is exactly 512x512 and has no alpha channel; stores reject a
+listing icon with transparency.
 
 ## Changelogs
 
