@@ -358,7 +358,10 @@ func (s *Server) ListenAndServe() (string, error) {
 	s.lnMu.Unlock()
 
 	go func() {
-		if err := http.Serve(ln, s.mux); err != nil {
+		// securityHeaders wraps the mux for both plain HTTP and the
+		// tls.NewListener path above — the TLS layer only wraps ln, so this
+		// single serve call is the one place every response passes through.
+		if err := http.Serve(ln, securityHeaders(s.mux)); err != nil {
 			// A closed listener is the expected result of Close(), not a fault.
 			if !errors.Is(err, net.ErrClosed) {
 				log.Printf("huemux: http server stopped: %v", err)
@@ -366,6 +369,32 @@ func (s *Server) ListenAndServe() (string, error) {
 		}
 	}()
 	return scheme + "://" + s.Addr, nil
+}
+
+// securityHeaders sets browser-side security headers on every HTTP response.
+// The loopback binding is the primary security control, but when the server is
+// exposed to the LAN (adb reverse, port forward, the desktop wrapper's bundled
+// Chromium) the UI must not be served without them.
+//
+// Two frontend constraints shape the policy:
+//   - script-src and style-src carry 'unsafe-inline' because every HTML page
+//     in web/ has inline <script> blocks and the UI sets styles from JS
+//     (element.style). Hardening those to hashes/nonces would mean rewriting
+//     the frontend's script structure, which is out of scope for a header
+//     middleware.
+//   - X-Frame-Options is SAMEORIGIN, not DENY: app.html hosts sync.html,
+//     lights.html and settings.html in same-origin iframes (see web/shell.js),
+//     and DENY blocks same-origin framing too. SAMEORIGIN still blocks the
+//     clickjacking case the header exists for — an external page framing this
+//     UI.
+func securityHeaders(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Security-Policy", "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; connect-src 'self' ws: wss:; img-src 'self' data:; font-src 'self'")
+		w.Header().Set("X-Content-Type-Options", "nosniff")
+		w.Header().Set("X-Frame-Options", "SAMEORIGIN")
+		w.Header().Set("Referrer-Policy", "no-referrer")
+		next.ServeHTTP(w, r)
+	})
 }
 
 func (s *Server) handleAreas(w http.ResponseWriter, r *http.Request) {
