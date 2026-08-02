@@ -21,11 +21,14 @@ import (
 	"fmt"
 	"io"
 	"log"
+	"net"
+	"net/http"
 	"os"
 	"os/exec"
 	"os/signal"
 	"path/filepath"
 	"runtime"
+	"strconv"
 	"strings"
 	"sync"
 	"syscall"
@@ -163,6 +166,29 @@ func main() {
 		return
 	}
 
+	// If the port scan moved us past the default, something is on 7654.
+	// Starting a second Electron would collide with the first instance's
+	// userData lock (~/.config/Electron SingletonLock) and crash with an
+	// opaque "App has crashed" message — see the desktop-build section of
+	// KNOWN_ISSUES.md. Probe the default before launching: if anything
+	// answers, assume the first instance is alive and exit cleanly rather
+	// than starting a second Electron that cannot survive.
+	if cfg.Listen.Port == 0 {
+		host := cfg.Listen.Host
+		if host == "" {
+			host = appconfig.DefaultHost
+		}
+		defaultAddr := net.JoinHostPort(host, strconv.Itoa(appconfig.DefaultPort))
+		if srv.Addr != defaultAddr {
+			probe := "http://" + defaultAddr + "/api/about"
+			if resp, err := httpGet(probe); err == nil {
+				resp.Body.Close()
+				fmt.Println("huemux-desktop: already running at http://" + defaultAddr)
+				os.Exit(0)
+			}
+		}
+	}
+
 	if err := runDesktop(url); err != nil {
 		fatalf("desktop window: %v", err)
 	}
@@ -213,7 +239,8 @@ func runDesktop(url string) error {
 		AppName:           "huemux",
 		BaseDirectoryPath: dataDir,
 		VersionElectron:   electronVersion,
-		SingleInstance:    true,
+		SingleInstance:     true,
+		ElectronSwitches:   []string{"--user-data-dir=" + filepath.Join(dataDir, "electron-profile")},
 	})
 	if err != nil {
 		return fmt.Errorf("init astilectron: %w", err)
@@ -337,6 +364,18 @@ func readStdinCommands(out chan<- string) {
 			out <- line[:1]
 		}
 	}
+}
+
+// httpGet fetches a URL and returns the response body on 200, or an error.
+// 2s timeout — this is a local probe, not a remote fetch.
+func httpGet(url string) (*http.Response, error) {
+	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+	defer cancel()
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
+	if err != nil {
+		return nil, err
+	}
+	return http.DefaultClient.Do(req)
 }
 
 func openBrowser(url string) {

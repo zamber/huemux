@@ -228,6 +228,7 @@ class ScreenCaptureService : Service() {
         val h = ((dispH * ratio).toInt().coerceAtLeast(32)) and 1.inv()
         capturedW = w
         capturedH = h
+        captureFrameCount = 0
         Log.i(TAG, "display ${dispW}x$dispH scale=$scale -> capture ${w}x$h")
         Mobile.logHost("capture: display ${dispW}x$dispH scale=$scale -> ${w}x$h")
 
@@ -290,6 +291,19 @@ class ScreenCaptureService : Service() {
      * everything else here.
      */
     private fun pushImage(image: android.media.Image) {
+        if (captureFrameCount < SKIP_INITIAL_FRAMES) {
+            captureFrameCount++
+            return
+        }
+        // Logged once per capture session (the guard above ensures it) so a
+        // device that silently swaps RGBA for ARGB/BGRA leaves a trace.
+        if (captureFrameCount == SKIP_INITIAL_FRAMES) {
+            val fmt = image.format
+            val cs = if (Build.VERSION.SDK_INT >= 28) image.colorSpace?.name ?: "null" else "(sdk<28)"
+            Mobile.logHost("capture: first frame format=$fmt (RGBA_8888=${PixelFormat.RGBA_8888})" +
+                " colorSpace=$cs planes=${image.planes.size}")
+        }
+
         val plane = image.planes[0]
         val buf: ByteBuffer = plane.buffer
         val pixelStride = plane.pixelStride
@@ -464,6 +478,16 @@ class ScreenCaptureService : Service() {
         super.onDestroy()
     }
 
+    /**
+     * Frames received since the VirtualDisplay was created, reset on each
+     * [startCapture]. The first few buffers from a fresh display are often the
+     * GPU's default clear colour — green on Qualcomm Adreno, black on Mali —
+     * and pushing them to the lights produces a visible flash. Skipping the
+     * first [SKIP_INITIAL_FRAMES] eliminates that flash at the cost of a
+     * frame or two of latency on start.
+     */
+    private var captureFrameCount = 0
+
     /** One captured row, reused. Bulk reads land here instead of per-pixel gets. */
     private var rowScratch: ByteArray? = null
 
@@ -551,6 +575,15 @@ class ScreenCaptureService : Service() {
          * the default scale is what keeps the ordinary case cheap.
          */
         const val CAP_LONG_EDGE = 1920
+
+        /**
+         * Frames to discard after creating a fresh VirtualDisplay.
+         * The initial buffers are the GPU's clear colour — visible as a green
+         * (or black) flash on the first sync of each session. 3 frames at 60Hz
+         * is ~50ms, which is too short for a human to notice and more than
+         * enough for the compositor to deliver a real frame.
+         */
+        const val SKIP_INITIAL_FRAMES = 3
 
         /**
          * Fraction of the display resolution to capture, 0.05..1.0. Settable
