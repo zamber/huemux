@@ -299,9 +299,8 @@ class ScreenCaptureService : Service() {
         // device that silently swaps RGBA for ARGB/BGRA leaves a trace.
         if (captureFrameCount == SKIP_INITIAL_FRAMES) {
             val fmt = image.format
-            val cs = if (Build.VERSION.SDK_INT >= 28) image.colorSpace?.name ?: "null" else "(sdk<28)"
             Mobile.logHost("capture: first frame format=$fmt (RGBA_8888=${PixelFormat.RGBA_8888})" +
-                " colorSpace=$cs planes=${image.planes.size}")
+                " planes=${image.planes.size} stride=${image.planes[0].rowStride}")
         }
 
         val plane = image.planes[0]
