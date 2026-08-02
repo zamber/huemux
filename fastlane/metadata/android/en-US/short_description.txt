@@ -1,0 +1,1 @@
+Screen sync and full light control for Philips Hue. Local only, no cloud.

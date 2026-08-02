@@ -60,6 +60,13 @@ android {
         }
     }
 
+    // AGP 8 stopped generating BuildConfig unless asked. MainActivity reads
+    // BuildConfig.VERSION_NAME to tell the Go side what version it is, so
+    // without this the app simply does not compile.
+    buildFeatures {
+        buildConfig = true
+    }
+
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17

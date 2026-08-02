@@ -1,0 +1,1 @@
+Synchronizacja ekranu i sterowanie światłami Philips Hue. Tylko lokalnie.

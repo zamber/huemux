@@ -40,9 +40,15 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
+
       - uses: actions/setup-go@v7
         with:
           go-version-file: go.mod
+
+      # Needs the Go toolchain: the file is generated from `go list -deps`,
+      # i.e. the modules the linker actually pulls in.
+      - name: Third-party licences are current
+        run: scripts/gen-third-party-licenses.sh --check
 
       - name: Cross-compile for android/arm64
         run: |

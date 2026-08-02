@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  The launcher mark: a bulb over three stacked bars, standing for one source
+  driving several channels — which is what the app does and what "mux" in the
+  name means.
+
+  A vector rather than a set of PNGs. It needs no density buckets, adds about a
+  kilobyte, and cannot go blurry. Drawn inside the 72x72 safe zone of the 108dp
+  adaptive canvas so no launcher shape can clip it.
+
+  Monochrome on purpose, matching the UI's own rule that contrast carries
+  meaning rather than colour (see AGENTS.md). It also means the same path
+  serves the themed-icon slot on Android 13+ without a second asset.
+-->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+
+    <!-- Bulb -->
+    <path
+        android:fillColor="#F5F5F0"
+        android:pathData="M54,26 m-15,0 a15,15 0 1,0 30,0 a15,15 0 1,0 -30,0" />
+    <!-- Neck -->
+    <path
+        android:fillColor="#F5F5F0"
+        android:pathData="M48,42 h12 v6 h-12 z" />
+
+    <!-- Three channels fanning out, widest nearest the source -->
+    <path
+        android:fillColor="#F5F5F0"
+        android:pathData="M34,56 h40 v6 h-40 z" />
+    <path
+        android:fillColor="#F5F5F0"
+        android:pathData="M39,68 h30 v6 h-30 z" />
+    <path
+        android:fillColor="#F5F5F0"
+        android:pathData="M44,80 h20 v6 h-20 z" />
+</vector>

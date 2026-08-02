@@ -71,3 +71,33 @@ body { margin: 0; }
 }
 #diagnostics .row { flex-wrap: wrap; }
 #diagnostics .row button { flex: 0 0 auto; }
+
+/* About. A definition list rather than rows of divs: it is literally
+   term/value pairs, and the semantics come free. */
+.about-grid {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 0.3rem 0.9rem;
+  margin: 0 0 0.6rem;
+  font-size: 0.85rem;
+}
+.about-grid dt { color: var(--ink-muted); }
+.about-grid dd { margin: 0; color: var(--ink); word-break: break-all; }
+.about-grid a { color: var(--ink); }
+
+/* The full third-party text is long by nature — every licence in full, because
+   that is what those licences require. Bounded and scrollable so it cannot
+   bury the rest of Settings. */
+#about-licences-text {
+  max-height: 55vh;
+  overflow: auto;
+  margin-top: 0.7rem;
+  padding: 0.6rem;
+  background: var(--surface-alt);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  font-size: 0.7rem;
+  line-height: 1.5;
+  white-space: pre-wrap;
+  word-break: break-word;
+}

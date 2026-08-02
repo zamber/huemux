@@ -290,6 +290,7 @@ func (s *Server) routes() {
 	if s.cfg.ShowsSyncTab() {
 		s.mux.HandleFunc("/api/areas", s.guard(s.handleAreas))
 	}
+	s.mux.HandleFunc("/api/about", s.guard(s.handleAbout))
 	s.mux.HandleFunc("/api/status", s.guard(s.handleStatusAPI))
 	s.mux.HandleFunc("/api/lights", s.guard(s.handleLights))
 	s.mux.HandleFunc("/api/rooms", s.guard(s.handleRooms))

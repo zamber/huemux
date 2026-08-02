@@ -120,6 +120,32 @@
     <span id="diag-result" class="hint"></span>
     <textarea id="diag-text" hidden readonly rows="18" spellcheck="false"></textarea>
   </section>
+
+  <section class="setting" id="about">
+    <label data-i18n="about.heading">About</label>
+    <dl class="about-grid">
+      <dt data-i18n="about.version">Version</dt><dd id="about-version">…</dd>
+      <dt data-i18n="about.licence">Licence</dt><dd id="about-licence">…</dd>
+      <dt data-i18n="about.source">Source</dt>
+      <dd><a id="about-source" href="#" rel="noreferrer">…</a></dd>
+    </dl>
+    <p class="hint" data-i18n="about.gplNote">
+      HueMux is free software under the GNU General Public License v3 or later.
+      You may use, study, change and share it; a version you distribute must
+      come with its source under the same terms.
+    </p>
+    <div class="row">
+      <button type="button" id="about-licences" data-i18n="about.thirdParty">Third-party licences</button>
+    </div>
+    <!-- Served from the embedded web/ directory rather than linked out: the
+         attribution has to be readable on a phone with no internet, which is
+         exactly the situation this app is designed for. -->
+    <pre id="about-licences-text" hidden></pre>
+    <p class="hint" data-i18n="about.trademark">
+      Not affiliated with, endorsed by, or sponsored by Signify N.V. Philips and
+      Hue are trademarks of Signify Holding.
+    </p>
+  </section>
 </main>
 
 <script src="/shared/theme.js"></script>

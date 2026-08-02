@@ -220,12 +220,29 @@ build**, rather than building from source on its own infrastructure.
 - No reproducible build required, which is what makes the main F-Droid repo
   hard for a `gomobile` project.
 - Requires a FOSS licence, a public source repo, and no proprietary
-  dependencies — all of which are true once §0.1 is done.
-- Wants Fastlane-structured metadata in the repo (`fastlane/metadata/android/`)
-  for the listing text and screenshots.
-- Submission is an issue on their tracker.
+  dependencies — all true now.
+- Reads Fastlane metadata from the repo, which is in `fastlane/` (see
+  `fastlane/README.md`).
 
-Realistically this should be the **first Android store**, before f-droid.org.
+**Ready:** licence, signed releases with a stable key, an incrementing
+`versionCode`, a real launcher icon, and listing text in English and Polish.
+
+**Before submitting:** add screenshots and a 512x512 `icon.png` — see
+`fastlane/README.md` for why the existing screenshots cannot be reused as-is.
+
+**To submit**, open a request at
+<https://gitlab.com/IzzyOnDroid/repo/-/issues> with:
+
+- the repository URL,
+- confirmation the app is FOSS with no proprietary dependencies,
+- the APK asset naming pattern from the releases page.
+
+They then track GitHub releases automatically. Their scanner also reports
+non-free trackers and libraries; HueMux has none, and it is worth keeping that
+true — an analytics SDK would be flagged publicly on the listing.
+
+Once accepted, users add the IzzyOnDroid repo in their F-Droid client and
+HueMux updates like any other app.
 
 ### 2A.3 Flathub — the Linux desktop answer
 

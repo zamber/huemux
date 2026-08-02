@@ -156,6 +156,10 @@ class MainActivity : AppCompatActivity() {
             // filesDir is the app-private directory Android guarantees is
             // writable; os.UserConfigDir() means nothing here, which is why
             // internal/config grew SetDir.
+            // Before start, so the About screen and any diagnostics report
+            // name the build the user actually installed rather than the
+            // literal string "android".
+            Mobile.setVersion(BuildConfig.VERSION_NAME)
             val url = Mobile.start(filesDir.absolutePath)
             Log.i(TAG, "huemux server started at $url")
             webView.loadUrl(url)

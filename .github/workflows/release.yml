@@ -138,6 +138,13 @@ jobs:
           go vet ./...
           go test ./...
 
+      # Attribution is a licence condition, not a nicety — MIT, BSD and
+      # Apache-2.0 all require it. This fails if a dependency was added without
+      # regenerating the file, or if one arrives under a licence that is not
+      # compatible with GPL-3.0-or-later.
+      - name: Third-party licences are current
+        run: scripts/gen-third-party-licenses.sh --check
+
       - name: Build all platform binaries
         run: |
           make dist
