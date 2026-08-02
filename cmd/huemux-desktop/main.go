@@ -19,12 +19,15 @@ import (
 	"context"
 	"flag"
 	"fmt"
+	"io"
 	"log"
 	"os"
 	"os/exec"
 	"os/signal"
 	"path/filepath"
 	"runtime"
+	"strings"
+	"sync"
 	"syscall"
 	"time"
 
@@ -41,6 +44,51 @@ import (
 )
 
 var version = "dev"
+
+// electronLog passes astilectron's logging through while keeping the most
+// recent lines Electron wrote to its own stderr.
+//
+// It exists because of how this fails in practice: Chromium explains itself on
+// stderr ("Missing X server or $DISPLAY", a sandbox complaint, a missing
+// library), astilectron relays that as a log line, and then the Go side
+// returns an error describing only its own symptom. Anyone reading the tail of
+// the output — which is what gets pasted into a bug report — sees the symptom
+// and none of the cause.
+type electronLog struct {
+	w     io.Writer
+	mu    sync.Mutex
+	lines []string
+}
+
+const electronLogKeep = 15
+
+func (e *electronLog) Write(p []byte) (int, error) {
+	const marker = "Stderr says: "
+	if i := strings.Index(string(p), marker); i >= 0 {
+		line := strings.TrimSpace(string(p)[i+len(marker):])
+		if line != "" {
+			e.mu.Lock()
+			e.lines = append(e.lines, line)
+			if len(e.lines) > electronLogKeep {
+				e.lines = e.lines[len(e.lines)-electronLogKeep:]
+			}
+			e.mu.Unlock()
+		}
+	}
+	return e.w.Write(p)
+}
+
+// tail renders the retained stderr for appending to an error, or "" when
+// Electron said nothing — in which case the error stands on its own rather
+// than gaining an empty section.
+func (e *electronLog) tail() string {
+	e.mu.Lock()
+	defer e.mu.Unlock()
+	if len(e.lines) == 0 {
+		return ""
+	}
+	return "\n\nwhat Electron reported:\n  " + strings.Join(e.lines, "\n  ")
+}
 
 // electronVersion is pinned rather than left at astilectron's default
 // (11.4.3, from 2020 — old enough that MediaStreamTrackProcessor support is
@@ -134,6 +182,19 @@ func runDesktop(url string) error {
 	}
 	dataDir := filepath.Join(cacheDir, "huemux", "astilectron")
 
+	// Checked before Electron is even started, because the failure it produces
+	// otherwise is a wall of Chromium logging ending in "context canceled".
+	// This is the single most common way the desktop build fails on Linux —
+	// over SSH, in a container, on a headless server — and the fix is a
+	// different command, not a bug report.
+	if runtime.GOOS == "linux" && os.Getenv("DISPLAY") == "" && os.Getenv("WAYLAND_DISPLAY") == "" {
+		return fmt.Errorf("no graphical display: both DISPLAY and WAYLAND_DISPLAY are unset.\n" +
+			"  This build opens a desktop window and needs one. Either:\n" +
+			"    huemux-desktop --headless    same server, no window\n" +
+			"    huemux                       the plain server binary\n" +
+			"  and open the printed URL in a browser")
+	}
+
 	// Logged unconditionally (cheap, one line) rather than gated behind
 	// -debug: session-type/display-server mismatches are exactly the class
 	// of bug (see provisioner.go's pipeWireCapturePatch) that's otherwise
@@ -141,7 +202,13 @@ func runDesktop(url string) error {
 	log.Printf("huemux-desktop: platform=%s session_type=%q wayland_display=%q x11_display=%q electron=%s cache_dir=%s",
 		runtime.GOOS, os.Getenv("XDG_SESSION_TYPE"), os.Getenv("WAYLAND_DISPLAY"), os.Getenv("DISPLAY"), electronVersion, dataDir)
 
-	l := log.New(os.Stdout, "[electron] ", log.LstdFlags)
+	// Electron reports its real failures on its own stderr, which astilectron
+	// relays as ordinary log lines. Those lines scroll past and the error the
+	// program actually returns is the Go-side symptom — "open window: context
+	// canceled" — which says nothing about why. Retaining the stderr tail lets
+	// the failure be reported with the cause attached.
+	cap := &electronLog{w: os.Stdout}
+	l := log.New(cap, "[electron] ", log.LstdFlags)
 	a, err := astilectron.New(l, astilectron.Options{
 		AppName:           "huemux",
 		BaseDirectoryPath: dataDir,
@@ -156,7 +223,8 @@ func runDesktop(url string) error {
 	a.SetProvisioner(newPatchingProvisioner(l))
 
 	if err := a.Start(); err != nil {
-		return fmt.Errorf("start astilectron (first run downloads Electron %s — needs internet access): %w", electronVersion, err)
+		return fmt.Errorf("start astilectron (first run downloads Electron %s — needs internet access): %w%s",
+			electronVersion, err, cap.tail())
 	}
 
 	w, err := a.NewWindow(url, &astilectron.WindowOptions{
@@ -169,7 +237,7 @@ func runDesktop(url string) error {
 		return fmt.Errorf("create window: %w", err)
 	}
 	if err := w.Create(); err != nil {
-		return fmt.Errorf("open window: %w", err)
+		return fmt.Errorf("open window: %w%s", err, cap.tail())
 	}
 	if os.Getenv("HUEMUX_DEVTOOLS") != "" {
 		_ = w.OpenDevTools()
