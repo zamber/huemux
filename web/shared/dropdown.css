@@ -32,6 +32,12 @@
  * belongs to is worth more than shaving the travel.
  */
 
+/* The element the panel spans on mobile: put this on the row that holds the
+   trigger, and the panel becomes as wide as that row. Nothing breaks if it is
+   missing — the panel just falls back to the next positioned ancestor — but
+   the result will be as wide as whatever that turns out to be. */
+.hm-dropdown-anchor { position: relative; }
+
 .hm-dropdown { position: relative; }
 
 .hm-dropdown > summary {
@@ -106,14 +112,26 @@
 .hm-dropdown-item.active { color: var(--ink); font-weight: 600; }
 
 @media (pointer: coarse) and (max-width: 700px) {
+  /* Full-bleed by anchoring to the row, not to the trigger.
+     .hm-dropdown goes position: static here so the panel's containing block
+     becomes the nearest positioned ancestor — .hm-dropdown-anchor, which spans
+     the content width — and left/right: 0 then means the row's edges.
+
+     The first attempt centred the panel on the trigger instead
+     (left: 50%; translateX(-50%); width: 100vw). That is only full-bleed if
+     the trigger happens to sit at the centre of the screen. With the filter
+     pill near the left edge the panel hung ~140px off the left of the
+     viewport, and since its rows are left-aligned, every label was pushed
+     off-screen: a correctly-behaving menu that appeared to have no text in it.
+     Anchoring to the row cannot go wrong that way — there is no arithmetic. */
+  .hm-dropdown { position: static; }
+
   .hm-dropdown-panel {
-    /* Full-bleed regardless of how much padding the container has, without
-       needing to know that padding: centre on the trigger, then take the
-       whole viewport width back. */
-    left: 50%;
-    transform: translateX(-50%);
-    width: 100vw;
-    max-width: 100vw;
+    left: 0;
+    right: 0;
+    width: auto;
+    transform: none;
+    max-width: none;
     min-width: 0;
     /* Capped so a long room list cannot run the length of the screen and
        under the bottom nav. Scrolls past that. */

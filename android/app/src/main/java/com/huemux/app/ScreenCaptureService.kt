@@ -13,6 +13,8 @@ import android.media.ImageReader
 import android.media.projection.MediaProjection
 import android.media.projection.MediaProjectionManager
 import android.os.Build
+import android.os.Handler
+import android.os.HandlerThread
 import android.os.IBinder
 import android.util.Log
 import com.huemux.mobile.Mobile
@@ -35,6 +37,20 @@ class ScreenCaptureService : Service() {
     private var reader: ImageReader? = null
     private var display: android.hardware.display.VirtualDisplay? = null
 
+    /**
+     * One thread owns the capture pipeline: the ImageReader delivers frames on
+     * it, and every teardown and rebuild is posted to it.
+     *
+     * This is not tidiness. Changing the capture resolution while capturing
+     * used to crash the app, because the rebuild closed the ImageReader from
+     * the caller's thread while a frame callback was running on another — a
+     * use-after-free on the native buffer, which surfaces as a SIGSEGV with no
+     * Kotlin stack to blame. Serialising both onto one thread makes the race
+     * unrepresentable rather than unlikely.
+     */
+    private var pipelineThread: HandlerThread? = null
+    private var pipeline: Handler? = null
+
     override fun onBind(intent: Intent?): IBinder? = null
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
@@ -49,7 +65,7 @@ class ScreenCaptureService : Service() {
             // resizing only the display gives scaled frames in a buffer that
             // no longer matches, which the row-stride copy reads as a sheared
             // image rather than an error.
-            rebuildCapture()
+            pipeline?.post { rebuildCapture() }
             return START_NOT_STICKY
         }
 
@@ -95,7 +111,10 @@ class ScreenCaptureService : Service() {
         }
 
         instance = this
-        startCapture()
+        val t = HandlerThread("huemux-capture").also { it.start() }
+        pipelineThread = t
+        pipeline = Handler(t.looper)
+        pipeline?.post { startCapture() }
         return START_NOT_STICKY
     }
 
@@ -103,10 +122,12 @@ class ScreenCaptureService : Service() {
      * Rebuilds the capture display at the current [captureScale]. No-op when
      * capture is not running, so a scale change made before starting is simply
      * picked up by the next [startCapture].
+     *
+     * Runs on [pipeline] only — see that field's comment for why.
      */
-    @Synchronized
     private fun rebuildCapture() {
         if (projection == null || display == null) return
+        Mobile.logHost("capture: rebuilding at scale=$captureScale")
         display?.release()
         reader?.close()
         display = null
@@ -118,13 +139,33 @@ class ScreenCaptureService : Service() {
     /**
      * Starts recording, if capture is running. Returns null on success or a
      * message for the UI. Recording is deliberately subordinate to capture: it
-     * needs the same MediaProjection, and it must never be able to interfere
-     * with the sync stream that projection exists for.
+     * needs the same projection, and it must never be able to interfere with
+     * the sync stream that projection exists for.
+     *
+     * Two implementations, chosen by quality:
+     *
+     *  - CAPTURE encodes the frames already flowing to the colour engine
+     *    ([FrameRecorder]). No second virtual display, so it cannot fail for
+     *    want of one — which is how the first version failed on real hardware.
+     *  - NATIVE mirrors the display again at full resolution
+     *    ([ScreenRecorder]), which is the only way to record more detail than
+     *    the pipeline captures, and which some devices will refuse.
      */
     @Synchronized
     fun startRecording(quality: ScreenRecorder.Quality): String? {
         val p = projection ?: return "screen capture is not running"
-        val rec = recorder ?: ScreenRecorder(applicationContext).also { recorder = it }
+        if (frameRecorder?.isRecording == true || screenRecorder?.isRecording == true) {
+            return "already recording"
+        }
+        Mobile.logHost("record: start requested quality=${quality.name.lowercase()} capture=${capturedW}x$capturedH")
+
+        if (quality == ScreenRecorder.Quality.CAPTURE) {
+            if (capturedW <= 0 || capturedH <= 0) return "screen capture is not running"
+            val rec = frameRecorder ?: FrameRecorder(applicationContext).also { frameRecorder = it }
+            return rec.start(capturedW, capturedH)
+        }
+
+        val rec = screenRecorder ?: ScreenRecorder(applicationContext).also { screenRecorder = it }
         val metrics = resources.displayMetrics
         return rec.start(
             p, quality,
@@ -135,11 +176,47 @@ class ScreenCaptureService : Service() {
     }
 
     @Synchronized
-    fun stopRecording(): String? = recorder?.stop()
+    fun stopRecording(): String? {
+        if (frameRecorder?.isRecording == true) return frameRecorder?.stop()
+        if (screenRecorder?.isRecording == true) return screenRecorder?.stop()
+        return null
+    }
 
-    fun isRecording(): Boolean = recorder?.isRecording == true
+    fun isRecording(): Boolean =
+        frameRecorder?.isRecording == true || screenRecorder?.isRecording == true
 
-    fun lastRecordingName(): String = recorder?.lastOutput ?: ""
+    fun lastRecordingName(): String {
+        val f = frameRecorder?.lastOutput ?: ""
+        return if (f.isNotEmpty()) f else (screenRecorder?.lastOutput ?: "")
+    }
+
+    /**
+     * A one-line summary for the diagnostics report. Everything about capture
+     * and recording lives in this process's Kotlin half, which the Go
+     * diagnostics cannot see — so a broken recording produced a report with no
+     * mention of recording in it at all.
+     */
+    fun diagnosticsBlock(): String {
+        val sb = StringBuilder()
+        sb.append("capture               ")
+        sb.append(if (display != null) "running ${capturedW}x$capturedH scale=$captureScale" else "stopped")
+        sb.append('\n')
+        val m = resources.displayMetrics
+        sb.append("display               ${m.widthPixels}x${m.heightPixels} @${m.densityDpi}dpi\n")
+        sb.append("recording             ")
+        sb.append(
+            when {
+                frameRecorder?.isRecording == true -> "frame encoder · " + (frameRecorder?.stats() ?: "")
+                screenRecorder?.isRecording == true -> "second display"
+                else -> "stopped"
+            }
+        )
+        sb.append('\n')
+        val last = lastRecordingName()
+        if (last.isNotEmpty()) sb.append("last recording        $last\n")
+        frameRecorder?.let { sb.append("frame encoder         ${it.stats()}\n") }
+        return sb.toString()
+    }
 
     private fun startCapture() {
         val p = projection ?: return
@@ -166,6 +243,7 @@ class ScreenCaptureService : Service() {
         capturedW = w
         capturedH = h
         Log.i(TAG, "display ${dispW}x$dispH scale=$scale -> capture ${w}x$h")
+        Mobile.logHost("capture: display ${dispW}x$dispH scale=$scale -> ${w}x$h")
 
         reader = ImageReader.newInstance(w, h, PixelFormat.RGBA_8888, 2).apply {
             setOnImageAvailableListener({ r ->
@@ -180,7 +258,7 @@ class ScreenCaptureService : Service() {
                     // stops with no error anywhere.
                     image.close()
                 }
-            }, null)
+            }, pipeline)
         }
 
         display = p.createVirtualDisplay(
@@ -220,6 +298,9 @@ class ScreenCaptureService : Service() {
             }
         }
         Mobile.pushFrame(w.toLong(), h.toLong(), out)
+        // Same buffer, same thread, straight after the engine has copied it.
+        // FrameRecorder must not retain `out` — it is reused for every frame.
+        frameRecorder?.let { if (it.isRecording) it.onFrame(out, w, h) }
     }
 
     private fun buildNotification(): Notification {
@@ -252,22 +333,44 @@ class ScreenCaptureService : Service() {
         // would leave every recording that ended by the user swiping the app
         // away invisible in the gallery and undeletable from it.
         try {
-            recorder?.stop()
+            if (frameRecorder?.isRecording == true) frameRecorder?.stop()
+            if (screenRecorder?.isRecording == true) screenRecorder?.stop()
         } catch (e: Exception) {
             Log.w(TAG, "recorder stop during shutdown", e)
         }
-        recorder = null
-        display?.release()
-        reader?.close()
+        frameRecorder = null
+        screenRecorder = null
+
+        // Tear the pipeline down on its own thread, for the same reason the
+        // rebuild runs there: a frame callback may be in flight right now, and
+        // closing the reader underneath it is a native crash. quitSafely lets
+        // the posted teardown run before the looper stops.
+        val t = pipelineThread
+        pipeline?.post {
+            display?.release()
+            reader?.close()
+            display = null; reader = null; rgbScratch = null
+        }
+        t?.quitSafely()
+        try {
+            t?.join(1000)
+        } catch (e: InterruptedException) {
+            Thread.currentThread().interrupt()
+        }
+        pipeline = null
+        pipelineThread = null
+
         projection?.stop()
-        display = null; reader = null; projection = null; rgbScratch = null
+        projection = null
         if (instance === this) instance = null
+        Mobile.logHost("capture: stopped")
         Log.i(TAG, "capture stopped")
         super.onDestroy()
     }
 
     private var rgbScratch: ByteArray? = null
-    private var recorder: ScreenRecorder? = null
+    private var frameRecorder: FrameRecorder? = null
+    private var screenRecorder: ScreenRecorder? = null
 
     companion object {
         /**

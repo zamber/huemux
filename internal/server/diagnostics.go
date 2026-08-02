@@ -5,11 +5,36 @@ import (
 	"net/http"
 	"runtime"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/zamber/huemux/internal/config"
 	"github.com/zamber/huemux/internal/debuglog"
 )
+
+// hostInfo is a block of plain text supplied by whatever is embedding this
+// server — currently the Android app, which is the only host with state the Go
+// side cannot observe. Stored as preformatted text rather than a struct
+// because the set of interesting facts is the host's business, and a schema
+// here would have to change every time the host learned something new.
+var hostInfo struct {
+	mu   sync.Mutex
+	text string
+}
+
+// SetHostInfo replaces the host block included in diagnostics reports.
+func SetHostInfo(text string) {
+	hostInfo.mu.Lock()
+	hostInfo.text = text
+	hostInfo.mu.Unlock()
+}
+
+// HostInfo returns the host block, empty when nothing has been set.
+func HostInfo() string {
+	hostInfo.mu.Lock()
+	defer hostInfo.mu.Unlock()
+	return hostInfo.text
+}
 
 // Version is the build version, set by the entry points so diagnostics can
 // report it. Left as "dev" when unset rather than empty, so a report from an
@@ -84,6 +109,16 @@ func (s *Server) handleDiagnostics(w http.ResponseWriter, r *http.Request) {
 		if snap.LastError != "" {
 			line("last error", snap.LastError)
 		}
+	}
+
+	// Whatever the host application knows and this process cannot see. On
+	// Android that is the capture and recording state, which lives entirely in
+	// Kotlin: a failed recording used to leave no trace anywhere in this
+	// report, so a bug report about it contained nothing about it.
+	if host := HostInfo(); host != "" {
+		b.WriteString("\nhost\n----\n")
+		b.WriteString(strings.TrimRight(host, "\n"))
+		b.WriteByte('\n')
 	}
 
 	b.WriteString("\nrecent log\n----------\n")

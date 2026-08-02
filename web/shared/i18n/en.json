@@ -106,14 +106,15 @@
     "captureScaleHint": "How much of the screen's real resolution to mirror. The colour pipeline reduces everything to a 64×36 grid, so higher buys nothing for sync itself — raise it only when recording, and put it back after: a bigger mirror costs battery continuously.",
     "captureWhenRunning": "size shown once sync is running",
     "recording": "Screen recording",
-    "recordQualityCapture": "Match capture — cheap",
+    "recordQualityCapture": "Match capture — no second mirror needed",
     "recordQualityNative": "Full resolution — better video",
     "recordStart": "Start recording",
     "recordStop": "Stop recording",
     "recordNeedsSync": "Start sync first — recording mirrors the same capture.",
     "recordInProgress": "Recording…",
     "recordSaved": "Saved to Movies/HueMux/{name}",
-    "recordingHint": "Records while sync runs, to Movies/HueMux. Recording always needs a second screen mirror of its own — Android gives a mirror exactly one destination, and this one's is already the colour pipeline. \"Match capture\" reuses the size set above; \"full resolution\" is a second full-size encode, which not every device will agree to."
+    "recordingHint": "Records while sync runs, to Movies/HueMux. “Match capture” encodes the frames sync is already capturing, so it needs nothing extra from the device and is as sharp as the capture resolution above. “Full resolution” mirrors the screen a second time at its own resolution for a better video, which some devices refuse.",
+    "captureScaleLocked": "Locked while recording — the video is encoded at the size it started with."
   },
   "lights": {
     "filterAll": "All",
