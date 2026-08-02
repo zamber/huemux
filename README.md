@@ -189,6 +189,40 @@ desktop). The first time you start sync you'll see your compositor's own
 screen-share consent dialog — that's Wayland's security model, not
 something this app can bypass, unlike X11.
 
+#### AppImage (Linux)
+
+The simplest way to get the desktop version on Linux: one executable file,
+no install step, no distro packages. The download URL never changes — it
+always serves the latest build.
+
+```bash
+# download, make executable, run
+wget -O huemux.AppImage \
+  https://github.com/zamber/huemux/releases/download/continuous/huemux-x86_64.AppImage
+chmod +x huemux.AppImage
+./huemux.AppImage
+```
+
+The URL is a continuous channel: every build replaces the file behind it,
+so re-downloading the same URL gets you the newest version. The AppImage
+is fully self-contained (first run still downloads Electron into your
+OS cache, exactly like the regular desktop build) and runs without an
+install step — or even without FUSE, since the AppImage runtime falls
+back to extracting itself.
+
+**Updating:** rather than re-downloading, the AppImage can update itself
+in place with a delta download, via the AppImage project's CLI updater:
+
+```bash
+# one-time: get the updater
+wget -O appimageupdatetool \
+  https://github.com/AppImage/AppImageUpdate/releases/download/continuous/appimageupdatetool-x86_64.AppImage
+chmod +x appimageupdatetool
+
+# then, whenever a new build lands on the channel:
+./appimageupdatetool huemux.AppImage
+```
+
 ### macOS
 
 macOS will ask for **Screen Recording** permission the first time either
