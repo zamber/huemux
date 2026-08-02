@@ -44,7 +44,13 @@ window.HueMuxShell = (() => {
   // Honour the URL only if that tab exists in this build; otherwise fall back
   // to whatever single frame there is. A lights-only deployment opened at
   // /sync.html used to land on a frame that does not exist and show nothing.
-  const wanted = location.pathname.indexOf('lights') !== -1 ? 'lights' : 'sync';
+  //
+  // The hash is checked first because that is how shared/standalone-redirect.js
+  // hands over the tab when someone loads a page directly: it can only send us
+  // to /app.html, so the tab has to travel out-of-path.
+  const from = location.hash ? location.hash.slice(1) : location.pathname;
+  const wanted = from.indexOf('lights') !== -1 ? 'lights'
+    : (from.indexOf('settings') !== -1 ? 'settings' : 'sync');
   const initial = frames[wanted] ? wanted : active;
   if (initial) {
     frames[initial].classList.add('active');

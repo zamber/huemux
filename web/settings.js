@@ -187,8 +187,19 @@ diag.download.addEventListener('click', () => {
   // A plain navigation, not a blob: the server already sets
   // Content-Disposition, and Android's WebView download listener handles a
   // real navigation far more reliably than a synthesised blob: URL.
+  //
+  // The navigation happens in a throwaway iframe rather than this window.
+  // The download listener normally intercepts before anything navigates, but
+  // if it does not, navigating this window would replace the Settings page
+  // with a wall of plain text — and inside the app shell that frame has no
+  // navigation of its own, so there would be no way back to it. A detached
+  // iframe absorbs that outcome; the listener fires either way.
   diagSay(t('settings.diagnosticsDownloading', 'Downloading…'));
-  window.location.href = '/api/diagnostics';
+  const sink = document.createElement('iframe');
+  sink.hidden = true;
+  sink.src = '/api/diagnostics';
+  document.body.appendChild(sink);
+  setTimeout(() => sink.remove(), 20000);
   setTimeout(() => {
     diagSay(t('settings.diagnosticsDownloadHint',
       'If nothing downloaded, use View or Copy instead.'));

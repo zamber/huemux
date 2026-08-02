@@ -6,6 +6,7 @@
 <meta name="color-scheme" content="light dark">
 <meta name="theme-color" content="#000000" id="theme-color-meta">
 <title>HueMux — Lights</title>
+<script src="/shared/standalone-redirect.js"></script>
 <script>
 (function() {
   var DARK = '#000000', LIGHT = '#f7f3ea';
@@ -33,6 +34,7 @@
 <link rel="stylesheet" href="/shared/theme.css">
 <link rel="stylesheet" href="/shared/header.css">
 <link rel="stylesheet" href="/shared/pairing.css">
+<link rel="stylesheet" href="/shared/dropdown.css">
 <link rel="stylesheet" href="/lights.css">
 </head>
 <body>
@@ -42,11 +44,11 @@
 
 <div id="app" hidden>
   <div class="lights-toolbar">
-    <details id="filter-details" class="filter-menu">
+    <details id="filter-details" class="hm-dropdown">
       <summary>
         <span id="filter-summary">Categories</span>
       </summary>
-      <div id="filter-list" class="filter-list"></div>
+      <div id="filter-list" class="hm-dropdown-panel"></div>
     </details>
     <button type="button" id="stop-streaming-btn" class="stop-streaming-btn" hidden data-i18n="lights.stopStreaming">Stop streaming</button>
     <span id="conn-dot" class="dot" title="connection to HueMux"></span>
@@ -66,6 +68,7 @@
 <script src="/shared/header.js"></script>
 <script src="/shared/pairing.js"></script>
 <script src="/shared/color.js"></script>
+<script src="/shared/dropdown.js"></script>
 <script src="/lights.js"></script>
 </body>
 </html>

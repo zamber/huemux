@@ -70,6 +70,13 @@
     }
     if (f.sync) addFrame('frame-sync', '/sync.html', 'Sync');
     if (f.lights) addFrame('frame-lights', '/lights.html', 'Lights');
+    // Settings is not profile-gated — it is how you change the profile, and
+    // on a phone it is the only route to a diagnostics report. It is a frame
+    // rather than a link for the same reason the other two are: leaving the
+    // shell destroys every iframe in it, so a trip to Settings used to end
+    // with lights.html loaded standalone and every subsequent tab switch a
+    // full page load, refetching and re-rendering from empty.
+    addFrame('frame-settings', '/settings.html', 'Settings');
 
     var s = document.createElement('script');
     s.src = '/shared/shell.js';

@@ -1,0 +1,132 @@
+/* Shared dropdown: a <details> disclosure styled as a menu. No library.
+ *
+ * Markup contract:
+ *
+ *   <details class="hm-dropdown">
+ *     <summary><span>Current value</span></summary>
+ *     <div class="hm-dropdown-panel">
+ *       <button class="hm-dropdown-item [active]">…</button>
+ *     </div>
+ *   </details>
+ *
+ * Behaviour (outside click, Escape, close-on-pick) is in shared/dropdown.js;
+ * this file is presentation only.
+ *
+ * ── Why this is not a bottom sheet on mobile ──────────────────────────────
+ * It was one. A full-width sheet anchored to the bottom of the viewport is
+ * the conventional mobile pattern and it was the wrong call here, for three
+ * reasons that only showed up on a real phone:
+ *
+ *   1. It was hard to notice. Tapping a control at the top of the screen and
+ *      having the response appear at the *bottom* breaks the connection
+ *      between cause and effect — the eye is still where the finger was.
+ *   2. It read as modal. A sheet that size implies the rest of the UI is
+ *      locked, which this one never was, so it over-claimed.
+ *   3. It collided with the fixed bottom nav, which is drawn above it, so the
+ *      last row or two of a long room list were simply not there.
+ *
+ * What replaced it is a hybrid: full-bleed width and finger-sized rows, like
+ * a sheet, but anchored directly beneath its trigger and dismissible by
+ * tapping anywhere, like a dropdown. Phones are large enough now that the top
+ * of the screen is reachable, and keeping the menu next to the control it
+ * belongs to is worth more than shaving the travel.
+ */
+
+.hm-dropdown { position: relative; }
+
+.hm-dropdown > summary {
+  list-style: none;
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.4rem 0.9rem;
+  border: 2px solid var(--ink);
+  border-radius: 999px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--ink);
+  cursor: pointer;
+  user-select: none;
+  white-space: nowrap;
+}
+.hm-dropdown > summary::-webkit-details-marker { display: none; }
+.hm-dropdown[open] > summary { background: rgba(127, 127, 127, 0.12); }
+
+/* The caret is the only affordance saying this opens something, so it is not
+   optional decoration. Rotating it on open is also the confirmation that the
+   tap registered, for the case where the panel opened off-screen. */
+.hm-dropdown > summary::after {
+  content: '';
+  width: 0.42em;
+  height: 0.42em;
+  margin-left: auto;
+  border-right: 2px solid currentColor;
+  border-bottom: 2px solid currentColor;
+  transform: translateY(-0.15em) rotate(45deg);
+  transition: transform 0.15s ease;
+}
+.hm-dropdown[open] > summary::after { transform: translateY(0.1em) rotate(225deg); }
+
+.hm-dropdown-panel {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  /* Above the fixed bottom nav (z-index 40): a long list can still reach it,
+     and being clipped by the chrome is exactly the bug this replaced. */
+  z-index: 60;
+  min-width: 170px;
+  max-height: 300px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  background: var(--surface-alt);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 0.3rem;
+  box-shadow: 0 8px 24px var(--shadow);
+}
+
+.hm-dropdown-item {
+  display: block;
+  width: 100%;
+  text-align: left;
+  padding: 0.5rem 0.7rem;
+  margin: 0;
+  background: none;
+  border: none;
+  border-radius: 6px;
+  color: var(--ink-muted);
+  font-family: inherit;
+  font-size: 0.85rem;
+  cursor: pointer;
+}
+.hm-dropdown-item:hover { background: var(--card-hover); color: var(--ink); }
+
+/* The selected row is marked by weight and full-contrast ink, not a colour
+   fill — same rule as everywhere else in this UI. */
+.hm-dropdown-item.active { color: var(--ink); font-weight: 600; }
+
+@media (pointer: coarse) and (max-width: 700px) {
+  .hm-dropdown-panel {
+    /* Full-bleed regardless of how much padding the container has, without
+       needing to know that padding: centre on the trigger, then take the
+       whole viewport width back. */
+    left: 50%;
+    transform: translateX(-50%);
+    width: 100vw;
+    max-width: 100vw;
+    min-width: 0;
+    /* Capped so a long room list cannot run the length of the screen and
+       under the bottom nav. Scrolls past that. */
+    max-height: 55vh;
+    border-radius: 14px;
+    padding: 0.4rem;
+  }
+
+  /* 44px minimum target, and comfortably past it — picking a room is one of
+     the two things this page is for. */
+  .hm-dropdown-item {
+    padding: 0.85rem 0.9rem;
+    font-size: 0.95rem;
+    border-radius: 10px;
+  }
+}

@@ -64,7 +64,11 @@ class HueMuxHeader extends HTMLElement {
   _render() {
     this.innerHTML =
       '<div class="ls-header-inner">' +
-        '<a class="ls-brand" href="/lights.html" data-i18n="app.name">HueMux</a>' +
+        // href="/" rather than a page: the shell is what "home" means here,
+        // and a direct link to lights.html would navigate the top window out
+        // of the shell and tear down every frame in it. data-tab lets the
+        // click be intercepted into a tab switch when that tab exists.
+        '<a class="ls-brand" href="/" data-tab="lights" data-i18n="app.name">HueMux</a>' +
         '<nav class="ls-nav"></nav>' +
         '<div class="ls-header-actions">' +
           '<button type="button" id="ls-theme-btn" class="ls-icon-btn"></button>' +
@@ -159,18 +163,28 @@ class HueMuxHeader extends HTMLElement {
 
 customElements.define('huemux-header', HueMuxHeader);
 
-// Any other in-page link to /sync.html or /lights.html (e.g. lights.html's
-// unpaired-panel "Go to Sync" links) needs the same shell-aware handling as
+// Any other in-page link to another tab's page (e.g. lights.html's
+// unpaired-panel "Go to Sync" link) needs the same shell-aware handling as
 // the nav links above, or clicking it navigates only the iframe itself —
 // leaving the shell's own top-level header/URL pointing at the tab you
 // clicked away from while the iframe you're looking at shows the other
 // page's content. Same-origin iframe, so a direct window.top reference
 // works without postMessage.
 if (window.self !== window.top) {
+  const TAB_FOR_PATH = {
+    '/lights.html': 'lights',
+    '/sync.html': 'sync',
+    '/settings.html': 'settings',
+  };
   document.addEventListener('click', (e) => {
-    const a = e.target.closest('a[href="/lights.html"], a[href="/sync.html"]');
-    if (!a || !window.top.HueMuxShell) return;
+    const a = e.target.closest('a[href]');
+    if (!a) return;
+    const tab = TAB_FOR_PATH[a.getAttribute('href')];
+    const shell = window.top.HueMuxShell;
+    // Only intercept what the shell can actually show. Otherwise the link
+    // keeps its normal behaviour rather than being silently swallowed.
+    if (!tab || !shell || !shell.has(tab)) return;
     e.preventDefault();
-    window.top.HueMuxShell.switchTab(a.getAttribute('href').indexOf('lights') !== -1 ? 'lights' : 'sync');
+    shell.switchTab(tab);
   });
 }

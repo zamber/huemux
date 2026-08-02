@@ -112,6 +112,9 @@ function handleControlMessage(msg) {
 
   latestStatus = msg;
   renderStatus(msg);
+  // Status is one of the two inputs to the button state, so re-render it here
+  // rather than only where this page changes its own mind.
+  renderSyncButtons();
   // Another connected client (a second tab, or the desktop app running
   // alongside a browser tab) can be the one actually holding the frame
   // source — this client would otherwise show a perfectly normal-looking
@@ -268,13 +271,34 @@ function stopSyncing(opts) {
 // disabled — which reads as broken rather than unavailable, and on a phone
 // wastes a third of the control row. One button that says what it will do is
 // clearer and matches the stop-streaming control the lights page already has.
+//
+// This must run at load, not only on a state change: `hidden` starts unset on
+// all three buttons, so until something calls this every one of them is on
+// screen at once — Start, Stop and Change source together, which is precisely
+// the state the markup is designed never to show.
 function renderSyncButtons() {
-  els.startBtn.hidden = syncing;
-  els.stopBtn.hidden = !syncing;
+  // The server, not this page, is the authority on whether a stream is
+  // running. They come apart whenever the page is newer than the stream: on
+  // Android the capture service is a foreground service that outlives a
+  // WebView reload, so a reloaded page would offer "Start" for a sync that is
+  // already running and had no way to stop it. Trust `syncing` for what this
+  // client is doing, and the status for what the machine is doing.
+  const streaming = syncing || serverStreamIsOurs();
+  els.startBtn.hidden = streaming;
+  els.stopBtn.hidden = !streaming;
   els.stopBtn.disabled = false;
-  els.changeSourceBtn.hidden = !syncing;
+  els.changeSourceBtn.hidden = !streaming;
   // Changing source is meaningless where the OS picks it for us.
   if (nativeCapture) els.changeSourceBtn.hidden = true;
+}
+
+// True when a stream is running and this client is the one feeding it — i.e.
+// stopping it here is both possible and the right thing to offer. A stream fed
+// by some *other* client is reported by els.sourceWarning instead; offering to
+// stop that one from here would be a surprise.
+function serverStreamIsOurs() {
+  return !!(latestStatus && latestStatus.snapshot && latestStatus.snapshot.StreamActive &&
+    (latestStatus.you_are_source || !latestStatus.source_held));
 }
 
 // Called from Kotlin when capture ends outside the page's control.
@@ -659,5 +683,10 @@ document.querySelectorAll('[data-preset-reactivity]').forEach((btn) => {
     slider.dispatchEvent(new Event('input'));
   });
 });
+
+// Before anything asynchronous: the three sync buttons all start visible
+// because none of them has `hidden` set in the markup, and the first thing
+// that would otherwise correct that is a status message.
+renderSyncButtons();
 
 connect();
