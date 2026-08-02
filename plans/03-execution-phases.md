@@ -19,7 +19,8 @@ reviewable commit or small series, and to leave `main` working.
 | 8 | Android M2 — config + mobile polish | **done** |
 | 9 | Android M3 — MediaProjection sync | **done, device-tested** |
 | 10 | Android M4 — CI build, signing, distribution | **done (signing awaits a keystore secret)** |
-| 11 | Device feedback — shell integrity, capture quality, recording | **built, untested on a device** |
+| 11 | Device feedback — shell integrity, capture quality, recording | **device-tested; recording reworked in 12** |
+| 12 | Recording without a second mirror, host diagnostics | **built, untested on a device** |
 
 ---
 
@@ -248,3 +249,29 @@ exactly one Surface for the display's lifetime, and the capture display's is the
 ImageReader that feeds Go. Recording therefore always costs a second virtual
 display; the quality setting chooses that display's resolution, not whether it
 exists. Devices that refuse a second display lose recording and keep syncing.
+
+## Phase 12 — Recording without a second mirror, and host diagnostics
+
+From testing alpha.13. Two of these are corrections to Phase 11.
+
+**Recording no longer needs a second VirtualDisplay.** Phase 11 recorded by
+mirroring the screen again, on the reasoning that one display cannot feed two
+consumers. True of a Surface, and beside the point: the frames are already in
+memory on their way to the colour engine. `FrameRecorder` encodes that buffer
+(RGB to YUV, MediaCodec, MediaMuxer). The device that refused a second display
+has nothing left to refuse. `ScreenRecorder` stays for full-resolution
+recording, the one case that does need its own mirror.
+
+**Capture rebuild is single-threaded.** Changing resolution mid-capture crashed:
+the reader was closed from one thread while a frame callback ran on another.
+A HandlerThread owns frame delivery, rebuild and teardown.
+
+**Diagnostics reach across the language boundary.** `server.SetHostInfo` and
+`Mobile.LogHost` let the Kotlin half write into the report the Go half
+generates. Without this a failed recording produced a report with no mention of
+recording, which is how Phase 11 shipped a bug that could not be diagnosed from
+its own bug report.
+
+**Done when** a device confirms: recording at "match capture" produces a
+playable file, the resolution slider does not crash and is locked while
+recording, and a failed recording leaves a specific reason in the host section.
