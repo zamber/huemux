@@ -15,8 +15,11 @@ on:
     tags:
       - 'v*'
 
+# Read-only by default; only the job that creates the release gets write. The
+# build and sign jobs handle artifacts and a signing key, and neither has any
+# business being able to alter the repository.
 permissions:
-  contents: write
+  contents: read
 
 jobs:
   # The Android APK, built in its own job because it needs a different Go
@@ -25,6 +28,11 @@ jobs:
   # artifact, since those expire and require a GitHub login to download.
   android:
     runs-on: ubuntu-latest
+    # The keystore secrets live in this environment rather than at repository
+    # scope, so only a job that names it can read them. android.yml has a
+    # pull_request trigger, and a branch PR in this repo would otherwise have
+    # been able to read the app signing key.
+    environment: signing
     steps:
       # Full history: versionCode is the commit count, and checkout's default
       # shallow clone would make that 1 on every build — which is exactly the
@@ -111,9 +119,11 @@ jobs:
           path: apk/*.apk
           if-no-files-found: error
 
-  build-and-release:
+  # No secrets, deliberately. Everything reproducible from the source alone
+  # happens here, so the jobs that do hold credentials stay as small as
+  # possible and a failure in one of them never means rebuilding.
+  build:
     runs-on: ubuntu-latest
-    needs: android
     steps:
       - uses: actions/checkout@v7
 
@@ -133,24 +143,28 @@ jobs:
           make dist
           make dist-desktop
 
-      # A curated .github/release-notes/<tag>.md is used as the release body
-      # when one exists; otherwise the body is left to the auto-generated
-      # commit list. Keeps a hand-written release from needing a manual edit
-      # after every publish.
-      - name: Locate curated release notes
-        id: notes
-        run: |
-          f=".github/release-notes/${GITHUB_REF_NAME}.md"
-          if [ -f "$f" ]; then
-            echo "using curated notes: $f"
-            echo "path=$f" >> "$GITHUB_OUTPUT"
-          else
-            echo "no curated notes at $f — falling back to generated notes"
-            echo "path=" >> "$GITHUB_OUTPUT"
-          fi
+      - uses: actions/upload-artifact@v7
+        with:
+          name: dist
+          path: dist/*
+          if-no-files-found: error
 
-      - name: Collect the APK built by the android job
-        uses: actions/download-artifact@v8
+  # Holds the GPG key, and nothing else. Separate from publish because a job
+  # may declare only one environment, and publish needs a different one to
+  # carry the approval gate — so signing and gating cannot share a job.
+  sign:
+    runs-on: ubuntu-latest
+    needs: [build, android]
+    environment: signing
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/download-artifact@v8
+        with:
+          name: dist
+          path: dist
+
+      - uses: actions/download-artifact@v8
         with:
           name: apk
           path: dist
@@ -162,13 +176,10 @@ jobs:
       - name: Add the APK to SHA256SUMS
         run: cd dist && sha256sum *.apk >> SHA256SUMS && cat SHA256SUMS
 
-      # Sign the checksum file rather than every artifact: one signature
-      # covers all of them, since SHA256SUMS already binds each file's content.
-      # A detached .asc alongside it is the convention every Linux packager and
+      # Sign the checksum file rather than every artifact: one signature covers
+      # all of them, since SHA256SUMS already binds each file's content. A
+      # detached .asc alongside it is the convention every Linux packager and
       # every wary user already knows how to check.
-      #
-      # Skipped rather than failed when the secret is absent, so a fork still
-      # produces a complete release.
       - name: Sign SHA256SUMS
         env:
           GPG_PRIVATE_KEY: ${{ secrets.GPG_PRIVATE_KEY }}
@@ -190,15 +201,11 @@ jobs:
 
       # --- Windows and macOS signing --------------------------------------
       #
-      # Both are gated on secrets that do not exist yet, and cannot be created
-      # without buying something: Authenticode needs a CA-issued certificate
-      # (Azure Trusted Signing, or an OV/EV cert on a hardware token), and a
+      # Gated on secrets that do not exist yet and cannot be created without
+      # buying something: Authenticode needs a CA-issued certificate, and a
       # Developer ID certificate is issued by Apple to paying members only.
       # Self-signed is not a cheaper version of either — it satisfies neither
-      # SmartScreen nor Gatekeeper, so it is a key to manage for no benefit.
-      #
-      # The steps are wired now so that the day a certificate exists the only
-      # change is adding secrets. See PUBLISHING.md.
+      # SmartScreen nor Gatekeeper. See PUBLISHING.md.
       - name: Sign Windows binaries
         env:
           AZURE_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
@@ -220,6 +227,53 @@ jobs:
           fi
           echo "::error::Apple signing secrets are set but the notarization step is not implemented yet"
           exit 1
+
+      - uses: actions/upload-artifact@v7
+        with:
+          name: signed
+          path: dist/*
+          if-no-files-found: error
+
+  # Holds no signing key — only the token that creates the release. The
+  # environment it names is chosen by the tag:
+  #
+  #   v0.1.0-alpha.3  ->  release-prerelease, unattended
+  #   v0.1.0          ->  release-stable, waits for a human
+  #
+  # Alphas are the development loop here and must not need an approval each
+  # time; a stable release goes to people who did not ask to be testers, so it
+  # pauses. Two environments rather than one because a required reviewer is a
+  # property of the environment, not something a condition can switch on.
+  publish:
+    runs-on: ubuntu-latest
+    needs: sign
+    permissions:
+      contents: write
+    environment: >-
+      ${{ contains(github.ref_name, '-') && 'release-prerelease' || 'release-stable' }}
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/download-artifact@v8
+        with:
+          name: signed
+          path: dist
+
+      # A curated .github/release-notes/<tag>.md is used as the release body
+      # when one exists; otherwise the body is left to the auto-generated
+      # commit list. Keeps a hand-written release from needing a manual edit
+      # after every publish.
+      - name: Locate curated release notes
+        id: notes
+        run: |
+          f=".github/release-notes/${GITHUB_REF_NAME}.md"
+          if [ -f "$f" ]; then
+            echo "using curated notes: $f"
+            echo "path=$f" >> "$GITHUB_OUTPUT"
+          else
+            echo "no curated notes at $f — falling back to generated notes"
+            echo "path=" >> "$GITHUB_OUTPUT"
+          fi
 
       - name: Create GitHub release
         uses: softprops/action-gh-release@v3
