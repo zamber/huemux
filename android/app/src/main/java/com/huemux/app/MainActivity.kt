@@ -478,6 +478,11 @@ class MainActivity : AppCompatActivity() {
                 val m = resources.displayMetrics
                 sb.append("display               ${m.widthPixels}x${m.heightPixels} @${m.densityDpi}dpi\n")
                 sb.append("capture scale         ${ScreenCaptureService.captureScale}\n")
+                // Last known, so a report taken after capture stopped still
+                // says what the colour engine was being fed.
+                if (ScreenCaptureService.pipelineW > 0) {
+                    sb.append("colour pipeline       ${ScreenCaptureService.pipelineW}x${ScreenCaptureService.pipelineH} (last)\n")
+                }
             }
             Mobile.setHostInfo(sb.toString())
         } catch (e: Exception) {
