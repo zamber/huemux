@@ -15,6 +15,7 @@ const els = {
   recordQuality: document.getElementById('record-quality'),
   recordBtn: document.getElementById('record-btn'),
   recordStatus: document.getElementById('record-status'),
+  recordShare: document.getElementById('record-share'),
   areaWarning: document.getElementById('area-warning'),
   preview: document.getElementById('preview'),
   liveBadge: document.getElementById('live-badge'),
@@ -755,7 +756,13 @@ function renderCaptureState(st) {
     els.recordStatus.textContent = HueMuxI18n.t('sync.recordNeedsSync');
   } else if (st.recording) {
     els.recordStatus.textContent = HueMuxI18n.t('sync.recordInProgress');
+  } else if (st.lastLocation) {
+    // The location the file actually went to, reported by the native side
+    // rather than assumed from a folder convention here. "It recorded and I
+    // have no idea where the file is" is not a saved file.
+    els.recordStatus.textContent = HueMuxI18n.t('sync.recordSaved', { name: st.lastLocation });
   }
+  if (els.recordShare) els.recordShare.hidden = !st.canShare;
 }
 
 function refreshCaptureState() {
@@ -782,6 +789,19 @@ if (nativeBridge()) {
     setTimeout(refreshCaptureState, 150);
     refreshCaptureState();
   });
+
+  if (els.recordShare) {
+    els.recordShare.addEventListener('click', () => {
+      const n = nativeBridge();
+      if (!n || typeof n.shareLastFile !== 'function') return;
+      try {
+        const res = JSON.parse(n.shareLastFile());
+        if (!res.ok) els.recordStatus.textContent = res.error;
+      } catch (e) {
+        els.recordStatus.textContent = String(e);
+      }
+    });
+  }
 
   els.recordQuality.addEventListener('change', () => {
     const n = nativeBridge();

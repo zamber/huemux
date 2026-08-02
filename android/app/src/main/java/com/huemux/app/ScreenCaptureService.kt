@@ -190,6 +190,16 @@ class ScreenCaptureService : Service() {
         return if (f.isNotEmpty()) f else (screenRecorder?.lastOutput ?: "")
     }
 
+    /** Where the last recording went, in words, for the UI to show verbatim. */
+    fun lastRecordingLocation(): String {
+        val f = frameRecorder?.lastLocation ?: ""
+        return if (f.isNotEmpty()) f else (screenRecorder?.lastLocation ?: "")
+    }
+
+    /** The last recording's URI, for the share sheet. */
+    fun lastRecordingUri(): android.net.Uri? =
+        frameRecorder?.lastUri ?: screenRecorder?.lastUri
+
     /**
      * A one-line summary for the diagnostics report. Everything about capture
      * and recording lives in this process's Kotlin half, which the Go
@@ -212,7 +222,7 @@ class ScreenCaptureService : Service() {
             }
         )
         sb.append('\n')
-        val last = lastRecordingName()
+        val last = lastRecordingLocation()
         if (last.isNotEmpty()) sb.append("last recording        $last\n")
         frameRecorder?.let { sb.append("frame encoder         ${it.stats()}\n") }
         return sb.toString()

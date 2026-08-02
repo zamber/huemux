@@ -61,6 +61,20 @@ class FrameRecorder(private val ctx: Context) {
     var lastOutput: String = ""
         private set
 
+    /**
+     * Where the last recording actually went, in words, and the URI to share
+     * it with. "It recorded and I have no idea where the file is" is not a
+     * usable outcome, so both are reported to the UI rather than left implicit
+     * in a folder convention.
+     */
+    @Volatile
+    var lastLocation: String = ""
+        private set
+
+    @Volatile
+    var lastUri: Uri? = null
+        private set
+
     private var codec: MediaCodec? = null
     private var muxer: MediaMuxer? = null
     private var trackIndex = -1
@@ -257,8 +271,14 @@ class FrameRecorder(private val ctx: Context) {
         trackIndex = -1
 
         Mobile.logHost("record: stopped in=$framesIn out=$framesOut err=${err ?: "none"}")
+        val savedUri = uri
+        val savedFile = file
         publishOutput(err == null)
         lastOutput = if (err == null) name else ""
+        if (err == null) {
+            lastUri = savedUri
+            lastLocation = savedFile?.absolutePath ?: ("Movies/HueMux/" + name)
+        }
         yuv = null
         return err
     }
