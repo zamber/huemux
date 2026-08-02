@@ -106,6 +106,41 @@ func TestConfigPatchIgnoresForwardedHeaders(t *testing.T) {
 	}
 }
 
+// POST used to be accepted as a simple CORS method — no preflight, so any
+// webpage could fire it at loopback. Only PATCH may change configuration now.
+func TestConfigRejectsPostMethod(t *testing.T) {
+	s := New(appconfig.Default(), nil, nil, nil, nil)
+	rec := httptest.NewRecorder()
+	req := httptest.NewRequest(http.MethodPost, "/api/config",
+		strings.NewReader(`{"profile":"lights"}`))
+	req.RemoteAddr = "127.0.0.1:5555"
+	s.mux.ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusMethodNotAllowed {
+		t.Errorf("POST rejected with %d, want %d MethodNotAllowed", rec.Code, http.StatusMethodNotAllowed)
+	}
+}
+
+// A loopback PATCH from a browser carries an Origin header naming some other
+// site. RemoteAddr alone cannot tell a curl invocation from an attacker's
+// page, so the Origin must be ours.
+func TestConfigPatchRejectsCrossOrigin(t *testing.T) {
+	dir := t.TempDir()
+	withConfigDir(t, dir)
+
+	s := New(appconfig.Default(), nil, nil, nil, nil)
+	rec := httptest.NewRecorder()
+	req := httptest.NewRequest(http.MethodPatch, "/api/config",
+		strings.NewReader(`{"profile":"lights"}`))
+	req.RemoteAddr = "127.0.0.1:5555"
+	req.Header.Set("Origin", "http://evil.example.com")
+	s.mux.ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusForbidden {
+		t.Errorf("cross-origin PATCH got %d, want %d Forbidden", rec.Code, http.StatusForbidden)
+	}
+}
+
 func TestConfigPatchValidatesAndPartiallyUpdates(t *testing.T) {
 	dir := t.TempDir()
 	withConfigDir(t, dir)

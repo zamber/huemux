@@ -51,7 +51,7 @@ func (s *Server) handleConfig(w http.ResponseWriter, r *http.Request) {
 	switch r.Method {
 	case http.MethodGet:
 		s.writeConfig(w, r)
-	case http.MethodPatch, http.MethodPost:
+	case http.MethodPatch:
 		s.patchConfig(w, r)
 	default:
 		w.Header().Set("Allow", "GET, PATCH")
@@ -83,9 +83,21 @@ func (s *Server) writeConfig(w http.ResponseWriter, r *http.Request) {
 // is exactly the operation you would not want reachable from the network it
 // governs, so the check is on where the request physically came from rather
 // than on a credential that could be replayed.
+//
+// Loopback is not enough on its own, though: any webpage open on this machine
+// can reach 127.0.0.1, and a PATCH from a browser arrives with RemoteAddr set
+// to loopback and no CORS preflight to stop it. So a request that names an
+// Origin must pass the same check the WebSocket handshake does — only our own
+// page, or a page served from the configured listen host, may change the
+// configuration. An absent Origin means a non-browser client (curl and the
+// like), which is fine from loopback.
 func (s *Server) patchConfig(w http.ResponseWriter, r *http.Request) {
 	if !isLoopbackRequest(r) {
 		http.Error(w, "configuration can only be changed from the local machine", http.StatusForbidden)
+		return
+	}
+	if origin := r.Header.Get("Origin"); origin != "" && !checkOrigin(r, s.Config().Listen.Host) {
+		http.Error(w, "cross-origin configuration changes are not allowed", http.StatusForbidden)
 		return
 	}
 
