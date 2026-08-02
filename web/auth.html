@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>HueMux — Authenticate</title>
+<meta id="theme-color-meta" name="theme-color" content="#000000">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<script>
+// Inline so the theme is set before first paint — keep in sync with other pages.
+(function () {
+  var LIGHT = '#f7f3ea', DARK = '#000000';
+  var stored = localStorage.getItem('theme');
+  var base = { light: 'light', dark: 'dark', 'simple-light': 'light', 'simple-dark': 'dark' }[stored];
+  if (base) document.documentElement.setAttribute('data-theme', base);
+  if (localStorage.getItem('themeSimple') === '1' || (stored && stored.indexOf('simple-') === 0)) {
+    document.documentElement.setAttribute('data-simple', '');
+  }
+  var resolved = base || (window.matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark');
+  var meta = document.getElementById('theme-color-meta');
+  if (meta) meta.setAttribute('content', resolved === 'light' ? LIGHT : DARK);
+})();
+</script>
+<link rel="stylesheet" href="/shared/theme.css">
+<link rel="stylesheet" href="/shared/header.css">
+<link rel="stylesheet" href="/shared/scrollbars.css">
+<style>
+  #auth-page {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-height: calc(100vh - 5rem);
+    padding: 1rem;
+  }
+  #auth-page h2 {
+    margin-bottom: 0.5rem;
+  }
+  #auth-page .hint {
+    margin-bottom: 1.5rem;
+    opacity: 0.7;
+  }
+  #auth-form {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+    width: 100%;
+    max-width: 24rem;
+  }
+  #auth-token {
+    font-family: inherit;
+    font-size: 1rem;
+    padding: 0.625rem 1rem;
+    border-radius: 0.5rem;
+    border: 2px solid var(--ink);
+    background: transparent;
+    color: var(--ink);
+    outline: none;
+  }
+  #auth-token:focus {
+    border-color: var(--accent);
+  }
+  #auth-submit {
+    font-family: inherit;
+    font-size: 1rem;
+    padding: 0.625rem 1.5rem;
+    border-radius: 0.5rem;
+    border: 2px solid var(--ink);
+    background: var(--ink);
+    color: var(--bg);
+    cursor: pointer;
+    font-weight: 600;
+  }
+  #auth-submit:hover { opacity: 0.9; }
+  #auth-error {
+    color: var(--accent);
+    font-weight: 600;
+    min-height: 1.5em;
+  }
+</style>
+</head>
+<body>
+<huemux-header></huemux-header>
+
+<main id="auth-page">
+  <h2 data-i18n="auth.heading">Enter your access token</h2>
+  <p class="hint" data-i18n="auth.hint">This server requires authentication.</p>
+
+  <form id="auth-form" autocomplete="off">
+    <input type="text" id="auth-token" spellcheck="false" autocapitalize="none"
+           data-i18n-attr="placeholder:auth.placeholder"
+           placeholder="e.g. otter.beacon.willow.cougar">
+    <button type="submit" id="auth-submit" data-i18n="auth.submit">Authenticate</button>
+    <p id="auth-error" role="alert"></p>
+  </form>
+</main>
+
+<script src="/shared/theme.js"></script>
+<script src="/shared/scrollbars.js"></script>
+<script src="/shared/i18n.js"></script>
+<script src="/shared/features.js"></script>
+<script src="/shared/header.js"></script>
+<script src="/shared/auth.js"></script>
+<script src="/auth.js"></script>
+</body>
+</html>

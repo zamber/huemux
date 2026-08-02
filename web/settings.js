@@ -171,7 +171,7 @@ function scheduleApply(immediate) {
 });
 
 // The token is also a credential every fetch and WebSocket on this device has
-// to send, so persist it to sessionStorage as it is typed — not on save.
+// to send, so persist it to localStorage as it is typed — not on save.
 els.token.addEventListener('input', function () {
   setAuthToken(els.token.value);
 });
@@ -183,7 +183,7 @@ els.form.addEventListener('submit', (ev) => {
   scheduleApply(true);
 });
 
-// Pre-fill the token field from sessionStorage: a stored token survives a page
+// Pre-fill the token field from localStorage: a stored token survives a page
 // reload, and showing it beats making the user re-type it to know it is there.
 (function () {
   var t = getAuthToken();

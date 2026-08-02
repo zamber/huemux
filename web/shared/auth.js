@@ -1,53 +1,76 @@
 // Shared auth token helper. When auth.mode=token is configured, the token must
-// be sent on every fetch and WebSocket upgrade. This module stores it in
-// sessionStorage (survives a page reload but not a browser restart — that is
-// deliberate: the token is a credential, not a preference).
+// be sent on every fetch and WebSocket upgrade.
+//
+// The token is stored in localStorage — it survives a browser restart (unlike
+// sessionStorage), which matters because the token is the only way back into
+// the app once auth is turned on.
 //
 // The server accepts two forms: Authorization: Bearer <token> (preferred for
 // fetch because it keeps the token out of URLs) and ?token= (required for
 // WebSocket because the browser WebSocket constructor cannot set headers).
 
 const AUTH_KEY = 'huemux-auth-token';
+const AUTH_PAGE = '/auth.html';
 
-// getToken returns the stored token or empty string.
 function getAuthToken() {
-  try { return sessionStorage.getItem(AUTH_KEY) || ''; } catch (_) { return ''; }
+  try { return localStorage.getItem(AUTH_KEY) || ''; } catch (_) { return ''; }
 }
 
-// setAuthToken stores the token. Pass '' to clear.
 function setAuthToken(t) {
-  try { sessionStorage.setItem(AUTH_KEY, t); } catch (_) {}
+  try { localStorage.setItem(AUTH_KEY, t); } catch (_) {}
 }
 
-// hasAuthToken reports whether a token is stored.
+function clearAuthToken() {
+  try { localStorage.removeItem(AUTH_KEY); } catch (_) {}
+}
+
 function hasAuthToken() {
   return getAuthToken() !== '';
 }
 
-// authFetch wraps fetch(), adding the Authorization header when a token is stored.
-// Use this instead of bare fetch() for every API call.
+// redirectToAuth sends the user to the token-entry page, preserving the current
+// URL so they come back to the right place after authenticating.
+function redirectToAuth() {
+  // Never redirect the auth page itself.
+  if (window.location.pathname === AUTH_PAGE) return;
+  var redir = encodeURIComponent(window.location.pathname + window.location.search);
+  window.location.replace(AUTH_PAGE + '?redirect=' + redir);
+}
+
+// logout clears the token and sends the user to the auth page.
+function logout() {
+  clearAuthToken();
+  window.location.replace(AUTH_PAGE);
+}
+
+// authFetch wraps fetch(), adding the Authorization header when a token is
+// stored, and redirecting to the auth page on 401 responses so the user is
+// never left staring at a dead UI with no way to recover.
 function authFetch(url, opts) {
-  const token = getAuthToken();
-  if (!token) return fetch(url, opts);
+  var token = getAuthToken();
 
   opts = opts || {};
   opts.headers = opts.headers || {};
   if (!(opts.headers instanceof Headers)) {
     opts.headers = new Headers(opts.headers);
   }
-  if (!opts.headers.has('Authorization')) {
+  if (token && !opts.headers.has('Authorization')) {
     opts.headers.set('Authorization', 'Bearer ' + token);
   }
-  return fetch(url, opts);
+
+  return fetch(url, opts).then(function(resp) {
+    if (resp.status === 401) redirectToAuth();
+    return resp;
+  });
 }
 
-// authWSURL returns the WebSocket URL with ?token= appended when a token is stored.
-// Pass the path, e.g. '/ws'.
+// authWSURL returns the WebSocket URL with ?token= appended when a token is
+// stored. Pass the path, e.g. '/ws'.
 function authWSURL(path) {
-  const proto = location.protocol === 'https:' ? 'wss' : 'ws';
-  const base = proto + '://' + location.host + path;
-  const token = getAuthToken();
+  var proto = location.protocol === 'https:' ? 'wss' : 'ws';
+  var base = proto + '://' + location.host + path;
+  var token = getAuthToken();
   if (!token) return base;
-  const sep = base.indexOf('?') === -1 ? '?' : '&';
+  var sep = base.indexOf('?') === -1 ? '?' : '&';
   return base + sep + 'token=' + encodeURIComponent(token);
 }

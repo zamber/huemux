@@ -74,6 +74,7 @@ class HueMuxHeader extends HTMLElement {
         '</a>' +
         '<nav class="ls-nav"></nav>' +
         '<div class="ls-header-actions">' +
+          '<button type="button" id="ls-logout-btn" class="ls-icon-btn" hidden title="Log out" aria-label="Log out">🔒</button>' +
           '<button type="button" id="ls-theme-btn" class="ls-icon-btn"></button>' +
           '<button type="button" id="ls-simple-btn" class="ls-icon-btn">✨</button>' +
         '</div>' +
@@ -82,8 +83,17 @@ class HueMuxHeader extends HTMLElement {
     this._brandMark = this.querySelector('#ls-brand-mark');
     this._themeBtn = this.querySelector('#ls-theme-btn');
     this._simpleBtn = this.querySelector('#ls-simple-btn');
+    this._logoutBtn = this.querySelector('#ls-logout-btn');
     this._themeBtn.addEventListener('click', () => HueMuxTheme.cycle());
     this._simpleBtn.addEventListener('click', () => HueMuxTheme.toggleSimple());
+
+    // Logout button — only shown when a token is stored.
+    if (this._logoutBtn) {
+      this._logoutBtn.addEventListener('click', function () { logout(); });
+      if (typeof hasAuthToken === 'function' && hasAuthToken()) {
+        this._logoutBtn.hidden = false;
+      }
+    }
 
     this._renderNav();
     this._renderTheme();
