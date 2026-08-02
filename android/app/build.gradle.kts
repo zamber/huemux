@@ -14,8 +14,22 @@ android {
         // court it for devices this would never be installed on.
         minSdk = 26
         targetSdk = 35
-        versionCode = 1
-        versionName = "0.0.1-alpha"
+        // Both come from CI, which derives them from the tag being built.
+        //
+        // These were hardcoded, and versionCode in particular is not cosmetic:
+        // Android refuses to install a build whose versionCode is not greater
+        // than the installed one, so every release shipping versionCode 1 was
+        // an app that could never update itself. That is invisible while
+        // testers sideload each APK over a wiped install, and fatal the moment
+        // anything tracks releases — which is the entire point of publishing
+        // through Obtainium or F-Droid.
+        //
+        // The code is the commit count: monotonic, deterministic from the
+        // source alone (so a rebuild of the same tag produces the same number,
+        // which F-Droid's reproducibility checks care about), and never needs
+        // a human to remember to bump it.
+        versionCode = (System.getenv("HUEMUX_VERSION_CODE") ?: "1").toInt()
+        versionName = System.getenv("HUEMUX_VERSION_NAME") ?: "dev"
     }
 
     // Release signing comes from the environment when CI has a keystore

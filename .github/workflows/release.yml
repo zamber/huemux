@@ -26,7 +26,12 @@ jobs:
   android:
     runs-on: ubuntu-latest
     steps:
+      # Full history: versionCode is the commit count, and checkout's default
+      # shallow clone would make that 1 on every build — which is exactly the
+      # hardcoded value this replaced.
       - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
       - uses: actions/setup-go@v7
         with:
           go-version: 'stable'
@@ -45,14 +50,32 @@ jobs:
       # still produces a debug-signed APK — installable, just not upgradeable
       # from a differently-signed build and not eligible for a store. Making
       # this optional keeps the repo buildable by anyone who forks it.
+      # The emptiness check is inside the script rather than in `if:`. A step's
+      # own `env:` block is not reliably in scope for its own `if:` expression,
+      # and the failure mode is silent in the worst direction: the step is
+      # skipped even though the secret is set, no keystore path is produced,
+      # and the build quietly falls back to a debug-signed APK that no store
+      # will take and no installed copy can upgrade from.
       - name: Decode signing keystore
         id: keystore
-        if: env.KEYSTORE_B64 != ''
         env:
           KEYSTORE_B64: ${{ secrets.ANDROID_KEYSTORE_B64 }}
         run: |
+          if [ -z "$KEYSTORE_B64" ]; then
+            echo "::notice::No ANDROID_KEYSTORE_B64 secret — this build will be debug-signed"
+            exit 0
+          fi
           echo "$KEYSTORE_B64" | base64 -d > "$RUNNER_TEMP/huemux.jks"
           echo "path=$RUNNER_TEMP/huemux.jks" >> "$GITHUB_OUTPUT"
+
+      # versionName is the tag; versionCode is the commit count — monotonic,
+      # and derived from the source rather than from the CI run, so rebuilding
+      # a tag reproduces the same number.
+      - name: Derive Android version
+        id: version
+        run: |
+          echo "name=${GITHUB_REF_NAME#v}" >> "$GITHUB_OUTPUT"
+          echo "code=$(git rev-list --count HEAD)" >> "$GITHUB_OUTPUT"
 
       - name: Build APK
         env:
@@ -60,6 +83,8 @@ jobs:
           HUEMUX_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
           HUEMUX_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
           HUEMUX_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+          HUEMUX_VERSION_NAME: ${{ steps.version.outputs.name }}
+          HUEMUX_VERSION_CODE: ${{ steps.version.outputs.code }}
         run: |
           gomobile init
           go get -tool golang.org/x/mobile/cmd/gobind
