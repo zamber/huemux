@@ -12,7 +12,6 @@ const els = {
   deviceCapture: document.getElementById('device-capture'),
   captureScale: document.getElementById('capture-scale'),
   captureScaleReadout: document.getElementById('capture-scale-readout'),
-  recordQuality: document.getElementById('record-quality'),
   recordBtn: document.getElementById('record-btn'),
   recordStatus: document.getElementById('record-status'),
   recordShare: document.getElementById('record-share'),
@@ -290,7 +289,10 @@ function renderSyncButtons() {
   // WebView reload, so a reloaded page would offer "Start" for a sync that is
   // already running and had no way to stop it. Trust `syncing` for what this
   // client is doing, and the status for what the machine is doing.
-  const streaming = syncing || serverStreamIsOurs();
+  // Any of the three counts. A capture running with no stream is exactly the
+  // state that stranded the user: the page showed Start, and the thing that
+  // needed stopping was the capture, not the stream.
+  const streaming = syncing || serverStreamIsOurs() || nativeCaptureRunning();
   els.startBtn.hidden = streaming;
   els.stopBtn.hidden = !streaming;
   els.stopBtn.disabled = false;
@@ -306,6 +308,15 @@ function renderSyncButtons() {
 // stopping it here is both possible and the right thing to offer. A stream fed
 // by some *other* client is reported by els.sourceWarning instead; offering to
 // stop that one from here would be a surprise.
+// Whether the Android capture service is running right now, according to the
+// service itself. Separate from `syncing` and from the server's stream state:
+// all three can disagree, and the one that decides whether a Stop button is
+// worth offering is this one.
+function nativeCaptureRunning() {
+  const st = readCaptureState();
+  return !!(st && st.capturing);
+}
+
 function serverStreamIsOurs() {
   return !!(latestStatus && latestStatus.snapshot && latestStatus.snapshot.StreamActive &&
     (latestStatus.you_are_source || !latestStatus.source_held));
@@ -528,7 +539,15 @@ function stopCapture() {
   // Native capture holds an Android foreground service and a MediaProjection
   // session; leaving those running would keep the screen-capture notification
   // up and the DTLS stream alive after the user pressed Stop.
-  if (nativeCapture) stopNativeCapture();
+  //
+  // Asked of the native side, not of `nativeCapture`. That flag is this page's
+  // memory of having started capture, and the capture service outlives the
+  // page: after a reload — or when the stream was stopped from the Lights tab,
+  // which is a different document — the flag is false while the service is
+  // very much running. Stop then did nothing, and since the page also believed
+  // nothing was running it offered no other way out; the only remaining
+  // control was Android's own recording indicator.
+  if (nativeCapture || nativeCaptureRunning()) stopNativeCapture();
   if (worker) { worker.postMessage({ type: 'stop' }); worker.terminate(); worker = null; }
   if (videoEl) { videoEl.pause(); videoEl.srcObject = null; videoEl = null; }
   if (stream) { stream.getTracks().forEach((t) => t.stop()); stream = null; }
@@ -739,9 +758,7 @@ function renderCaptureState(st) {
   // is locked for the duration rather than allowed to corrupt the rest of the
   // file. The native side refuses it too; this is so the UI says why.
   els.captureScale.disabled = !!st.scaleLocked;
-  els.recordQuality.disabled = !!st.recording;
 
-  els.recordQuality.value = st.quality === 'native' ? 'native' : 'capture';
   els.recordBtn.classList.toggle('recording', !!st.recording);
   els.recordBtn.textContent = HueMuxI18n.t(st.recording ? 'sync.recordStop' : 'sync.recordStart');
   // Recording mirrors the capture projection, so there is nothing to record
@@ -803,16 +820,6 @@ if (nativeBridge()) {
     });
   }
 
-  els.recordQuality.addEventListener('change', () => {
-    const n = nativeBridge();
-    if (!n) return;
-    try {
-      n.setRecordingQuality(els.recordQuality.value);
-    } catch (e) {
-      console.warn('setRecordingQuality failed', e);
-    }
-  });
-
   els.recordBtn.addEventListener('click', () => {
     const n = nativeBridge();
     if (!n) return;
@@ -820,7 +827,7 @@ if (nativeBridge()) {
     els.recordStatus.textContent = '';
     let res;
     try {
-      res = JSON.parse(st && st.recording ? n.stopRecording() : n.startRecording(els.recordQuality.value));
+      res = JSON.parse(st && st.recording ? n.stopRecording() : n.startRecording());
     } catch (e) {
       els.recordStatus.textContent = String(e);
       return;

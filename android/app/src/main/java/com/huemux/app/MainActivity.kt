@@ -308,7 +308,6 @@ class MainActivity : AppCompatActivity() {
                 // configured for the size it had when it started. Allowing it
                 // would corrupt the rest of the recording.
                 put("scaleLocked", svc?.isRecording() == true)
-                put("quality", recordingQuality().name.lowercase())
                 put("lastRecording", svc?.lastRecordingName() ?: "")
                 // The full location, not just the filename: a recording the
                 // user cannot find has not really been saved.
@@ -332,20 +331,11 @@ class MainActivity : AppCompatActivity() {
             ScreenCaptureService.requestReconfigure(this@MainActivity)
         }
 
-        /** Remembers which recording quality the UI last chose. */
         @JavascriptInterface
-        fun setRecordingQuality(quality: String) {
-            val q = parseQuality(quality)
-            prefs().edit().putString(PREF_QUALITY, q.name).apply()
-        }
-
-        @JavascriptInterface
-        fun startRecording(quality: String): String {
-            val q = parseQuality(quality)
-            prefs().edit().putString(PREF_QUALITY, q.name).apply()
+        fun startRecording(): String {
             val svc = ScreenCaptureService.instance
-                ?: return result(false, "start screen sync first — recording mirrors the same capture")
-            val err = svc.startRecording(q)
+                ?: return result(false, "start screen sync first — recording encodes the same capture")
+            val err = svc.startRecording()
             return result(err == null, err ?: "")
         }
 
@@ -480,7 +470,6 @@ class MainActivity : AppCompatActivity() {
             val sb = StringBuilder()
             sb.append("android sdk           ${Build.VERSION.SDK_INT}\n")
             sb.append("device                ${Build.MANUFACTURER} ${Build.MODEL}\n")
-            sb.append("recording quality     ${recordingQuality().name.lowercase()}\n")
             val svc = ScreenCaptureService.instance
             if (svc != null) {
                 sb.append(svc.diagnosticsBlock())
@@ -496,22 +485,11 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    private fun recordingQuality(): ScreenRecorder.Quality =
-        parseQuality(prefs().getString(PREF_QUALITY, null))
 
-    /**
-     * Unknown values fall back to CAPTURE rather than throwing. The default
-     * matters: it is the cheap mode that reuses the size the pipeline already
-     * asked for, and the one that cannot fail for want of encoder headroom.
-     */
-    private fun parseQuality(s: String?): ScreenRecorder.Quality =
-        if (s.equals("native", ignoreCase = true)) ScreenRecorder.Quality.NATIVE
-        else ScreenRecorder.Quality.CAPTURE
 
     private companion object {
         const val TAG = "HueMux"
         const val PREFS = "huemux"
         const val PREF_SCALE = "captureScale"
-        const val PREF_QUALITY = "recordingQuality"
     }
 }
