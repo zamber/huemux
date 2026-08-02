@@ -174,7 +174,7 @@ func cmdPair(args []string) {
 
 	fmt.Printf("found bridge %q (id %s). Press the link button on the bridge now — waiting up to 60s...\n", info.Name, info.BridgeID)
 
-	username, clientkey, err := hue.Pair(ctx, bridgeIP, fmt.Sprintf("huemux#%s", hostname()), 60*time.Second)
+	username, clientkey, certSHA256, err := hue.Pair(ctx, bridgeIP, fmt.Sprintf("huemux#%s", hostname()), 60*time.Second)
 	if err != nil {
 		fatalf("pairing failed: %v", err)
 	}
@@ -183,10 +183,11 @@ func cmdPair(args []string) {
 	}
 
 	if err := config.SaveBridge(config.Bridge{
-		BridgeIP:  bridgeIP,
-		BridgeID:  info.BridgeID,
-		Username:  username,
-		ClientKey: clientkey,
+		BridgeIP:   bridgeIP,
+		BridgeID:   info.BridgeID,
+		Username:   username,
+		ClientKey:  clientkey,
+		CertSHA256: certSHA256,
 	}); err != nil {
 		fatalf("saving config: %v", err)
 	}
@@ -198,7 +199,7 @@ func cmdPair(args []string) {
 
 func cmdAreas(args []string) {
 	bridge := mustLoadBridge()
-	client := hue.NewClient(bridge.BridgeIP, bridge.Username)
+	client := hue.NewClient(bridge.BridgeIP, bridge.Username, bridge.CertSHA256)
 
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
@@ -228,7 +229,7 @@ func cmdTest(args []string) {
 	}
 	areaID := args[0]
 	bridge := mustLoadBridge()
-	client := hue.NewClient(bridge.BridgeIP, bridge.Username)
+	client := hue.NewClient(bridge.BridgeIP, bridge.Username, bridge.CertSHA256)
 
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()

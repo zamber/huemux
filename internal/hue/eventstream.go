@@ -3,7 +3,6 @@ package hue
 import (
 	"bufio"
 	"context"
-	"crypto/tls"
 	"encoding/json"
 	"fmt"
 	"log"
@@ -70,10 +69,11 @@ func (c *Client) streamEventsOnce(ctx context.Context, out chan<- Event) error {
 	// The eventstream is long-lived by design, so it needs its own client:
 	// c.hc (used for ordinary REST calls elsewhere in this package) has a
 	// 10s total-request timeout, which would kill this connection almost
-	// immediately.
+	// immediately. The TLS config carries the same certificate pin as the
+	// REST client.
 	client := &http.Client{
 		Transport: &http.Transport{
-			TLSClientConfig: &tls.Config{InsecureSkipVerify: true}, //nolint:gosec // bridge cert is self-signed, see clip.go
+			TLSClientConfig: tlsConfigForCert(c.certSHA256),
 		},
 	}
 

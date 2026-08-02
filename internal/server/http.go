@@ -910,13 +910,13 @@ func (s *Server) runPair(bridgeIP string) {
 	s.pairMu.Unlock()
 
 	hostname, _ := os.Hostname()
-	username, clientkey, err := hue.Pair(ctx, bridgeIP, "huemux#"+hostname, 60*time.Second)
+	username, clientkey, certSHA256, err := hue.Pair(ctx, bridgeIP, "huemux#"+hostname, 60*time.Second)
 	if err != nil {
 		s.pairFail(err.Error())
 		return
 	}
 
-	bridge := config.Bridge{BridgeIP: bridgeIP, BridgeID: info.BridgeID, Username: username, ClientKey: clientkey}
+	bridge := config.Bridge{BridgeIP: bridgeIP, BridgeID: info.BridgeID, Username: username, ClientKey: clientkey, CertSHA256: certSHA256}
 	if err := config.SaveBridge(bridge); err != nil {
 		s.pairFail(fmt.Sprintf("saving config: %v", err))
 		return

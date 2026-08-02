@@ -3,7 +3,9 @@ package hue
 import (
 	"bytes"
 	"context"
+	"crypto/sha256"
 	"crypto/tls"
+	"crypto/x509"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -14,29 +16,68 @@ import (
 // Client talks to a single bridge's CLIP v2 REST API.
 //
 // The bridge presents a self-signed certificate on HTTPS. The system trust
-// store will never accept it, so verification is skipped here rather than
-// pinned — this is a LAN device on the user's own network, not a public
-// endpoint.
+// store will never accept it, so verification is skipped when no pin is
+// stored; once pairing has captured the certificate fingerprint (see Pair),
+// every connection is pinned to it instead.
 type Client struct {
 	BridgeIP string
 	Username string // application key; also the DTLS PSK identity
 
-	hc *http.Client
+	certSHA256 string // hex-encoded SHA-256 of the bridge cert; empty = unpinned
+	hc         *http.Client
 }
 
 // NewClient builds a client for a bridge that has already been paired.
 // Username may be empty for calls made before pairing (Pair, BridgeConfig).
-func NewClient(bridgeIP, username string) *Client {
+//
+// When certSHA256 is non-empty, every HTTPS connection verifies that the
+// bridge's certificate fingerprint matches it. When it is empty — first
+// pairing, or a config saved before pinning existed — the connection falls
+// back to InsecureSkipVerify for backward compatibility.
+func NewClient(bridgeIP, username, certSHA256 string) *Client {
 	return &Client{
-		BridgeIP: bridgeIP,
-		Username: username,
+		BridgeIP:   bridgeIP,
+		Username:   username,
+		certSHA256: certSHA256,
 		hc: &http.Client{
 			Timeout: 10 * time.Second,
 			Transport: &http.Transport{
-				TLSClientConfig: &tls.Config{InsecureSkipVerify: true}, //nolint:gosec // bridge cert is self-signed; see doc comment above
+				TLSClientConfig: tlsConfigForCert(certSHA256),
 			},
 		},
 	}
+}
+
+// tlsConfigForCert returns the TLS client config for talking to a bridge.
+// With a non-empty certSHA256 (the fingerprint captured during pairing) the
+// bridge certificate is pinned to it; with an empty one the connection falls
+// back to InsecureSkipVerify, for backward compatibility with configs saved
+// before pinning existed.
+func tlsConfigForCert(certSHA256 string) *tls.Config {
+	if certSHA256 == "" {
+		return &tls.Config{InsecureSkipVerify: true} //nolint:gosec // unpinned fallback; see NewClient
+	}
+	return &tls.Config{
+		InsecureSkipVerify: false,
+		VerifyPeerCertificate: func(rawCerts [][]byte, _ [][]*x509.Certificate) error {
+			return verifyCertSHA256(rawCerts, certSHA256)
+		},
+	}
+}
+
+// verifyCertSHA256 pins the presented leaf certificate to a known SHA-256
+// fingerprint. The bridge's self-signed certificate is stable — it only
+// changes on factory reset — so a match means the connection really is to the
+// bridge we paired with, not to something that spoofed its IP on the LAN.
+func verifyCertSHA256(rawCerts [][]byte, want string) error {
+	if len(rawCerts) == 0 {
+		return fmt.Errorf("no certificates presented")
+	}
+	got := fmt.Sprintf("%x", sha256.Sum256(rawCerts[0]))
+	if got != want {
+		return fmt.Errorf("bridge certificate fingerprint mismatch: got %s, want %s", got, want)
+	}
+	return nil
 }
 
 type v2Envelope[T any] struct {
@@ -100,7 +141,7 @@ type BridgeInfo struct {
 // BridgeConfig fetches the unauthenticated bridge config. It works before
 // pairing and is how discovery confirms an IP is actually a Hue bridge.
 func BridgeConfig(ctx context.Context, bridgeIP string) (BridgeInfo, error) {
-	c := NewClient(bridgeIP, "")
+	c := NewClient(bridgeIP, "", "")
 	var info BridgeInfo
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, fmt.Sprintf("https://%s/api/0/config", bridgeIP), nil)
 	if err != nil {
@@ -150,54 +191,66 @@ const linkButtonNotPressed = 101
 // generateclientkey is mandatory: without it the bridge issues a username
 // with no PSK, which is enough for ordinary REST calls but useless for
 // Entertainment streaming.
-func Pair(ctx context.Context, bridgeIP, devicetype string, timeout time.Duration) (username, clientkey string, err error) {
-	c := NewClient(bridgeIP, "")
+//
+// certSHA256 is the hex-encoded SHA-256 fingerprint of the bridge's TLS
+// certificate, captured from the first successful pairing response. Callers
+// should persist it alongside the credentials so later connections can be
+// pinned to it (see NewClient).
+func Pair(ctx context.Context, bridgeIP, devicetype string, timeout time.Duration) (username, clientkey, certSHA256 string, err error) {
+	c := NewClient(bridgeIP, "", "")
 	body := map[string]any{
 		"devicetype":        devicetype,
 		"generateclientkey": true,
 	}
 	b, err := json.Marshal(body)
 	if err != nil {
-		return "", "", err
+		return "", "", "", err
 	}
 
 	deadline := time.Now().Add(timeout)
 	for {
 		req, err := http.NewRequestWithContext(ctx, http.MethodPost, fmt.Sprintf("https://%s/api", bridgeIP), bytes.NewReader(b))
 		if err != nil {
-			return "", "", err
+			return "", "", "", err
 		}
 		req.Header.Set("Content-Type", "application/json")
 
 		resp, err := c.hc.Do(req)
 		if err != nil {
-			return "", "", fmt.Errorf("contact bridge at %s: %w", bridgeIP, err)
+			return "", "", "", fmt.Errorf("contact bridge at %s: %w", bridgeIP, err)
+		}
+		// The TLS connection state from the handshake carries the leaf
+		// certificate, which is the fingerprint we pin against on every later
+		// connection. Captured on whichever response completes the pairing.
+		if resp.TLS != nil && len(resp.TLS.PeerCertificates) > 0 {
+			leaf := resp.TLS.PeerCertificates[0]
+			certSHA256 = fmt.Sprintf("%x", sha256.Sum256(leaf.Raw))
 		}
 		var results []pairResult
 		decErr := json.NewDecoder(resp.Body).Decode(&results)
 		resp.Body.Close()
 		if decErr != nil {
-			return "", "", fmt.Errorf("decode pairing response: %w", decErr)
+			return "", "", "", fmt.Errorf("decode pairing response: %w", decErr)
 		}
 
 		if len(results) > 0 {
 			if results[0].Success != nil {
 				if results[0].Success.ClientKey == "" {
-					return "", "", fmt.Errorf("bridge did not return a clientkey; generateclientkey may not have been honoured")
+					return "", "", "", fmt.Errorf("bridge did not return a clientkey; generateclientkey may not have been honoured")
 				}
-				return results[0].Success.Username, results[0].Success.ClientKey, nil
+				return results[0].Success.Username, results[0].Success.ClientKey, certSHA256, nil
 			}
 			if results[0].Error != nil && results[0].Error.Type != linkButtonNotPressed {
-				return "", "", fmt.Errorf("bridge rejected pairing: %s", results[0].Error.Description)
+				return "", "", "", fmt.Errorf("bridge rejected pairing: %s", results[0].Error.Description)
 			}
 		}
 
 		if time.Now().After(deadline) {
-			return "", "", fmt.Errorf("timed out waiting for the link button to be pressed (%s)", timeout)
+			return "", "", "", fmt.Errorf("timed out waiting for the link button to be pressed (%s)", timeout)
 		}
 		select {
 		case <-ctx.Done():
-			return "", "", ctx.Err()
+			return "", "", "", ctx.Err()
 		case <-time.After(2 * time.Second):
 		}
 	}
