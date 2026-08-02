@@ -15,7 +15,6 @@
 package main
 
 import (
-	"bufio"
 	"context"
 	"flag"
 	"fmt"
@@ -24,7 +23,6 @@ import (
 	"net"
 	"net/http"
 	"os"
-	"os/exec"
 	"os/signal"
 	"path/filepath"
 	"runtime"
@@ -37,6 +35,7 @@ import (
 	"github.com/asticode/go-astikit"
 	"github.com/asticode/go-astilectron"
 
+	"github.com/zamber/huemux/cmd/shared"
 	"github.com/zamber/huemux/internal/appconfig"
 	"github.com/zamber/huemux/internal/config"
 	"github.com/zamber/huemux/internal/debuglog"
@@ -125,11 +124,11 @@ func main() {
 
 	configDir, err := config.Dir()
 	if err != nil {
-		fatalf("resolving config dir: %v", err)
+		shared.Fatalf("huemux-desktop", "resolving config dir: %v", err)
 	}
 	cfg, err := appconfig.Resolve(configDir, cfgFlags)
 	if err != nil {
-		fatalf("%v", err)
+		shared.Fatalf("huemux-desktop", "%v", err)
 	}
 	for _, w := range cfg.Warnings() {
 		fmt.Fprintln(os.Stderr, "huemux-desktop: warning: "+w)
@@ -142,11 +141,11 @@ func main() {
 
 	store, err := config.NewStore()
 	if err != nil {
-		fatalf("loading settings: %v", err)
+		shared.Fatalf("huemux-desktop", "loading settings: %v", err)
 	}
 	favorites, err := config.NewFavoritesStore()
 	if err != nil {
-		fatalf("loading favorites: %v", err)
+		shared.Fatalf("huemux-desktop", "loading favorites: %v", err)
 	}
 
 	var eng *engine.Engine
@@ -157,7 +156,7 @@ func main() {
 	srv := server.New(cfg, store, favorites, eng, lights)
 	url, err := srv.ListenAndServe()
 	if err != nil {
-		fatalf("starting server: %v", err)
+		shared.Fatalf("huemux-desktop", "starting server: %v", err)
 	}
 	fmt.Println("huemux-desktop " + version + "  " + url)
 
@@ -190,9 +189,9 @@ func main() {
 	}
 
 	if err := runDesktop(url); err != nil {
-		fatalf("desktop window: %v", err)
+		shared.Fatalf("huemux-desktop", "desktop window: %v", err)
 	}
-	shutdown(srv.Engine(), store)
+	shared.Shutdown(srv.Engine(), store)
 }
 
 // runDesktop bootstraps Electron via astilectron and opens a window pointed
@@ -239,8 +238,8 @@ func runDesktop(url string) error {
 		AppName:           "huemux",
 		BaseDirectoryPath: dataDir,
 		VersionElectron:   electronVersion,
-		SingleInstance:     true,
-		ElectronSwitches:   []string{"--user-data-dir=" + filepath.Join(dataDir, "electron-profile")},
+		SingleInstance:    true,
+		ElectronSwitches:  []string{"--user-data-dir=" + filepath.Join(dataDir, "electron-profile")},
 	})
 	if err != nil {
 		return fmt.Errorf("init astilectron: %w", err)
@@ -282,7 +281,7 @@ func runHeadless(srv *server.Server, store *config.Store, url string, verbose bo
 	if !srv.Paired() {
 		fmt.Println("not paired yet — open the URL above to pair with your bridge")
 	}
-	openBrowser(url)
+	shared.OpenBrowser(url)
 
 	printer := ui.NewPrinter(url)
 	printer.Verbose = verbose
@@ -291,7 +290,7 @@ func runHeadless(srv *server.Server, store *config.Store, url string, verbose bo
 	signal.Notify(sigCh, os.Interrupt, syscall.SIGTERM)
 
 	stdinCh := make(chan string, 1)
-	go readStdinCommands(stdinCh)
+	go shared.ReadStdinCommands(stdinCh)
 
 	renderTick := time.NewTicker(250 * time.Millisecond)
 	defer renderTick.Stop()
@@ -300,11 +299,11 @@ func runHeadless(srv *server.Server, store *config.Store, url string, verbose bo
 	for {
 		select {
 		case <-sigCh:
-			shutdown(srv.Engine(), store)
+			shared.Shutdown(srv.Engine(), store)
 			return
 		case cmd := <-stdinCh:
 			if cmd == "q" {
-				shutdown(srv.Engine(), store)
+				shared.Shutdown(srv.Engine(), store)
 				return
 			}
 			eng := srv.Engine()
@@ -345,27 +344,6 @@ func runHeadless(srv *server.Server, store *config.Store, url string, verbose bo
 	}
 }
 
-func shutdown(eng *engine.Engine, store *config.Store) {
-	if eng != nil {
-		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-		defer cancel()
-		eng.Stop(ctx)
-	}
-	store.Flush()
-}
-
-func readStdinCommands(out chan<- string) {
-	// Line-buffered "q"/"r"/"b" rather than raw single-keypress input — see
-	// the identical comment in cmd/huemux/main.go.
-	scanner := bufio.NewScanner(os.Stdin)
-	for scanner.Scan() {
-		line := scanner.Text()
-		if len(line) > 0 {
-			out <- line[:1]
-		}
-	}
-}
-
 // httpGet fetches a URL and returns the response body on 200, or an error.
 // 2s timeout — this is a local probe, not a remote fetch.
 func httpGet(url string) (*http.Response, error) {
@@ -376,22 +354,4 @@ func httpGet(url string) (*http.Response, error) {
 		return nil, err
 	}
 	return http.DefaultClient.Do(req)
-}
-
-func openBrowser(url string) {
-	var cmd *exec.Cmd
-	switch runtime.GOOS {
-	case "darwin":
-		cmd = exec.Command("open", url)
-	case "windows":
-		cmd = exec.Command("rundll32", "url.dll,FileProtocolHandler", url)
-	default:
-		cmd = exec.Command("xdg-open", url)
-	}
-	_ = cmd.Start()
-}
-
-func fatalf(format string, args ...any) {
-	fmt.Fprintf(os.Stderr, "huemux-desktop: "+format+"\n", args...)
-	os.Exit(1)
 }
