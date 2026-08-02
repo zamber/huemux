@@ -167,5 +167,16 @@
     "diagnosticsShare": "Udostępnij",
     "diagnosticsSaved": "Zapisano w ",
     "diagnosticsDownloadFailed": "Nie udało się zapisać pliku."
+  },
+  "about": {
+    "heading": "O programie",
+    "version": "Wersja",
+    "licence": "Licencja",
+    "source": "Kod źródłowy",
+    "thirdParty": "Licencje innych podmiotów",
+    "unknown": "nieznana",
+    "licencesFailed": "Nie udało się wczytać licencji: ",
+    "gplNote": "HueMux to wolne oprogramowanie na licencji GNU General Public License v3 lub nowszej. Możesz go używać, badać, zmieniać i udostępniać; wersja, którą rozpowszechniasz, musi być dostarczona z kodem źródłowym na tych samych warunkach.",
+    "trademark": "Niepowiązane z Signify N.V., nieautoryzowane ani niesponsorowane przez tę firmę. Philips i Hue są znakami towarowymi Signify Holding."
   }
 }

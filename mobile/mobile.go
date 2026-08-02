@@ -80,7 +80,13 @@ func Start(configDir string) (string, error) {
 	// line for -debug, no reachable filesystem. The settings screen's
 	// diagnostics button reads this buffer.
 	debuglog.Capture()
-	server.Version = "android"
+	// Overwritten by SetVersion if the host app calls it, which the Android
+	// app does with its own BuildConfig.VERSION_NAME. Without that the About
+	// screen and every diagnostics report from a phone said "android", which
+	// answers a different question from the one being asked.
+	if server.Version == "dev" {
+		server.Version = "android"
+	}
 
 	// Whether a config file exists has to be checked before Load, not
 	// inferred from what it returns: Load merges over appconfig.Default(), so
@@ -309,4 +315,16 @@ func SetHostInfo(text string) {
 // hundred lines and this shares it with everything else.
 func LogHost(line string) {
 	debuglog.Note("huemux/host: " + line)
+}
+
+// SetVersion tells the Go side what version the host application is, for the
+// About screen and diagnostics reports. Call it before Start.
+//
+// The Go binaries get this from an ldflags -X at build time; an Android build
+// has no such link step for the host app, so the version has to come across
+// the bridge instead.
+func SetVersion(v string) {
+	if v != "" {
+		server.Version = v
+	}
 }

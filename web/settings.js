@@ -257,3 +257,52 @@ diag.download.addEventListener('click', () => {
       'If nothing downloaded, use View or Copy instead.'));
   }, 2500);
 });
+
+// ---------- about ----------
+
+const about = {
+  version: document.getElementById('about-version'),
+  licence: document.getElementById('about-licence'),
+  source: document.getElementById('about-source'),
+  btn: document.getElementById('about-licences'),
+  text: document.getElementById('about-licences-text'),
+};
+
+fetch('/api/about')
+  .then((r) => (r.ok ? r.json() : Promise.reject(new Error('HTTP ' + r.status))))
+  .then((a) => {
+    about.version.textContent = a.version;
+    about.licence.textContent = a.license;
+    about.source.textContent = a.source_url;
+    about.source.href = a.source_url;
+  })
+  .catch(() => {
+    // The section still says something useful without the server: the licence
+    // is a property of the build, not of the connection.
+    about.version.textContent = t('about.unknown', 'unknown');
+    about.licence.textContent = 'GPL-3.0-or-later';
+  });
+
+// Loaded on demand rather than with the page: it is several hundred lines of
+// licence text that most visits will never open, and Settings should not carry
+// that on every load.
+let licencesLoaded = false;
+about.btn.addEventListener('click', () => {
+  if (licencesLoaded) {
+    about.text.hidden = !about.text.hidden;
+    return;
+  }
+  // Served from the embedded web/ directory, so this works on a phone with no
+  // internet — which is the whole point of shipping the text rather than a link.
+  fetch('/THIRD_PARTY_LICENSES.md')
+    .then((r) => (r.ok ? r.text() : Promise.reject(new Error('HTTP ' + r.status))))
+    .then((txt) => {
+      about.text.textContent = txt;
+      about.text.hidden = false;
+      licencesLoaded = true;
+    })
+    .catch((e) => {
+      about.text.textContent = t('about.licencesFailed', 'Could not load licences: ') + e.message;
+      about.text.hidden = false;
+    });
+});
