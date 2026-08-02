@@ -210,8 +210,22 @@ OS cache, exactly like the regular desktop build) and runs without an
 install step — or even without FUSE, since the AppImage runtime falls
 back to extracting itself.
 
-**Updating:** rather than re-downloading, the AppImage can update itself
-in place with a delta download, via the AppImage project's CLI updater:
+**Updating:** the AppImage carries update-channel data, so AppImage
+managers can update it in place. The easiest is
+[Gear Lever](https://github.com/mijorus/gearlever) — a small GTK app for
+managing all your AppImages (install, run, update, remove):
+
+```bash
+flatpak install flathub it.mijorus.gearlever
+```
+
+Drop `huemux.AppImage` into it: Gear Lever detects the update channel
+from the file itself, integrates the app into your menu, and updates it
+automatically when a new build lands — optionally at every login, with a
+desktop notification.
+
+The AppImage project's own CLI updater works too, if you prefer the
+terminal:
 
 ```bash
 # one-time: get the updater

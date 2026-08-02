@@ -64,9 +64,11 @@ jobs:
           cp dist/huemux-desktop-linux-amd64 AppDir/usr/bin/huemux-desktop
           cp packaging/appimage/AppRun AppDir/AppRun
           cp packaging/appimage/huemux.desktop AppDir/huemux.desktop
-          # The store icon is the canonical 512x512 render of the same
-          # geometry every other format comes from (scripts/gen-icon.py).
-          cp fastlane/metadata/android/en-US/images/icon.png AppDir/huemux.png
+          # Transparent corners (RGBA) — the store icon's corners are
+          # opaque, which shows as a white box in AppImage managers'
+          # previews. Rendered from web/shared/icon.svg, whose rounded
+          # background rect leaves the corners transparent.
+          cp packaging/appimage/huemux.png AppDir/huemux.png
 
       - name: Build AppImage
         run: |

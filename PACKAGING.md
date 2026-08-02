@@ -278,26 +278,38 @@ The asset under that URL is replaced on every build (`gh release upload
 --clobber`), so the URL never changes while its contents track `main`.
 The embedded update information names the `.zsync` asset
 (`gh-releases-zsync|zamber|huemux|continuous|huemux-x86_64.AppImage.zsync`),
-which is how `appimageupdatetool` finds the delta. The AppImage updates
-itself in place, downloading only what changed:
+which is how update clients find the delta. AppImage managers read this
+directly:
 
-```sh
-# one-time: get the updater (the AppImage project's CLI tool)
-wget -O appimageupdatetool \
-  https://github.com/AppImage/AppImageUpdate/releases/download/continuous/appimageupdatetool-x86_64.AppImage
-chmod +x appimageupdatetool
+- **[Gear Lever](https://github.com/mijorus/gearlever)** — detects the
+  channel automatically (its `GithubUpdater` handles the
+  `gh-releases-zsync|` format), integrates the app into the menu, and can
+  auto-update at login. The user-facing recommendation in the README.
+- **`appimageupdatetool`** (AppImage project's CLI) — delta update in
+  place, no manager installed:
+  ```sh
+  ./appimageupdatetool huemux-x86_64.AppImage
+  ```
 
-# then, whenever a new build lands on the channel:
-./appimageupdatetool huemux-x86_64.AppImage
-```
+Two gotchas worth encoding in the workflow comment history:
 
-The filename in the update information must end in `.zsync` — the updater
-fetches exactly the file the string names and hands it to zsync2 to parse,
-so naming the AppImage itself makes it fetch the binary and fail with
-"Failed to parse .zsync file!". (Verified against appimageupdatetool's own
-AppImage, which follows the same convention.) The AppImage runtime's
-`--appimage-update` flag is not implemented in the current type2 runtime;
-`appimageupdatetool` is the supported path.
+1. The filename in the update information must end in `.zsync` — the
+   updater fetches exactly the file the string names and hands it to
+   zsync2 to parse, so naming the AppImage itself makes it fetch the
+   binary and fail with "Failed to parse .zsync file!". Verified against
+   appimageupdatetool's own AppImage, which uses the same convention.
+2. The AppImage runtime's `--appimage-update` flag is not implemented in
+   the current type2 runtime; managers (Gear Lever, appimageupdatetool)
+   are the supported path.
+
+The icon (`packaging/appimage/huemux.png`) is deliberately RGBA with
+transparent corners, rendered from `web/shared/icon.svg` — the store
+icon's corners are opaque, which AppImage managers show as a white box
+in their previews. Re-render if the geometry changes: host the SVG in a
+512x512 HTML page with `background: transparent` and screenshot it with
+Chrome using `--default-background-color=00000000`. (Screenshotting the
+SVG directly as a top-level document renders a white blob in the
+top-right corner — the HTML wrapper is the reliable path.)
 
 Triggered on `main` pushes rather than tags deliberately: every release is
 a tag on a main commit, and the branch push precedes the tag, so gating on
