@@ -117,8 +117,7 @@ const brightnessTimers = {};
 // ---------- transport ----------
 
 function connect() {
-  const proto = location.protocol === 'https:' ? 'wss' : 'ws';
-  ws = new WebSocket(`${proto}://${location.host}/ws`);
+  ws = new WebSocket(authWSURL('/ws'));
   ws.onopen = () => {
     wsReady = true;
     els.connDot.className = 'dot ok';
@@ -385,27 +384,27 @@ function mergeFavorite(id, fav) {
 // ---------- data fetch ----------
 
 async function fetchLights() {
-  const res = await fetch('/api/lights');
+  const res = await authFetch('/api/lights');
   lights = await res.json();
   loaded = true;
   renderGrid();
 }
 
 async function fetchRooms() {
-  const res = await fetch('/api/rooms');
+  const res = await authFetch('/api/rooms');
   rooms = await res.json();
   renderFilterMenu();
 }
 
 async function fetchScenes() {
-  const res = await fetch('/api/scenes');
+  const res = await authFetch('/api/scenes');
   scenes = await res.json();
   renderZoneScenes();
   renderGrid(); // room-scoped scenes now render inline as part of the grid too
 }
 
 async function fetchFavorites() {
-  const res = await fetch('/api/favorites');
+  const res = await authFetch('/api/favorites');
   favoritesRaw = await res.json();
 }
 

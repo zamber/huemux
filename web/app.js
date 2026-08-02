@@ -49,8 +49,7 @@ let discoveryStarted = false;
 // --- WebSocket transport -----------------------------------------------
 
 function connect() {
-  const proto = location.protocol === 'https:' ? 'wss' : 'ws';
-  ws = new WebSocket(`${proto}://${location.host}/ws`);
+  ws = new WebSocket(authWSURL('/ws'));
   ws.binaryType = 'arraybuffer';
 
   ws.onopen = () => {
@@ -149,7 +148,7 @@ const AREA_TYPE_KEYS = {
 };
 
 async function loadAreas() {
-  const resp = await fetch('/api/areas');
+  const resp = await authFetch('/api/areas');
   const areas = await resp.json();
   els.areaSelect.innerHTML = '';
   if (!areas || areas.length === 0) {
@@ -183,7 +182,7 @@ document.addEventListener('huemux:langchange', loadAreas);
 let scenesData = [];
 
 async function loadScenes() {
-  const resp = await fetch('/api/scenes');
+  const resp = await authFetch('/api/scenes');
   scenesData = await resp.json();
   renderScenesStrip();
 }
