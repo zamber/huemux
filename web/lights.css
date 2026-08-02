@@ -1,6 +1,9 @@
 body { margin: 0; }
 
-#app { max-width: 1600px; margin: 0 auto; padding: 0.6rem 1rem 2rem; }
+/* --page-pad is read by .room-header below, which has to cancel exactly this
+   inset to reach the screen edges. Declared as a variable so the two cannot
+   drift apart. */
+#app { --page-pad: 1rem; max-width: 1600px; margin: 0 auto; padding: 0.6rem var(--page-pad) 2rem; }
 
 .lights-toolbar { display: flex; align-items: center; gap: 0.6rem; padding: 0.6rem 0; }
 
@@ -63,7 +66,15 @@ body { margin: 0; }
   position: sticky;
   top: 0;
   z-index: 5;
-  padding: 0.45rem 0 0.35rem;
+  /* Full-bleed, not merely opaque. The background used to be exactly as wide
+     as the content column, which is the same width as the cards — so a card
+     scrolling underneath showed in the gap beside it, and its rounded corners
+     showed even where the widths matched. Cancelling the page inset and
+     restoring it as padding keeps the text aligned with the cards while the
+     background reaches the screen edges. */
+  margin-left: calc(var(--page-pad) * -1);
+  margin-right: calc(var(--page-pad) * -1);
+  padding: 0.45rem var(--page-pad) 0.35rem;
   margin-top: -0.45rem;
   background: var(--surface);
 }

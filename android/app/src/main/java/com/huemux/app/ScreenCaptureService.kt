@@ -389,6 +389,13 @@ class ScreenCaptureService : Service() {
                 }
             }
         }
+        // Logged on change, not per frame. A report taken after capture has
+        // stopped shows no live capture block at all, so without a line in the
+        // log there is no evidence anywhere of what the colour engine was
+        // actually fed — which is the number this whole split exists to change.
+        if (sw != pipelineW || sh != pipelineH) {
+            Mobile.logHost("capture: colour pipeline ${sw}x$sh (step=$step, from ${w}x$h)")
+        }
         pipelineW = sw
         pipelineH = sh
         Mobile.pushFrame(sw.toLong(), sh.toLong(), out)

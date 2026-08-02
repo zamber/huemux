@@ -24,7 +24,8 @@ reviewable commit or small series, and to leave `main` working.
 | 13 | File output — native save, share sheet, reported locations | **built, untested on a device** |
 | 14 | Long-press suppression | **built, untested on a device** |
 | 15 | Capture lifecycle; full-res recording removed | **built, untested on a device** |
-| 16 | Split frame path — pipeline downscale, direct encode | **built, unmeasured on a device** |
+| 16 | Split frame path — pipeline downscale, direct encode | **device-confirmed: snappy at 100% recording resolution** |
+| 17 | Restricted-profile nav, sticky heading, encoder tail | **built, untested on a device** |
 
 ---
 
@@ -373,3 +374,28 @@ It caught a stale row averaged into the bottom edge and an undeclared buffer.
 
 **Done when** a device shows inbound fps holding up with the recording
 resolution at 100%, and recordings still look right.
+
+## Phase 17 — Restricted profiles, sticky heading, encoder tail
+
+Phase 16 confirmed working on device (~20fps, reported as snappy, 2122 frames
+recorded at full resolution with sync running). These are the defects visible
+alongside it.
+
+**A single-feature profile could not leave Settings.** `_renderNav` emitted no
+feature link when only one of lights/sync existed, so the nav was Settings
+alone — and the profile control is on that page. Every existing tab now gets a
+link.
+
+**The sticky room heading was content-width**, so cards scrolling under it
+showed beside it. It now cancels `--page-pad` and restores it as padding.
+
+**The encoder tail was dropped.** `drain(endOfStream = true)` returned at the
+first `INFO_TRY_AGAIN_LATER`, discarding frames already queued — `in=2122
+out=2121` in the device log. It now polls to `DRAIN_TIMEOUT_MS`, which also
+governs whether the end-of-stream marker is ever seen.
+
+**The pipeline size is logged on change**, since the live capture block is
+absent from any report taken after capture stops, which is all of them.
+
+**Done when** a device confirms both restricted profiles are navigable, the
+heading covers what scrolls under it, and `in == out` on a recording.

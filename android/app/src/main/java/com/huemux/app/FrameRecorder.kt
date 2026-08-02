@@ -301,17 +301,37 @@ class FrameRecorder(private val ctx: Context) {
 
     // --- encoder plumbing --------------------------------------------------
 
+    /**
+     * Moves encoded output into the muxer.
+     *
+     * While recording this is a non-blocking sweep — anything ready is written,
+     * anything not is picked up next frame. At end of stream it must instead
+     * wait, because frames already queued have not been encoded yet.
+     *
+     * The first version returned on the first INFO_TRY_AGAIN_LATER even at end
+     * of stream, which discarded whatever the encoder had not finished. A
+     * device log showed it exactly: `in=2122 out=2121`, one frame queued and
+     * never written. One frame is not much, but the same path decides whether
+     * the end-of-stream marker is ever seen, and a file finalised without it is
+     * one a stricter player can reject.
+     *
+     * So end of stream now polls until the marker arrives or [DRAIN_TIMEOUT_MS]
+     * passes. The deadline is what stops a codec that never emits the marker
+     * from hanging the caller forever.
+     */
     private fun drain(endOfStream: Boolean) {
         val c = codec ?: return
         val info = MediaCodec.BufferInfo()
+        val deadline = System.nanoTime() + DRAIN_TIMEOUT_MS * 1_000_000
         while (true) {
             val index = c.dequeueOutputBuffer(info, if (endOfStream) 10000 else 0)
             if (index == MediaCodec.INFO_TRY_AGAIN_LATER) {
                 if (!endOfStream) return
-                // Waiting for the end-of-stream flag; a codec that never sends
-                // it would hang here, so bail after the timeout above rather
-                // than loop forever.
-                return
+                if (System.nanoTime() >= deadline) {
+                    Mobile.logHost("record: gave up waiting for end of stream after ${DRAIN_TIMEOUT_MS}ms")
+                    return
+                }
+                continue
             }
             if (index == MediaCodec.INFO_OUTPUT_FORMAT_CHANGED) {
                 // The only point at which the muxer can learn the real format:
@@ -496,6 +516,13 @@ class FrameRecorder(private val ctx: Context) {
         const val TAG = "HueMuxFrameRec"
         const val MIME = "video/avc"
         const val FRAME_RATE = 30
+
+        /**
+         * How long stop() will wait for the encoder to finish what it has.
+         * Long enough for a deep queue on a slow encoder, short enough that a
+         * codec which never signals end of stream cannot hang the UI.
+         */
+        const val DRAIN_TIMEOUT_MS = 2000L
 
         fun bitrateFor(w: Int, h: Int): Int =
             (w.toLong() * h.toLong() * FRAME_RATE / 10).toInt().coerceIn(500_000, 20_000_000)
