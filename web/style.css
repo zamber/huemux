@@ -46,6 +46,17 @@ select, input[type=number] {
 input[type=range] { width: 100%; }
 .control { margin-bottom: 0.9rem; }
 .control.checkbox label { display: flex; align-items: center; gap: 0.4rem; }
+
+/* Device-capture block. Its own section rather than more rows under Sampling:
+   everything in it configures the phone's screen mirror, not how the colours
+   are read out of it, and it disappears entirely in a browser. */
+#device-capture { margin-top: 1.2rem; }
+#device-capture select { width: 100%; }
+.record-row { display: flex; align-items: center; gap: 0.6rem; flex-wrap: wrap; margin-top: 0.5rem; }
+/* The recording button is a state, not a colour: outlined when idle, filled
+   when running, so it reads the same way with no colour vision and in either
+   theme. */
+#record-btn.recording { background: var(--ink); color: var(--surface); }
 .presets { display: flex; gap: 0.4rem; margin-bottom: 0.3rem; }
 .presets button {
   flex: 1; padding: 0.3rem; background: var(--surface-alt); color: var(--ink); border: 1px solid var(--border);

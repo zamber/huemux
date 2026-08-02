@@ -11,8 +11,8 @@
     "titleSystem": "Motyw: systemowy (kliknij, aby zmienić)",
     "titleLight": "Motyw: jasny (kliknij, aby zmienić)",
     "titleDark": "Motyw: ciemny (kliknij, aby zmienić)",
-    "titleSimpleLight": "Motyw: prosty jasny — mniej efektów, szybciej (kliknij, aby zmienić)",
-    "titleSimpleDark": "Motyw: prosty ciemny — mniej efektów, szybciej (kliknij, aby zmienić)"
+    "titleEffectsOn": "Efekty wizualne: włączone — kliknij, aby uprościć i przyspieszyć",
+    "titleEffectsOff": "Efekty wizualne: wyłączone — kliknij, aby przywrócić gradienty i cienie"
   },
   "lang": {
     "titleSystem": "Język: systemowy (kliknij, aby zmienić)",
@@ -100,7 +100,20 @@
       "clients": "{n} klient(ów)",
       "fpsIn": "{fps} fps wejścia",
       "busyHeldBy": "zajęte przez inną aplikację ({app})"
-    }
+    },
+    "deviceCapture": "To urządzenie",
+    "captureScale": "Rozdzielczość przechwytywania",
+    "captureScaleHint": "Jaka część rzeczywistej rozdzielczości ekranu jest kopiowana. Potok kolorów i tak redukuje wszystko do siatki 64×36, więc wyższa wartość nic nie daje samej synchronizacji — podnieś ją tylko na czas nagrywania i potem zmniejsz: większa kopia ekranu ciągle zużywa baterię.",
+    "captureWhenRunning": "rozmiar po uruchomieniu synchronizacji",
+    "recording": "Nagrywanie ekranu",
+    "recordQualityCapture": "Jak przechwytywanie — tanio",
+    "recordQualityNative": "Pełna rozdzielczość — lepszy obraz",
+    "recordStart": "Rozpocznij nagrywanie",
+    "recordStop": "Zatrzymaj nagrywanie",
+    "recordNeedsSync": "Najpierw uruchom synchronizację — nagrywanie korzysta z tego samego przechwytywania.",
+    "recordInProgress": "Nagrywanie…",
+    "recordSaved": "Zapisano w Movies/HueMux/{name}",
+    "recordingHint": "Nagrywa w trakcie synchronizacji, do Movies/HueMux. Nagrywanie zawsze wymaga własnej, drugiej kopii ekranu — Android daje kopii dokładnie jeden cel, a ten jest już zajęty przez potok kolorów. „Jak przechwytywanie” używa rozmiaru ustawionego powyżej; „pełna rozdzielczość” to drugie kodowanie w pełnym rozmiarze, na które nie każde urządzenie pozwoli."
   },
   "lights": {
     "filterAll": "Wszystkie",

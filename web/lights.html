@@ -6,21 +6,26 @@
 <meta name="color-scheme" content="light dark">
 <meta name="theme-color" content="#000000" id="theme-color-meta">
 <title>HueMux — Lights</title>
+<script src="/shared/standalone-redirect.js"></script>
 <script>
 (function() {
   var DARK = '#000000', LIGHT = '#f7f3ea';
   var t = localStorage.getItem('theme');
   var resolved;
-  // Must understand the simple-* variants too, or a page stored as
-  // "simple-dark" would flash the system theme before theme.js corrects it.
-  // Keep in sync with BASE/CHOICES in shared/theme.js.
+  // Palette and decoration are two independent keys; read both, or a page
+  // stored as dark+simple flashes the wrong one before theme.js corrects it.
+  // Still understands the old combined values, which are migrated on the
+  // first run of theme.js but are whatever is on disk until then.
+  // Keep in sync with PALETTES/SIMPLE_KEY in shared/theme.js.
   var base = { light: 'light', dark: 'dark', 'simple-light': 'light', 'simple-dark': 'dark' }[t];
   if (base) {
     document.documentElement.setAttribute('data-theme', base);
-    if (t.indexOf('simple-') === 0) document.documentElement.setAttribute('data-simple', '');
     resolved = base;
   } else {
     resolved = window.matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark';
+  }
+  if (localStorage.getItem('themeSimple') === '1' || (t && t.indexOf('simple-') === 0)) {
+    document.documentElement.setAttribute('data-simple', '');
   }
   var meta = document.getElementById('theme-color-meta');
   if (meta) meta.setAttribute('content', resolved === 'light' ? LIGHT : DARK);
@@ -29,6 +34,7 @@
 <link rel="stylesheet" href="/shared/theme.css">
 <link rel="stylesheet" href="/shared/header.css">
 <link rel="stylesheet" href="/shared/pairing.css">
+<link rel="stylesheet" href="/shared/dropdown.css">
 <link rel="stylesheet" href="/lights.css">
 </head>
 <body>
@@ -38,11 +44,11 @@
 
 <div id="app" hidden>
   <div class="lights-toolbar">
-    <details id="filter-details" class="filter-menu">
+    <details id="filter-details" class="hm-dropdown">
       <summary>
         <span id="filter-summary">Categories</span>
       </summary>
-      <div id="filter-list" class="filter-list"></div>
+      <div id="filter-list" class="hm-dropdown-panel"></div>
     </details>
     <button type="button" id="stop-streaming-btn" class="stop-streaming-btn" hidden data-i18n="lights.stopStreaming">Stop streaming</button>
     <span id="conn-dot" class="dot" title="connection to HueMux"></span>
@@ -62,6 +68,7 @@
 <script src="/shared/header.js"></script>
 <script src="/shared/pairing.js"></script>
 <script src="/shared/color.js"></script>
+<script src="/shared/dropdown.js"></script>
 <script src="/lights.js"></script>
 </body>
 </html>

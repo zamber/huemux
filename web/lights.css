@@ -24,61 +24,10 @@ body { margin: 0; }
 }
 .stop-streaming-btn:hover { opacity: 0.88; }
 
-/* Filter menu: native <details> disclosure, no dropdown library needed. */
-.filter-menu { position: relative; }
-.filter-menu summary {
-  list-style: none;
-  display: flex; align-items: center; gap: 0.4rem;
-  padding: 0.4rem 0.9rem;
-  border: 2px solid var(--ink);
-  border-radius: 999px;
-  font-size: 0.85rem; font-weight: 600;
-  color: var(--ink);
-  cursor: pointer;
-  user-select: none;
-  white-space: nowrap;
-}
-.filter-menu summary::-webkit-details-marker { display: none; }
-.filter-menu[open] summary { background: rgba(127,127,127,0.12); }
-.filter-list {
-  position: absolute; top: calc(100% + 6px); left: 0; z-index: 20;
-  min-width: 170px; max-height: 300px; overflow-y: auto;
-  background: var(--surface-alt); border: 1px solid var(--border);
-  border-radius: 10px; padding: 0.3rem; box-shadow: 0 8px 24px var(--shadow);
-}
-.filter-item {
-  display: block; width: 100%; text-align: left;
-  padding: 0.5rem 0.7rem; margin: 0;
-  background: none; border: none; border-radius: 6px;
-  color: var(--ink-muted); font-size: 0.85rem; cursor: pointer;
-}
-.filter-item:hover { background: var(--card-hover); color: var(--ink); }
-.filter-item.active { color: var(--ink); font-weight: 600; }
-
-/* On a phone the dropdown is a 170px-wide, 300px-tall scroller anchored to
-   the toolbar — cramped as soon as there are more than a couple of rooms, and
-   its rows are ~34px, under the 44px finger minimum. Become a bottom sheet
-   instead: full width, thumb-reachable, and roomy enough to show every room
-   without scrolling. */
-@media (pointer: coarse) and (max-width: 700px) {
-  .filter-list {
-    position: fixed;
-    top: auto;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    min-width: 0;
-    max-height: 60vh;
-    border-radius: 14px 14px 0 0;
-    border-bottom: none;
-    padding: 0.4rem 0.4rem calc(0.4rem + env(safe-area-inset-bottom, 0px));
-    box-shadow: 0 -8px 32px var(--shadow);
-  }
-  .filter-item {
-    padding: 0.85rem 0.9rem;
-    font-size: 0.95rem;
-  }
-}
+/* The filter menu is the shared .hm-dropdown component — markup, styling and
+   dismissal behaviour all live in shared/dropdown.{css,js}. Nothing
+   lights-specific remains here; it was a private copy of that pattern until
+   the pattern got a name. */
 
 /* #lights-grid itself is just a vertical stack of room groups (or, for the
    single-room filter, one bare .lights-cards-grid) — the actual responsive

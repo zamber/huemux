@@ -11,8 +11,8 @@
     "titleSystem": "Theme: system (click to change)",
     "titleLight": "Theme: light (click to change)",
     "titleDark": "Theme: dark (click to change)",
-    "titleSimpleLight": "Theme: simple light — fewer effects, faster (click to change)",
-    "titleSimpleDark": "Theme: simple dark — fewer effects, faster (click to change)"
+    "titleEffectsOn": "Visual effects: on — click for the simpler, faster look",
+    "titleEffectsOff": "Visual effects: off — click to bring back gradients and shadows"
   },
   "lang": {
     "titleSystem": "Language: system (click to change)",
@@ -100,7 +100,20 @@
       "clients": "{n} client(s)",
       "fpsIn": "{fps} fps in",
       "busyHeldBy": "held by another application ({app})"
-    }
+    },
+    "deviceCapture": "This device",
+    "captureScale": "Capture resolution",
+    "captureScaleHint": "How much of the screen's real resolution to mirror. The colour pipeline reduces everything to a 64×36 grid, so higher buys nothing for sync itself — raise it only when recording, and put it back after: a bigger mirror costs battery continuously.",
+    "captureWhenRunning": "size shown once sync is running",
+    "recording": "Screen recording",
+    "recordQualityCapture": "Match capture — cheap",
+    "recordQualityNative": "Full resolution — better video",
+    "recordStart": "Start recording",
+    "recordStop": "Stop recording",
+    "recordNeedsSync": "Start sync first — recording mirrors the same capture.",
+    "recordInProgress": "Recording…",
+    "recordSaved": "Saved to Movies/HueMux/{name}",
+    "recordingHint": "Records while sync runs, to Movies/HueMux. Recording always needs a second screen mirror of its own — Android gives a mirror exactly one destination, and this one's is already the colour pipeline. \"Match capture\" reuses the size set above; \"full resolution\" is a second full-size encode, which not every device will agree to."
   },
   "lights": {
     "filterAll": "All",

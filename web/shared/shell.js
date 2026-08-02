@@ -11,17 +11,19 @@ window.HueMuxShell = (() => {
   // than from a fixed pair — otherwise switchTab would target a null element
   // and the shell would land on a frame that was never created.
   const frames = {};
-  const syncFrame = document.getElementById('frame-sync');
-  const lightsFrame = document.getElementById('frame-lights');
-  if (syncFrame) frames.sync = syncFrame;
-  if (lightsFrame) frames.lights = lightsFrame;
+  for (const tab of ['sync', 'lights', 'settings']) {
+    const el = document.getElementById('frame-' + tab);
+    if (el) frames[tab] = el;
+  }
 
   // Whichever frame exists, preferring sync to match the historical default.
-  let active = frames.sync ? 'sync' : (frames.lights ? 'lights' : null);
+  let active = frames.sync ? 'sync' : (frames.lights ? 'lights' : (frames.settings ? 'settings' : null));
+
+  const NAV_KEY = { lights: 'nav.lights', sync: 'nav.sync', settings: 'nav.settings' };
+  const PATH = { lights: '/lights.html', sync: '/sync.html', settings: '/settings.html' };
 
   function titleFor(tab) {
-    const key = tab === 'lights' ? 'nav.lights' : 'nav.sync';
-    return 'HueMux — ' + HueMuxI18n.t(key);
+    return 'HueMux — ' + HueMuxI18n.t(NAV_KEY[tab] || NAV_KEY.sync);
   }
 
   function switchTab(tab) {
@@ -32,7 +34,7 @@ window.HueMuxShell = (() => {
       active = tab;
       const header = document.querySelector('huemux-header');
       if (header) header.setAttribute('active', tab);
-      history.replaceState(null, '', tab === 'lights' ? '/lights.html' : '/sync.html');
+      history.replaceState(null, '', PATH[tab] || PATH.sync);
     }
     document.title = titleFor(tab);
   }
@@ -42,7 +44,13 @@ window.HueMuxShell = (() => {
   // Honour the URL only if that tab exists in this build; otherwise fall back
   // to whatever single frame there is. A lights-only deployment opened at
   // /sync.html used to land on a frame that does not exist and show nothing.
-  const wanted = location.pathname.indexOf('lights') !== -1 ? 'lights' : 'sync';
+  //
+  // The hash is checked first because that is how shared/standalone-redirect.js
+  // hands over the tab when someone loads a page directly: it can only send us
+  // to /app.html, so the tab has to travel out-of-path.
+  const from = location.hash ? location.hash.slice(1) : location.pathname;
+  const wanted = from.indexOf('lights') !== -1 ? 'lights'
+    : (from.indexOf('settings') !== -1 ? 'settings' : 'sync');
   const initial = frames[wanted] ? wanted : active;
   if (initial) {
     frames[initial].classList.add('active');

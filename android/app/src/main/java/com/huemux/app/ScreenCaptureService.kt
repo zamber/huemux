@@ -42,6 +42,16 @@ class ScreenCaptureService : Service() {
             stopSelf()
             return START_NOT_STICKY
         }
+        if (intent?.action == ACTION_RECONFIGURE) {
+            // A capture-scale change while running. Rebuilding the display is
+            // the only way to resize it — VirtualDisplay.resize() exists but
+            // the ImageReader behind it is fixed at its construction size, so
+            // resizing only the display gives scaled frames in a buffer that
+            // no longer matches, which the row-stride copy reads as a sheared
+            // image rather than an error.
+            rebuildCapture()
+            return START_NOT_STICKY
+        }
 
         // Order is load-bearing on Android 14+: getMediaProjection() throws if
         // the service is not already in the foreground. Doing this first is not
@@ -84,9 +94,52 @@ class ScreenCaptureService : Service() {
             }, null)
         }
 
+        instance = this
         startCapture()
         return START_NOT_STICKY
     }
+
+    /**
+     * Rebuilds the capture display at the current [captureScale]. No-op when
+     * capture is not running, so a scale change made before starting is simply
+     * picked up by the next [startCapture].
+     */
+    @Synchronized
+    private fun rebuildCapture() {
+        if (projection == null || display == null) return
+        display?.release()
+        reader?.close()
+        display = null
+        reader = null
+        rgbScratch = null
+        startCapture()
+    }
+
+    /**
+     * Starts recording, if capture is running. Returns null on success or a
+     * message for the UI. Recording is deliberately subordinate to capture: it
+     * needs the same MediaProjection, and it must never be able to interfere
+     * with the sync stream that projection exists for.
+     */
+    @Synchronized
+    fun startRecording(quality: ScreenRecorder.Quality): String? {
+        val p = projection ?: return "screen capture is not running"
+        val rec = recorder ?: ScreenRecorder(applicationContext).also { recorder = it }
+        val metrics = resources.displayMetrics
+        return rec.start(
+            p, quality,
+            capturedW, capturedH,
+            metrics.widthPixels.coerceAtLeast(1), metrics.heightPixels.coerceAtLeast(1),
+            metrics.densityDpi,
+        )
+    }
+
+    @Synchronized
+    fun stopRecording(): String? = recorder?.stop()
+
+    fun isRecording(): Boolean = recorder?.isRecording == true
+
+    fun lastRecordingName(): String = recorder?.lastOutput ?: ""
 
     private fun startCapture() {
         val p = projection ?: return
@@ -194,15 +247,27 @@ class ScreenCaptureService : Service() {
         // Covers every other way this ends — stopSelf from the page, the
         // system reclaiming the service, the activity going away.
         onCaptureEnded?.invoke()
+        // Before the projection goes: stopping the recorder finalises the MP4
+        // and clears its MediaStore pending flag. Skipping it on this path
+        // would leave every recording that ended by the user swiping the app
+        // away invisible in the gallery and undeletable from it.
+        try {
+            recorder?.stop()
+        } catch (e: Exception) {
+            Log.w(TAG, "recorder stop during shutdown", e)
+        }
+        recorder = null
         display?.release()
         reader?.close()
         projection?.stop()
         display = null; reader = null; projection = null; rgbScratch = null
+        if (instance === this) instance = null
         Log.i(TAG, "capture stopped")
         super.onDestroy()
     }
 
     private var rgbScratch: ByteArray? = null
+    private var recorder: ScreenRecorder? = null
 
     companion object {
         /**
@@ -213,25 +278,49 @@ class ScreenCaptureService : Service() {
         @Volatile
         var onCaptureEnded: (() -> Unit)? = null
 
+        /**
+         * The running service, or null. The web UI asks synchronous questions
+         * ("are you recording?", "what size are you capturing?") and expects an
+         * answer in the same call, which an Intent cannot give. Only ever
+         * touched from the main thread and the WebView's bridge thread, and
+         * every method it exposes is @Synchronized.
+         */
+        @Volatile
+        var instance: ScreenCaptureService? = null
+            private set
+
         const val TAG = "HueMuxCapture"
         const val ACTION_STOP = "com.huemux.app.STOP_CAPTURE"
+        const val ACTION_RECONFIGURE = "com.huemux.app.RECONFIGURE_CAPTURE"
         const val EXTRA_RESULT_CODE = "resultCode"
         const val EXTRA_RESULT_DATA = "resultData"
         private const val CHANNEL_ID = "huemux-capture"
         private const val NOTIFICATION_ID = 1
 
-        // Upper bound on the captured long edge. The Go pipeline reduces to a
-        // 64x36 grid regardless, so anything beyond this is bandwidth and
-        // battery for no visible gain.
-        const val CAP_LONG_EDGE = 480
+        /**
+         * Hard ceiling on the captured long edge.
+         *
+         * This used to be 480 — the point past which the colour pipeline, which
+         * reduces everything to a 64x36 grid, gains nothing. That was right
+         * while the size was fixed, and wrong the moment [captureScale] became
+         * a control: it silently clamped the top two thirds of the slider to
+         * the same result, so the setting looked broken by being obeyed. The
+         * cap now exists only to stop a request no encoder would honour, and
+         * the default scale is what keeps the ordinary case cheap.
+         */
+        const val CAP_LONG_EDGE = 1920
 
         /**
          * Fraction of the display resolution to capture, 0.05..1.0. Settable
-         * from the UI: higher is sharper input for the colour pipeline (and
-         * usable as a screen recording), lower is cheaper.
+         * from the UI: higher is sharper input for the colour pipeline (and a
+         * better screen recording), lower is cheaper.
+         *
+         * 0.2 lands a typical 1080x2400 phone at a 480-pixel long edge, which
+         * is what every build up to now captured at, so the default costs
+         * exactly what it did before the cap was raised.
          */
         @Volatile
-        var captureScale: Float = 0.25f
+        var captureScale: Float = 0.2f
 
         /** Last negotiated capture size, for the settings UI to display. */
         @Volatile
@@ -249,6 +338,12 @@ class ScreenCaptureService : Service() {
 
         fun stop(ctx: Context) {
             ctx.startService(Intent(ctx, ScreenCaptureService::class.java).setAction(ACTION_STOP))
+        }
+
+        /** Applies a new [captureScale] to a capture already in progress. */
+        fun requestReconfigure(ctx: Context) {
+            if (instance == null) return
+            ctx.startService(Intent(ctx, ScreenCaptureService::class.java).setAction(ACTION_RECONFIGURE))
         }
     }
 }

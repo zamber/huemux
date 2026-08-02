@@ -64,17 +64,24 @@ class HueMuxHeader extends HTMLElement {
   _render() {
     this.innerHTML =
       '<div class="ls-header-inner">' +
-        '<a class="ls-brand" href="/lights.html" data-i18n="app.name">HueMux</a>' +
+        // href="/" rather than a page: the shell is what "home" means here,
+        // and a direct link to lights.html would navigate the top window out
+        // of the shell and tear down every frame in it. data-tab lets the
+        // click be intercepted into a tab switch when that tab exists.
+        '<a class="ls-brand" href="/" data-tab="lights" data-i18n="app.name">HueMux</a>' +
         '<nav class="ls-nav"></nav>' +
         '<div class="ls-header-actions">' +
           '<button type="button" id="ls-theme-btn" class="ls-icon-btn"></button>' +
+          '<button type="button" id="ls-simple-btn" class="ls-icon-btn">✨</button>' +
           '<button type="button" id="ls-lang-btn" class="ls-icon-btn"></button>' +
         '</div>' +
       '</div>';
 
     this._themeBtn = this.querySelector('#ls-theme-btn');
+    this._simpleBtn = this.querySelector('#ls-simple-btn');
     this._langBtn = this.querySelector('#ls-lang-btn');
     this._themeBtn.addEventListener('click', () => HueMuxTheme.cycle());
+    this._simpleBtn.addEventListener('click', () => HueMuxTheme.toggleSimple());
     this._langBtn.addEventListener('click', () => HueMuxI18n.cycle());
 
     this._renderNav();
@@ -114,24 +121,33 @@ class HueMuxHeader extends HTMLElement {
   }
 
   _renderTheme() {
-    // Reads through HueMuxTheme.current() rather than localStorage directly,
-    // so an unrecognised stored value falls back to 'system' in one place.
-    const choice = (typeof HueMuxTheme !== 'undefined') ? HueMuxTheme.current() : 'system';
-    // The simple variants reuse their palette's icon with a dot, rather than
-    // inventing a symbol: they are the same light/dark theme with the
-    // decoration removed, and the title says which.
-    const icons = {
-      system: '🌗', light: '☀️', dark: '🌙',
-      'simple-light': '☀', 'simple-dark': '🌒',
-    };
+    // Reads through HueMuxTheme rather than localStorage directly, so an
+    // unrecognised stored value falls back to 'system' in one place.
+    const has = typeof HueMuxTheme !== 'undefined';
+    const choice = has ? HueMuxTheme.palette() : 'system';
+    // Three palettes, three shapes that cannot be confused at 16px: a sun, a
+    // moon, and a half-lit moon for "whatever the system says". The previous
+    // five-icon cycle distinguished states by a crescent's thickness, which is
+    // not a distinction anyone can make on a phone.
+    const icons = { system: '🌓', light: '☀️', dark: '🌙' };
     const titleKeys = {
       system: 'theme.titleSystem', light: 'theme.titleLight', dark: 'theme.titleDark',
-      'simple-light': 'theme.titleSimpleLight', 'simple-dark': 'theme.titleSimpleDark',
     };
     this._themeBtn.textContent = icons[choice] || icons.system;
     const title = HueMuxI18n.t(titleKeys[choice] || titleKeys.system);
     this._themeBtn.setAttribute('title', title);
     this._themeBtn.setAttribute('aria-label', title);
+
+    // Decoration is a separate axis, so it gets a separate control. One glyph
+    // in two states — lit and dimmed — rather than a second near-identical
+    // symbol; aria-pressed carries the same fact for screen readers.
+    if (!this._simpleBtn) return;
+    const simple = has && HueMuxTheme.isSimple();
+    this._simpleBtn.classList.toggle('off', simple);
+    this._simpleBtn.setAttribute('aria-pressed', simple ? 'true' : 'false');
+    const st = HueMuxI18n.t(simple ? 'theme.titleEffectsOff' : 'theme.titleEffectsOn');
+    this._simpleBtn.setAttribute('title', st);
+    this._simpleBtn.setAttribute('aria-label', st);
   }
 
   _renderLang() {
@@ -147,18 +163,28 @@ class HueMuxHeader extends HTMLElement {
 
 customElements.define('huemux-header', HueMuxHeader);
 
-// Any other in-page link to /sync.html or /lights.html (e.g. lights.html's
-// unpaired-panel "Go to Sync" links) needs the same shell-aware handling as
+// Any other in-page link to another tab's page (e.g. lights.html's
+// unpaired-panel "Go to Sync" link) needs the same shell-aware handling as
 // the nav links above, or clicking it navigates only the iframe itself —
 // leaving the shell's own top-level header/URL pointing at the tab you
 // clicked away from while the iframe you're looking at shows the other
 // page's content. Same-origin iframe, so a direct window.top reference
 // works without postMessage.
 if (window.self !== window.top) {
+  const TAB_FOR_PATH = {
+    '/lights.html': 'lights',
+    '/sync.html': 'sync',
+    '/settings.html': 'settings',
+  };
   document.addEventListener('click', (e) => {
-    const a = e.target.closest('a[href="/lights.html"], a[href="/sync.html"]');
-    if (!a || !window.top.HueMuxShell) return;
+    const a = e.target.closest('a[href]');
+    if (!a) return;
+    const tab = TAB_FOR_PATH[a.getAttribute('href')];
+    const shell = window.top.HueMuxShell;
+    // Only intercept what the shell can actually show. Otherwise the link
+    // keeps its normal behaviour rather than being silently swallowed.
+    if (!tab || !shell || !shell.has(tab)) return;
     e.preventDefault();
-    window.top.HueMuxShell.switchTab(a.getAttribute('href').indexOf('lights') !== -1 ? 'lights' : 'sync');
+    shell.switchTab(tab);
   });
 }

@@ -15,10 +15,11 @@ reviewable commit or small series, and to leave `main` working.
 | 4 | Profile-aware UI + settings screen | **done** |
 | 5 | Listen address, Origin, auth | **done** |
 | 6 | TLS modes | **done** |
-| 7 | Android M1 — lights, standalone | **built, untested on a device** |
+| 7 | Android M1 — lights, standalone | **done, device-tested** |
 | 8 | Android M2 — config + mobile polish | **done** |
-| 9 | Android M3 — MediaProjection sync | **built, untested on a device** |
+| 9 | Android M3 — MediaProjection sync | **done, device-tested** |
 | 10 | Android M4 — CI build, signing, distribution | **done (signing awaits a keystore secret)** |
+| 11 | Device feedback — shell integrity, capture quality, recording | **built, untested on a device** |
 
 ---
 
@@ -205,3 +206,45 @@ must precede `getMediaProjection()`.
 CI build (runners ship the Android SDK), keystore signing from a secret, APK
 attached to releases. F-Droid is a natural fit; Play Store adds a
 `MediaProjection` policy review, which is another reason sync is not in M1.
+
+## Phase 11 — Device feedback
+
+Not planned up front: this is the work that came out of actually using alpha.11
+and alpha.12 on a phone, which is where every item below was found.
+
+**Shell integrity.** The app is an iframe shell precisely so switching tabs does
+not tear down a running capture, and two routes led out of it: Settings was a
+plain link rather than a frame, and the shell's own `replaceState` meant any
+reload resolved to a bare page outside the shell, one-way. Both closed; see
+`web/shared/standalone-redirect.js`. This was the root cause of the "it re-inits
+whenever I navigate" report, and of a stale sync page offering Start for a
+stream that was already running.
+
+**Two theme axes, not five states.** Palette and visual effects were one
+five-state cycle behind one button. Split, with a migration for stored
+`simple-light`/`simple-dark` values.
+
+**Dropdowns.** The mobile bottom sheet is gone in favour of an anchored,
+full-bleed panel; `shared/dropdown.{css,js}`, and the rule is written down in
+AGENTS.md's UX section. It had been clipped by the fixed bottom nav.
+
+**Lights cache.** Last-known lights/rooms/scenes/favourites in `localStorage`,
+painted before the WebSocket connects, and no empty state until `/api/lights`
+has actually answered.
+
+**Capture resolution and recording** — the two things alpha.12 deliberately
+left. `captureScale` is now a control rather than a constant, and the long-edge
+cap moved from 480 to 1920, since a cap below the slider's range made the
+setting look broken by silently ignoring most of it. Recording is
+`ScreenRecorder.kt`, at either the capture size or the display's own.
+
+**Done when** a device confirms: recording produces a playable file in
+Movies/HueMux at both qualities, the resolution slider changes the reported
+capture size, and a lap through all three tabs leaves a running sync running.
+
+Note on the recording design: mirroring to a MediaRecorder *and* to the colour
+pipeline from one VirtualDisplay is not possible — `createVirtualDisplay` binds
+exactly one Surface for the display's lifetime, and the capture display's is the
+ImageReader that feeds Go. Recording therefore always costs a second virtual
+display; the quality setting chooses that display's resolution, not whether it
+exists. Devices that refuse a second display lose recording and keep syncing.

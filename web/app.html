@@ -11,16 +11,20 @@
   var DARK = '#000000', LIGHT = '#f7f3ea';
   var t = localStorage.getItem('theme');
   var resolved;
-  // Must understand the simple-* variants too, or a page stored as
-  // "simple-dark" would flash the system theme before theme.js corrects it.
-  // Keep in sync with BASE/CHOICES in shared/theme.js.
+  // Palette and decoration are two independent keys; read both, or a page
+  // stored as dark+simple flashes the wrong one before theme.js corrects it.
+  // Still understands the old combined values, which are migrated on the
+  // first run of theme.js but are whatever is on disk until then.
+  // Keep in sync with PALETTES/SIMPLE_KEY in shared/theme.js.
   var base = { light: 'light', dark: 'dark', 'simple-light': 'light', 'simple-dark': 'dark' }[t];
   if (base) {
     document.documentElement.setAttribute('data-theme', base);
-    if (t.indexOf('simple-') === 0) document.documentElement.setAttribute('data-simple', '');
     resolved = base;
   } else {
     resolved = window.matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark';
+  }
+  if (localStorage.getItem('themeSimple') === '1' || (t && t.indexOf('simple-') === 0)) {
+    document.documentElement.setAttribute('data-simple', '');
   }
   var meta = document.getElementById('theme-color-meta');
   if (meta) meta.setAttribute('content', resolved === 'light' ? LIGHT : DARK);
@@ -66,6 +70,13 @@
     }
     if (f.sync) addFrame('frame-sync', '/sync.html', 'Sync');
     if (f.lights) addFrame('frame-lights', '/lights.html', 'Lights');
+    // Settings is not profile-gated — it is how you change the profile, and
+    // on a phone it is the only route to a diagnostics report. It is a frame
+    // rather than a link for the same reason the other two are: leaving the
+    // shell destroys every iframe in it, so a trip to Settings used to end
+    // with lights.html loaded standalone and every subsequent tab switch a
+    // full page load, refetching and re-rendering from empty.
+    addFrame('frame-settings', '/settings.html', 'Settings');
 
     var s = document.createElement('script');
     s.src = '/shared/shell.js';

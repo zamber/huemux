@@ -46,11 +46,61 @@ const els = {
 let ws = null;
 let wsReady = false;
 let ready = false; // becomes true once a paired status arrives and initial data is loaded
+let loaded = false; // becomes true once /api/lights has actually answered at least once
 
 let lights = [];
 let rooms = [];
 let scenes = [];
 let favoritesRaw = {}; // id -> unix-seconds; covers ids /api/lights and /api/rooms don't carry a favorite flag for (scenes, and the synthetic "all" pseudo-id)
+
+// ---------- offline cache ----------
+//
+// Opening this page used to show nothing at all, then "No lights found on
+// this bridge.", then the lights — because the grid is gated behind a
+// WebSocket connecting, reporting `paired`, and four fetches resolving, and
+// renders an empty state in the meantime. Every one of those steps is fast on
+// its own and visibly slow in sequence on a phone.
+//
+// The last known-good payload is small, changes rarely, and is a strictly
+// better first paint than an empty grid, so it goes to localStorage and comes
+// straight back on load. It is presentation only: the live WebSocket
+// overwrites every value it covers within a moment, and the fetches replace
+// the arrays wholesale. Nothing is ever *sent* to the bridge from cache.
+const CACHE_KEY = 'lightsCache.v1';
+
+function saveCache() {
+  try {
+    localStorage.setItem(CACHE_KEY, JSON.stringify({ lights, rooms, scenes, favoritesRaw }));
+  } catch (e) {
+    // A full or disabled localStorage is not worth failing a render over.
+  }
+}
+
+// Returns whether anything was restored, so the caller can decide to reveal
+// the grid before the server has confirmed we are still paired.
+function loadCache() {
+  let raw;
+  try {
+    raw = localStorage.getItem(CACHE_KEY);
+  } catch (e) {
+    return false;
+  }
+  if (!raw) return false;
+  try {
+    const c = JSON.parse(raw);
+    // Shape-check rather than trust: this survives across versions, and a
+    // half-understood payload rendering as a broken grid would be worse than
+    // the empty state it replaces.
+    if (!Array.isArray(c.lights) || !Array.isArray(c.rooms) || !Array.isArray(c.scenes)) return false;
+    lights = c.lights;
+    rooms = c.rooms;
+    scenes = c.scenes;
+    favoritesRaw = (c.favoritesRaw && typeof c.favoritesRaw === 'object') ? c.favoritesRaw : {};
+    return lights.length > 0;
+  } catch (e) {
+    return false;
+  }
+}
 
 let filter = 'favorites'; // 'favorites' | 'all' | 'room'
 let filterRoomId = null;
@@ -337,6 +387,7 @@ function mergeFavorite(id, fav) {
 async function fetchLights() {
   const res = await fetch('/api/lights');
   lights = await res.json();
+  loaded = true;
   renderGrid();
 }
 
@@ -372,6 +423,10 @@ async function initialLoad() {
   renderFilterMenu();
   renderGrid();
   renderZoneScenes();
+  // Written once everything has landed rather than per-fetch, so the cache is
+  // always a coherent set — a half-written one would render lights with room
+  // names and scenes that no longer match them.
+  saveCache();
 }
 
 function hasAnyFavorites() {
@@ -539,7 +594,12 @@ function renderGrid() {
     }).join('');
   }
 
-  if (!list.length && !showAllTile) {
+  // "No lights found" is a conclusion, and until /api/lights has answered we
+  // have not got one — an empty `lights` array before the first fetch just
+  // means the fetch is still in flight. Saying so anyway is what produced the
+  // flash of "no lights" on every open. An empty *filter* result is different:
+  // that is a real answer about a real room, so it still shows.
+  if (!list.length && !showAllTile && (loaded || lights.length)) {
     html += `<p class="hint lights-empty">${escapeHtml(HueMuxI18n.t('lights.empty'))}</p>`;
   }
   els.grid.innerHTML = html;
@@ -740,7 +800,7 @@ function renderFilterMenu() {
       (filter === 'favorites' && it.key === 'favorites') ||
       (filter === 'all' && it.key === 'all') ||
       (filter === 'room' && it.key === 'room:' + filterRoomId);
-    return `<button type="button" class="filter-item ${active ? 'active' : ''}" data-key="${escapeHtml(it.key)}">${escapeHtml(it.label)}</button>`;
+    return `<button type="button" class="hm-dropdown-item ${active ? 'active' : ''}" data-key="${escapeHtml(it.key)}">${escapeHtml(it.label)}</button>`;
   }).join('');
 
   updateFilterSummary();
@@ -1032,7 +1092,7 @@ els.stopStreamingBtn.addEventListener('click', () => {
 });
 
 els.filterList.addEventListener('click', (e) => {
-  const btn = e.target.closest('.filter-item');
+  const btn = e.target.closest('.hm-dropdown-item');
   if (!btn) return;
   const key = btn.dataset.key;
   if (key === 'favorites') { filter = 'favorites'; filterRoomId = null; }
@@ -1040,6 +1100,8 @@ els.filterList.addEventListener('click', (e) => {
   else if (key.indexOf('room:') === 0) { filter = 'room'; filterRoomId = key.slice(5); }
   filterExplicitFromURL = true;
   persistFilterToURL();
+  // shared/dropdown.js already closes it on any item click; this stays so the
+  // page does not depend on that script having loaded to remain usable.
   els.filterDetails.open = false;
   renderFilterMenu();
   renderGrid();
@@ -1084,6 +1146,28 @@ function restoreFilterFromURL() {
 
 restoreFilterFromURL();
 HueMuxFeatures.load();
+
+// Paint the last known state before anything asynchronous starts. Revealing
+// #app here is deliberate: it is normally gated on the server confirming a
+// paired bridge, but a cache can only exist if we were paired when it was
+// written, and the alternative is a blank screen for as long as the WebSocket
+// takes to connect. If the bridge really has been unpaired since, the first
+// status message hides it again — a brief wrong guess in the rare case, in
+// exchange for an instant open in the common one.
+const hydrated = loadCache();
+if (hydrated) {
+  // Same fallback initialLoad applies, applied to the cached data too —
+  // otherwise a user with no favourites gets an empty Favorites view painted
+  // instantly and then swapped for All a moment later, which is a worse first
+  // impression than the blank screen this is meant to remove.
+  if (!filterExplicitFromURL && filter === 'favorites' && !hasAnyFavorites()) filter = 'all';
+  els.unpaired.hidden = true;
+  els.app.hidden = false;
+  renderFilterMenu();
+  renderGrid();
+  renderZoneScenes();
+}
+
 HueMuxI18n.init().then(() => {
   renderFilterMenu();
   renderGrid();
