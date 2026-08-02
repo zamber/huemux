@@ -229,6 +229,14 @@ func (s *Stream) flush() error {
 	return nil
 }
 
+// Stats returns a consistent snapshot of the stream statistics, safe for
+// concurrent access from callers that do not hold s.mu.
+func (s *Stream) Stats() (sent uint64, lastErr error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	return s.Sent, s.LastError
+}
+
 // encode builds one HueStream v2 packet.
 //
 //	 0  9  "HueStream"
