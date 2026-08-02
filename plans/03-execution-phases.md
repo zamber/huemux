@@ -23,6 +23,7 @@ reviewable commit or small series, and to leave `main` working.
 | 12 | Recording without a second mirror, host diagnostics | **device-tested; file output reworked in 13** |
 | 13 | File output — native save, share sheet, reported locations | **built, untested on a device** |
 | 14 | Long-press suppression | **built, untested on a device** |
+| 15 | Capture lifecycle; full-res recording removed | **built, untested on a device** |
 
 ---
 
@@ -322,3 +323,25 @@ for devices where the download and the clipboard both fail.
 **Done when** a device confirms that holding a button or slider produces no
 highlight, no haptic tick, and no stuck state, and that the diagnostics text
 can still be selected by hand.
+
+## Phase 15 — Capture lifecycle, and the end of full-resolution recording
+
+From the first device log that could describe the Android half (Phase 12's
+host diagnostics earning their keep immediately).
+
+**One MediaProjection permits one VirtualDisplay.** From Android 14, asking for
+a second ends the projection rather than failing. The log is unambiguous:
+`record: start requested quality=native` at 08:29:04.811, `capture: stopped` at
+08:29:05.176. Phase 11's second-display recorder was never going to work on a
+current device; `ScreenRecorder.kt` is deleted. Full-resolution recording is
+now done by raising the capture scale, which reaches the same encoder legally —
+confirmed in the same log at 942x1920 for 864 frames.
+
+**Capture lifetime is not stream lifetime.** Stopping the stream left the
+capture service running, and the Sync page keyed its Stop button off stream
+state, so a capture with no stream had no control anywhere in the app. The stop
+path now asks the service rather than trusting per-page state, and the button
+appears whenever capture is running.
+
+**Done when** a device confirms: stopping from either tab ends both the stream
+and the capture, and no state leaves the capture running with no way to stop it.
