@@ -5,6 +5,11 @@ published, plus how to package it further for OS-native distribution
 channels (Homebrew, Flatpak, AppImage). Written for whoever cuts a release
 or wants to add a new packaging target — most of this doesn't change often.
 
+> **Store submission, developer accounts, and the legal work that has to
+> happen first** (licensing, attribution, privacy policy, trademark) are in
+> [PUBLISHING.md](PUBLISHING.md). This file is about producing artifacts;
+> that one is about being allowed to distribute them.
+
 ## Current state vs. what's described below
 
 Today, `.github/workflows/release.yml` builds and publishes **plain,
