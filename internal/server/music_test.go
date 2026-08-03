@@ -1,0 +1,136 @@
+package server
+
+import (
+	"encoding/binary"
+	"math"
+	"testing"
+
+	"github.com/zamber/huemux/internal/appconfig"
+	"github.com/zamber/huemux/internal/music"
+)
+
+// audioPayload assembles a valid 0x02 audio frame with the given FFT band
+// values (rest zero) and a bass-only marker in the wave if bassOn.
+func audioPayload(t *testing.T, fft [32]float32) []byte {
+	t.Helper()
+	p := make([]byte, 1+4*(music.Bands+music.Samples))
+	p[0] = music.TypeByte
+	for i, v := range fft {
+		binary.LittleEndian.PutUint32(p[1+4*i:], math.Float32bits(v))
+	}
+	return p
+}
+
+func TestStatusMessageNoMusic(t *testing.T) {
+	s := New(appconfig.Default(), nil, nil, nil, nil)
+	if msg := s.statusMessage(nil); msg.Music != nil {
+		t.Fatalf("status carried music before any frame: %+v", msg.Music)
+	}
+}
+
+func TestAudioFrameSourceAndStatus(t *testing.T) {
+	s := New(appconfig.Default(), nil, nil, nil, nil)
+
+	c1, c2 := &Conn{}, &Conn{}
+	var fft [32]float32
+	fft[0] = 0.9 // loud bass
+
+	s.handleAudioFrame(c1, audioPayload(t, fft))
+
+	msg := s.statusMessage(nil)
+	if msg.Music == nil || !msg.Music.Active || msg.Music.Frames != 1 {
+		t.Fatalf("status after first frame: %+v", msg.Music)
+	}
+	if msg.Music.FFT[0] != 0.9 {
+		t.Fatalf("bass band = %v, want 0.9", msg.Music.FFT[0])
+	}
+
+	// A second connection's frames are dropped while c1 owns the source.
+	var other [32]float32
+	other[31] = 1.0
+	s.handleAudioFrame(c2, audioPayload(t, other))
+	msg = s.statusMessage(nil)
+	if msg.Music.FFT[0] != 0.9 || msg.Music.Frames != 1 {
+		t.Fatalf("second source's frame leaked in: %+v", msg.Music)
+	}
+
+	// c2 taking over after c1 disconnects works.
+	s.removeConn(c1)
+	if msg := s.statusMessage(nil); msg.Music != nil {
+		t.Fatalf("status kept music after source disconnect: %+v", msg.Music)
+	}
+	s.handleAudioFrame(c2, audioPayload(t, other))
+	msg = s.statusMessage(nil)
+	if msg.Music == nil || msg.Music.FFT[31] != 1.0 {
+		t.Fatalf("new source's frame not accepted after takeover: %+v", msg.Music)
+	}
+
+	// Reconnecting c1 must not resurrect the cleared state.
+	s.removeConn(c2)
+	if msg := s.statusMessage(nil); msg.Music != nil {
+		t.Fatalf("status kept music after second disconnect: %+v", msg.Music)
+	}
+}
+
+// TestMusicStopClearsState is the regression guard for the stale-analysis
+// trap: capture can stop on the page while the WS connection stays open
+// (it carries the UI), so the disconnect path never fires and the status
+// push would keep reporting the last frame as live forever.
+// TestGridFramesDoNotTouchMusicState guards the 0x02/0x01 dispatch: a grid
+// frame (type 0x01) must never be interpreted as audio, even when both
+// arrive on the same connection.
+func TestGridFramesDoNotTouchMusicState(t *testing.T) {
+	s := New(appconfig.Default(), nil, nil, nil, nil)
+	c := &Conn{}
+
+	// 3x1 grid of white pixels, exactly the shape handleGridFrame accepts
+	// (it then no-ops on the nil engine).
+	s.handleGridFrame(c, []byte{0x01, 3, 1, 255, 255, 255, 255, 255, 255})
+	if msg := s.statusMessage(nil); msg.Music != nil {
+		t.Fatalf("grid frame claimed the music source: %+v", msg.Music)
+	}
+
+	// And the reverse: an audio frame must not be readable as a grid frame.
+	s.handleAudioFrame(c, audioPayload(t, [32]float32{0.5}))
+	if msg := s.statusMessage(nil); msg.Music == nil || !msg.Music.Active {
+		t.Fatal("audio frame not accepted after a grid frame")
+	}
+}
+
+func TestMusicStopClearsState(t *testing.T) {
+	s := New(appconfig.Default(), nil, nil, nil, nil)
+	c := &Conn{}
+	s.handleAudioFrame(c, audioPayload(t, [32]float32{0.5}))
+	if msg := s.statusMessage(nil); msg.Music == nil {
+		t.Fatal("expected music state after a frame")
+	}
+
+	s.handleControlMessage(c, []byte(`{"type": "music_stop"}`))
+	if msg := s.statusMessage(nil); msg.Music != nil {
+		t.Fatalf("music block survived music_stop: %+v", msg.Music)
+	}
+
+	// A stopped source must not block a fresh one: the next frame from the
+	// same connection re-claims the source.
+	s.handleAudioFrame(c, audioPayload(t, [32]float32{0.5}))
+	if msg := s.statusMessage(nil); msg.Music == nil || !msg.Music.Active {
+		t.Fatal("new frames not accepted after music_stop")
+	}
+}
+
+func TestAudioFrameRejectsMalformed(t *testing.T) {
+	s := New(appconfig.Default(), nil, nil, nil, nil)
+	c := &Conn{}
+
+	// Wrong type byte must not claim the source.
+	s.handleAudioFrame(c, []byte{0x01, 0, 0, 0, 0})
+	if msg := s.statusMessage(nil); msg.Music != nil {
+		t.Fatalf("malformed frame accepted: %+v", msg.Music)
+	}
+	// Truncated frame must not claim it either.
+	p := audioPayload(t, [32]float32{})
+	s.handleAudioFrame(c, p[:len(p)-1])
+	if msg := s.statusMessage(nil); msg.Music != nil {
+		t.Fatalf("truncated frame accepted: %+v", msg.Music)
+	}
+}

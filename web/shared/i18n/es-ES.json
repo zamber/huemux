@@ -130,6 +130,15 @@
     "empty": "No se encontraron luces en este puente.",
     "stopStreaming": "Detener transmisión"
   },
+  "music": {
+    "heading": "Reactividad musical",
+    "hint": "Captura el micrófono y envía el análisis de audio al motor.",
+    "start": "Iniciar captura de micrófono",
+    "stop": "Detener",
+    "idle": "Sin captura",
+    "capturing": "Capturando — {n} fotogramas",
+    "error": "No se pudo iniciar la captura del micrófono"
+  },
   "settings": {
     "heading": "Configuración",
     "loading": "Cargando…",

@@ -130,6 +130,15 @@
     "empty": "Nenhuma luz encontrada nesta ponte.",
     "stopStreaming": "Parar transmissão"
   },
+  "music": {
+    "heading": "Reatividade musical",
+    "hint": "Captura o microfone e envia a análise de áudio ao motor.",
+    "start": "Iniciar captura do microfone",
+    "stop": "Parar",
+    "idle": "Sem captura",
+    "capturing": "Capturando — {n} quadros",
+    "error": "Não foi possível iniciar a captura do microfone"
+  },
   "settings": {
     "heading": "Configurações",
     "loading": "Carregando…",

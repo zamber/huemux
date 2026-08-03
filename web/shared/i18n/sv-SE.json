@@ -130,6 +130,15 @@
     "empty": "Inga ljus hittades på denna brygga.",
     "stopStreaming": "Stoppa direktuppspelning"
   },
+  "music": {
+    "heading": "Musikreaktivitet",
+    "hint": "Fångar in mikrofonen och strömmar ljudanalys till motorn.",
+    "start": "Starta mikrofoninspelning",
+    "stop": "Stoppa",
+    "idle": "Spelar inte in",
+    "capturing": "Spelar in — {n} bildrutor",
+    "error": "Det gick inte att starta mikrofoninspelningen"
+  },
   "settings": {
     "heading": "Inställningar",
     "loading": "Laddar…",

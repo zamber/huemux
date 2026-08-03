@@ -130,6 +130,15 @@
     "empty": "Tällä sillalla ei löytynyt valoja.",
     "stopStreaming": "Pysäytä virtaus"
   },
+  "music": {
+    "heading": "Musiikkireaktiivisuus",
+    "hint": "Kaappaa mikrofonin äänen ja lähettää analyysin moottorille.",
+    "start": "Käynnistä mikrofonin kaappaus",
+    "stop": "Pysäytä",
+    "idle": "Ei kaappausta",
+    "capturing": "Kaapataan — {n} kuvaa",
+    "error": "Mikrofonin kaappausta ei voitu käynnistää"
+  },
   "settings": {
     "heading": "Asetukset",
     "loading": "Ladataan…",

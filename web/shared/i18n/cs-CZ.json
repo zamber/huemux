@@ -130,6 +130,15 @@
     "empty": "Na tomto mostě nebyla nalezena žádná světla.",
     "stopStreaming": "Zastavit streamování"
   },
+  "music": {
+    "heading": "Reakce na hudbu",
+    "hint": "Zachycuje mikrofon a streamuje analýzu zvuku do enginu.",
+    "start": "Spustit snímání mikrofonu",
+    "stop": "Zastavit",
+    "idle": "Nesnímá",
+    "capturing": "Snímá — {n} snímků",
+    "error": "Nelze spustit snímání mikrofonu"
+  },
   "settings": {
     "heading": "Nastavení",
     "loading": "Načítání…",

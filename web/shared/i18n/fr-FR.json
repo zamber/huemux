@@ -130,6 +130,15 @@
     "empty": "Aucune lumière trouvée sur ce pont.",
     "stopStreaming": "Arrêter le flux"
   },
+  "music": {
+    "heading": "Réactivité musicale",
+    "hint": "Capture le microphone et diffuse l'analyse audio au moteur.",
+    "start": "Démarrer la capture micro",
+    "stop": "Arrêter",
+    "idle": "Pas de capture",
+    "capturing": "Capture — {n} trames",
+    "error": "Impossible de démarrer la capture du microphone"
+  },
   "settings": {
     "heading": "Paramètres",
     "loading": "Chargement…",

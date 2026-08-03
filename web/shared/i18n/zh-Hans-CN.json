@@ -130,6 +130,15 @@
     "empty": "在此网桥上未找到灯光。",
     "stopStreaming": "停止流式传输"
   },
+  "music": {
+    "heading": "音乐响应",
+    "hint": "捕获麦克风并将音频分析流式传输到引擎。",
+    "start": "开始麦克风捕获",
+    "stop": "停止",
+    "idle": "未在捕获",
+    "capturing": "捕获中 — {n} 帧",
+    "error": "无法启动麦克风捕获"
+  },
   "settings": {
     "heading": "设置",
     "loading": "加载中…",

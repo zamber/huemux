@@ -26,6 +26,7 @@ import (
 	"github.com/zamber/huemux/internal/engine"
 	"github.com/zamber/huemux/internal/hue"
 	"github.com/zamber/huemux/internal/lightctl"
+	"github.com/zamber/huemux/internal/music"
 	"github.com/zamber/huemux/internal/pipeline"
 )
 
@@ -61,8 +62,13 @@ type Server struct {
 
 	mu           sync.Mutex
 	frameSource  *Conn
+	musicSource  *Conn // connection owning audio capture (music reactivity)
 	uiConns      map[*Conn]struct{}
 	lastFrameLog time.Time // throttles logFrameStats to at most once/second
+
+	// music holds the latest audio analysis frame. Immutable pointer after
+	// construction, so it needs no lock of its own on top of State's.
+	music *music.State
 
 	Addr string
 }
@@ -93,6 +99,7 @@ func New(cfg appconfig.Config, store *config.Store, favorites *config.FavoritesS
 		mux:       http.NewServeMux(),
 		uiConns:   map[*Conn]struct{}{},
 		authLimit: newAuthLimiter(),
+		music:     music.New(),
 	}
 	if eng != nil || lights != nil {
 		s.setPaired(eng, lights)
@@ -352,13 +359,13 @@ type favoriteEventWire struct {
 // configChangedWire is broadcast to every WS client after /api/config changes,
 // so each frame can update its features/auth state without a full reload.
 type configChangedWire struct {
-	Type         string   `json:"type"`
-	Profile      string   `json:"profile"`
-	Lights       bool     `json:"lights"`
-	Sync         bool     `json:"sync"`
-	Auth         configAuthWire  `json:"auth"`
+	Type         string           `json:"type"`
+	Profile      string           `json:"profile"`
+	Lights       bool             `json:"lights"`
+	Sync         bool             `json:"sync"`
+	Auth         configAuthWire   `json:"auth"`
 	Listen       configListenWire `json:"listen"`
-	LanAddresses []string `json:"lan_addresses"`
+	LanAddresses []string         `json:"lan_addresses"`
 }
 
 type configAuthWire struct {
@@ -625,6 +632,24 @@ type statusWire struct {
 	// this struct which is identical for every recipient.
 	SourceHeld   bool `json:"source_held"`
 	YouAreSource bool `json:"you_are_source"`
+
+	// Music carries the latest audio analysis frame while a browser is
+	// capturing (music reactivity, Phase 1). Absent until then, so the
+	// common case pays nothing.
+	Music *musicStatusWire `json:"music,omitempty"`
+}
+
+// musicStatusWire is the music-reactivity block of the status push: whether
+// a browser is sending audio frames, how many have arrived, and the latest
+// 32 FFT bands plus 256 wave samples. The arrays let the UI and the Go
+// analysis primitives see exactly what the engine received — the browser
+// already has its own copy, so these exist to prove the pipe, not to feed
+// the preview.
+type musicStatusWire struct {
+	Active bool      `json:"active"`
+	Frames uint64    `json:"frames"`
+	FFT    []float32 `json:"fft"`
+	Wave   []float32 `json:"wave"`
 }
 
 func (s *Server) statusMessage(conn *Conn) statusWire {
@@ -652,6 +677,17 @@ func (s *Server) statusMessage(conn *Conn) statusWire {
 	msg.SourceHeld = s.frameSource != nil
 	msg.YouAreSource = conn != nil && s.frameSource == conn
 	s.mu.Unlock()
+
+	if f, active, frames := s.music.Snapshot(); active {
+		// Copied, not aliased: the wire struct must not share backing
+		// arrays with whatever the next frame will overwrite.
+		msg.Music = &musicStatusWire{
+			Active: true,
+			Frames: frames,
+			FFT:    append([]float32(nil), f.FFT[:]...),
+			Wave:   append([]float32(nil), f.Wave[:]...),
+		}
+	}
 	return msg
 }
 
@@ -695,12 +731,7 @@ func (s *Server) handleWS(w http.ResponseWriter, r *http.Request) {
 
 	defer func() {
 		close(statusDone)
-		s.mu.Lock()
-		delete(s.uiConns, conn)
-		if s.frameSource == conn {
-			s.frameSource = nil
-		}
-		s.mu.Unlock()
+		s.removeConn(conn)
 	}()
 
 	for {
@@ -710,11 +741,88 @@ func (s *Server) handleWS(w http.ResponseWriter, r *http.Request) {
 		}
 		switch opcode {
 		case opBinary:
-			s.handleGridFrame(conn, payload)
+			// 0x01 is a screen-sync grid frame, 0x02 an audio frame for
+			// music reactivity. Dispatched here rather than inside the grid
+			// handler so an audio frame can never be misread as the start
+			// of a (different-sized) grid frame.
+			if len(payload) > 0 && payload[0] == music.TypeByte {
+				s.handleAudioFrame(conn, payload)
+			} else {
+				s.handleGridFrame(conn, payload)
+			}
 		case opText:
 			s.handleControlMessage(conn, payload)
 		}
 	}
+}
+
+// removeConn forgets a disconnected connection: unregisters it as a UI
+// client and releases whatever source roles it held. Extracted from the
+// handleWS defer so tests can exercise the disconnect path directly.
+func (s *Server) removeConn(conn *Conn) {
+	s.mu.Lock()
+	delete(s.uiConns, conn)
+	if s.frameSource == conn {
+		s.frameSource = nil
+	}
+	wasMusicSource := s.musicSource == conn
+	if wasMusicSource {
+		s.musicSource = nil
+	}
+	s.mu.Unlock()
+	// The music source is gone; whatever state it built up is stale and must
+	// not keep reporting as live analysis. Cleared outside the lock — the
+	// state has its own, and Update (which takes only State's) never runs
+	// under s.mu.
+	if wasMusicSource {
+		s.music.Clear()
+	}
+}
+
+// handleAudioFrame accepts a binary audio frame (type 0x02, see
+// internal/music) from whichever connection is the music source. Music
+// capture deliberately has no claim handshake in Phase 1 — unlike grid
+// frames it needs neither a paired bridge nor a selected area — so the most
+// recent connection to send a valid frame owns the source and every other
+// connection's frames are dropped. That keeps two capturing tabs from
+// interleaving their audio into one incoherent analysis stream; the
+// take-over is immediate and needs no message because the newest sender is
+// whoever last pressed Start.
+func (s *Server) handleAudioFrame(conn *Conn, payload []byte) {
+	f, ok := music.ParseFrame(payload)
+	if !ok {
+		return
+	}
+	s.mu.Lock()
+	if s.musicSource != nil && s.musicSource != conn {
+		s.mu.Unlock()
+		return
+	}
+	s.musicSource = conn
+	s.mu.Unlock()
+	s.music.Update(f)
+
+	if debuglog.Enabled {
+		s.logMusicStats()
+	}
+}
+
+// logMusicStats logs a throttled (at most once/second) summary of incoming
+// audio frames when -debug is on — the same rationale as logFrameStats: the
+// one signal the server had zero visibility into was whether frames were
+// really arriving, or the capture path had silently stalled.
+func (s *Server) logMusicStats() {
+	s.mu.Lock()
+	skip := time.Since(s.lastFrameLog) < time.Second
+	if !skip {
+		s.lastFrameLog = time.Now()
+	}
+	s.mu.Unlock()
+	if skip {
+		return
+	}
+	f, _, frames := s.music.Snapshot()
+	log.Printf("huemux debug: audio frames=%d bass=%.3f wave0=%.3f", frames, f.FFT[0], f.Wave[0])
 }
 
 // handleGridFrame accepts a binary grid frame only from whichever
@@ -860,6 +968,17 @@ func (s *Server) handleControlMessage(conn *Conn, payload []byte) {
 		return
 	case "pair":
 		go s.runPair(msg.BridgeIP)
+		return
+	case "music_stop":
+		// Music capture stopped on the page while the WS connection stays
+		// open (it carries the UI too), so the disconnect path never fires.
+		// Without this the status push would keep reporting the last frame
+		// as live analysis forever. Any connection may clear it — the same
+		// rule as the grid stream's "stop".
+		s.mu.Lock()
+		s.musicSource = nil
+		s.mu.Unlock()
+		s.music.Clear()
 		return
 	}
 

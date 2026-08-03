@@ -130,6 +130,15 @@
     "empty": "Nie znaleziono świateł na tym mostku.",
     "stopStreaming": "Zatrzymaj strumieniowanie"
   },
+  "music": {
+    "heading": "Reakcja na muzykę",
+    "hint": "Przechwytuje mikrofon i przesyła analizę audio do silnika.",
+    "start": "Start przechwytywania mikrofonu",
+    "stop": "Zatrzymaj",
+    "idle": "Brak przechwytywania",
+    "capturing": "Przechwytuje — {n} klatek",
+    "error": "Nie udało się uruchomić przechwytywania mikrofonu"
+  },
   "settings": {
     "heading": "Ustawienia",
     "loading": "Ładowanie…",

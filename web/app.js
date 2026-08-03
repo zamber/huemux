@@ -861,4 +861,10 @@ if (nativeBridge()) {
 // that would otherwise correct that is a status message.
 renderSyncButtons();
 
+// Music reactivity (Phase 1): hand the audio-source module our WebSocket
+// senders so its 0x02 frames ride the same connection as everything else —
+// binary frames through sendGrid, JSON control messages (music_stop) through
+// send.
+if (typeof HueMuxMusic !== 'undefined') HueMuxMusic.init({ send: sendGrid, control: send });
+
 connect();

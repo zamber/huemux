@@ -130,6 +130,15 @@
     "empty": "在此橋接器上找不到任何燈光。",
     "stopStreaming": "停止串流"
   },
+  "music": {
+    "heading": "音樂反應",
+    "hint": "擷取麥克風並將音訊分析串流到引擎。",
+    "start": "開始麥克風擷取",
+    "stop": "停止",
+    "idle": "未在擷取",
+    "capturing": "擷取中 — {n} 影格",
+    "error": "無法啟動麥克風擷取"
+  },
   "settings": {
     "heading": "設定",
     "loading": "正在載入…",

@@ -399,10 +399,13 @@ When enabled (toggle in header), the sync page shows:
 **Goal:** Get audio into the pipeline and extract meaningful features.
 No lights change yet. The analysis values appear in the browser UI.
 
-- [ ] `AudioContext` capture from microphone
-- [ ] `AnalyserNode` → FFT bins (32 bands) + waveform (256 samples)
-- [ ] FFT data sent over WebSocket to Go at ~30 Hz (binary frame, `0x02`
-      type byte, interleaved `float32`)
+- [x] `AudioContext` capture from microphone — `web/music.js`, capture
+      toggle on the sync page (Phase 1 step 1, 2026-08-03)
+- [x] `AnalyserNode` → FFT bins (32 bands) + waveform (256 samples) —
+      2048-pt FFT reduced to 32 geometrically-spaced bands + 256 samples
+- [x] FFT data sent over WebSocket to Go at ~30 Hz (binary frame, `0x02`
+      type byte, interleaved `float32`) — `internal/music.ParseFrame`,
+      surfaced in the status push as `music.{active,frames,fft,wave}`
 - [ ] Go-side `BeatDetector` primitive (energy-based onset detection)
 - [ ] Go-side `FreqBands` primitive (bass/mid/treble split)
 - [ ] Browser UI: live FFT spectrum, beat indicator, BPM display

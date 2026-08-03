@@ -130,6 +130,15 @@
     "empty": "Tidak ada lampu yang ditemukan di jembatan ini.",
     "stopStreaming": "Hentikan streaming"
   },
+  "music": {
+    "heading": "Reaktivitas musik",
+    "hint": "Menangkap mikrofon dan mengirim analisis audio ke mesin.",
+    "start": "Mulai tangkap mikrofon",
+    "stop": "Berhenti",
+    "idle": "Tidak menangkap",
+    "capturing": "Menangkap — {n} bingkai",
+    "error": "Tidak dapat memulai tangkapan mikrofon"
+  },
   "settings": {
     "heading": "Pengaturan",
     "loading": "Memuat…",

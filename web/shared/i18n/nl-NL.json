@@ -130,6 +130,15 @@
     "empty": "Geen lampen gevonden op deze bridge.",
     "stopStreaming": "Stop streaming"
   },
+  "music": {
+    "heading": "Muziekreactiviteit",
+    "hint": "Vangt de microfoon op en streamt audio-analyse naar de engine.",
+    "start": "Microfoonopname starten",
+    "stop": "Stoppen",
+    "idle": "Niet aan het opnemen",
+    "capturing": "Opnemen — {n} frames",
+    "error": "Kan microfoonopname niet starten"
+  },
   "settings": {
     "heading": "Instellingen",
     "loading": "Bezig met laden…",

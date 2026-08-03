@@ -130,6 +130,15 @@
     "empty": "Nessuna luce trovata su questo bridge.",
     "stopStreaming": "Arresta trasmissione"
   },
+  "music": {
+    "heading": "Reattività musicale",
+    "hint": "Cattura il microfono e invia l'analisi audio al motore.",
+    "start": "Avvia cattura microfono",
+    "stop": "Ferma",
+    "idle": "Nessuna cattura",
+    "capturing": "Cattura in corso — {n} fotogrammi",
+    "error": "Impossibile avviare la cattura del microfono"
+  },
   "settings": {
     "heading": "Impostazioni",
     "loading": "Caricamento…",

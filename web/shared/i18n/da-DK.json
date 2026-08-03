@@ -130,6 +130,15 @@
     "empty": "Ingen lys fundet på denne bro.",
     "stopStreaming": "Stop streaming"
   },
+  "music": {
+    "heading": "Musikreaktivitet",
+    "hint": "Optager mikrofonen og streamer lydanalyse til motoren.",
+    "start": "Start mikrofonoptagelse",
+    "stop": "Stop",
+    "idle": "Optager ikke",
+    "capturing": "Optager — {n} frames",
+    "error": "Kunne ikke starte mikrofonoptagelse"
+  },
   "settings": {
     "heading": "Indstillinger",
     "loading": "Indlæser…",

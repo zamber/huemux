@@ -256,6 +256,25 @@
     </details>
   </section>
   </div>
+
+  <!-- Music reactivity (Phase 1): the audio-source half of the multiplexer.
+       Mic capture streams analysis frames to the engine over the same WS.
+       Deliberately outside #app (which hides until the bridge is paired):
+       music analysis needs no bridge and no selected area — Phase 1's whole
+       point is that it drives nothing yet — so it must work (and be
+       testable) before pairing exists. Its own tab and the full analysis UI
+       come with the later phases. -->
+  <section id="music-panel">
+    <h2 data-i18n="music.heading">Music reactivity</h2>
+    <div class="record-row">
+      <button type="button" id="music-toggle" data-i18n="music.start">Start mic capture</button>
+      <span id="music-status" class="hint"></span>
+    </div>
+    <p class="hint" data-i18n="music.hint">
+      Captures the microphone and streams audio analysis to the engine.
+    </p>
+    <canvas id="music-spectrum" width="600" height="90" hidden></canvas>
+  </section>
 </main>
 
 <script src="/shared/theme.js"></script>
@@ -268,6 +287,7 @@
 <script src="/shared/color.js"></script>
 <script>HueMuxI18n.init(); HueMuxFeatures.load();</script>
 <script src="/shared/auth.js"></script>
+<script src="/music.js"></script>
 <script src="/app.js"></script>
 </body>
 </html>

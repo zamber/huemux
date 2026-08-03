@@ -130,6 +130,15 @@
     "empty": "Bu köprüde ışık bulunamadı.",
     "stopStreaming": "Akışı durdur"
   },
+  "music": {
+    "heading": "Müzik tepkisi",
+    "hint": "Mikrofonu yakalar ve ses analizini motora iletir.",
+    "start": "Mikrofon yakalamayı başlat",
+    "stop": "Durdur",
+    "idle": "Yakalamıyor",
+    "capturing": "Yakalıyor — {n} kare",
+    "error": "Mikrofon yakalama başlatılamadı"
+  },
   "settings": {
     "heading": "Ayarlar",
     "loading": "Yükleniyor…",

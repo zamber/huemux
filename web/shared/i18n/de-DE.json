@@ -130,6 +130,15 @@
     "empty": "Keine Leuchten auf dieser Bridge gefunden.",
     "stopStreaming": "Streaming stoppen"
   },
+  "music": {
+    "heading": "Musik-Reaktivität",
+    "hint": "Nimmt das Mikrofon auf und streamt die Audioanalyse an die Engine.",
+    "start": "Mikrofonaufnahme starten",
+    "stop": "Stoppen",
+    "idle": "Nicht am Aufnehmen",
+    "capturing": "Aufnahme — {n} Frames",
+    "error": "Mikrofonaufnahme konnte nicht gestartet werden"
+  },
   "settings": {
     "heading": "Einstellungen",
     "loading": "Wird geladen…",

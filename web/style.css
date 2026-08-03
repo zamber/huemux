@@ -108,6 +108,14 @@ huemux-pairing { grid-column: 1 / -1; }
 .scenes-details summary { cursor: pointer; color: var(--ink-muted); font-size: 0.85rem; user-select: none; }
 .scenes-details .scenes-strip { margin-top: 0.6rem; }
 
+/* Music-reactivity capture (Phase 1): the audio-source half of the
+   multiplexer lives on the sync page for now; its own tab comes when the
+   analysis UI does. The toggle follows the record-button convention — a
+   running capture inverts to a solid ink fill. */
+#music-panel { grid-column: span 1; }
+#music-toggle.recording { background: var(--ink); color: var(--surface); }
+#music-spectrum { display: block; width: 100%; height: 90px; margin-top: 0.6rem; }
+
 .status-grid { display: grid; grid-template-columns: auto 1fr; gap: 0.25rem 0.8rem; font-size: 0.8rem; }
 .status-grid .k { color: var(--ink-muted); }
 .swatches { display: flex; gap: 0.3rem; flex-wrap: wrap; margin-top: 0.5rem; grid-column: 1 / -1; }

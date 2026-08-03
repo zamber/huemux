@@ -130,6 +130,15 @@
     "empty": "Nu au fost găsite luminile pe această pasarelă.",
     "stopStreaming": "Opriți transmisia"
   },
+  "music": {
+    "heading": "Reactivitate muzicală",
+    "hint": "Captează microfonul și transmite analiza audio către motor.",
+    "start": "Pornește captura microfonului",
+    "stop": "Oprește",
+    "idle": "Nu captează",
+    "capturing": "Captează — {n} cadre",
+    "error": "Nu s-a putut porni captura microfonului"
+  },
   "settings": {
     "heading": "Setări",
     "loading": "Se încarcă…",

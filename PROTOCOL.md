@@ -109,6 +109,20 @@ frame source is honoured; other tabs may connect for the UI but their frames are
 ignored, because two capturing tabs produce a strobe that is very hard to trace
 back from the light end.
 
+```
+byte 0    0x02           message type: audio frame (music reactivity)
+byte 1+   32 FFT magnitude bands then 256 waveform samples, as one flat
+          sequence of little-endian float32 (1152 bytes)
+```
+
+At ~30 Hz that is ~35 KB/s. Bands are 0..1 magnitude (0 = bass, 31 = treble);
+wave samples are −1..1. Audio frames carry no claim handshake: the connection
+that most recently sent a valid frame owns the audio source and all other
+connections' frames are dropped, so two capturing tabs cannot interleave their
+audio into one analysis stream. Unlike grid frames, audio capture needs
+neither a paired bridge nor a selected area — the analysis side of the music
+engine is entirely Go-side (see `docs/MUSIC-REACTIVITY.md`).
+
 ### Control: browser → service (JSON text)
 
 ```json
@@ -120,6 +134,12 @@ back from the light end.
 
 `identify` blinks a physical light and is what makes click-to-blink work in the
 calibration view.
+
+`{"type": "music_stop"}` clears the music-reactivity audio source (see the
+0x02 frame format below). Sent when the page stops mic capture while the WS
+connection stays open — without it the status push would keep reporting the
+last audio frame as live analysis forever. Any connection may send it, the
+same rule as `stop` for the grid stream.
 
 ### State: service → browser (JSON text)
 
@@ -147,6 +167,19 @@ for every recipient), since only one WS connection is ever the frame source
 captured frames are silently dropped, which without this is invisible: a
 second tab or the desktop app both keep showing their own local capture
 preview with no indication that it's not actually reaching the bridge.
+
+While a browser is capturing audio (music reactivity, Phase 1), the status
+push also carries the latest analysis frame so the UI and the Go-side
+analysis primitives can see exactly what the engine received:
+
+```json
+"music": { "active": true, "frames": 87, "fft": [ ...32 floats, 0-1... ], "wave": [ ...256 floats... ] }
+```
+
+`fft` is magnitude per band, 0 = bass, 31 = treble; `wave` is the downsampled
+time-domain signal. The block is absent while no audio source is connected.
+The browser already has its own copy of this data — the arrays exist to prove
+the pipe and to feed analysis, not to power the preview.
 
 The frame source is claimed explicitly by `select_area` (`claimFrameSource`),
 not by whichever connection happens to send a grid frame first — starting
