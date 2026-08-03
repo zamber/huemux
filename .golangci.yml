@@ -16,15 +16,8 @@ linters:
         - (*os.File).Write
         - (*net.UDPConn).Close
         - (*net.TCPConn).Close
-        - (*net.Conn).Close
         - (net.Conn).Close
         - (*os.File).Remove
-      exclude:
-        # Common patterns where errors are intentionally ignored with defer.
-        - path: '(.+)\.Body\.Close'
-          msg: 'Error return value of `resp.Body.Close` is not checked'
-        - path: '.+_test\.go'
-          msg: 'Error return value of `.*\.Close` is not checked'
     gosec:
       excludes:
         # G402 — TLS InsecureSkipVerify: bridge certs are self-signed by design.
