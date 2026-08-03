@@ -10,12 +10,32 @@ huemux-pairing {
   /* Horizontal padding, not just auto margins: below 480px the max-width does
      nothing and the panel ran edge-to-edge against the screen, with the bridge
      card and the manual-IP field touching both sides. */
-  margin: 2rem auto;
+  margin: auto;
   padding: 0 1rem;
   text-align: start;
   box-sizing: border-box;
 }
 huemux-pairing[hidden] { display: none; }
+
+/* While pairing is the page's focus, fill the viewport below the header
+   and flex-centre the panel's content — same pattern as auth.html's
+   #auth-page. Only applies while visible: [hidden] keeps display:none
+   once the app is usable. Works identically on both lights.html (direct
+   body child) and sync.html (grid item) since the panel is the only
+   visible content while unpaired. */
+huemux-pairing:not([hidden]) {
+  min-height: calc(100vh - 6rem);
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
+/* Below 480px the max-width constraint has already stopped applying, so
+   this padding is all that keeps the panel off the screen edges — halve it
+   on phones. */
+@media (max-width: 480px) {
+  huemux-pairing { padding: 0 0.5rem; }
+}
 
 huemux-pairing h2 {
   margin-top: 0;

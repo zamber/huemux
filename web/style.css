@@ -123,6 +123,9 @@ huemux-pairing { grid-column: 1 / -1; }
 
 @media (max-width: 800px) {
   #app-main { grid-template-columns: 1fr; }
+  /* The primary CTA earns a full-width row on phones; flex-wrap on
+     #area-panel drops the button below the inline controls. */
+  #start-btn { width: 100%; }
 }
 
 /* Native (Android MediaProjection) capture pushes frames straight into the Go

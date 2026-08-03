@@ -302,7 +302,10 @@ function patchRoomTileFor(l) {
   const tile = els.grid.querySelector(`.all-lights-tile[data-room-id="${cssEscape(room.id)}"]`);
   if (!tile) return;
   const roomLights = lights.filter((x) => x.room_id === room.id);
-  const anyOn = roomLights.some((x) => x.on);
+  // Use the room's grouped_light state when available — same logic as
+  // renderRoomTile and patchRoomTile, so a grouped_light event reporting
+  // off is not overridden by a subsequent per-light event's aggregate.
+  const anyOn = room.on !== undefined ? room.on : roomLights.some((x) => x.on);
   const power = tile.querySelector('[data-action="toggle-room"]');
   if (power) {
     power.classList.toggle('active', anyOn);
@@ -697,7 +700,13 @@ function renderAllLightsTile() {
 // No favorite star here — favoriting is per-light/per-scene/the global
 // "all", not per-room, at least for now.
 function renderRoomTile(room, roomLights) {
-  const anyOn = roomLights.some((l) => l.on);
+  // The room's grouped_light state (room.on, set from the /api/rooms
+  // response and kept current by mergeLightEvent) is authoritative —
+  // a grouped_light reporting off while individual lights still flag
+  // on=true must not render an active power button and colour wash.
+  // Fall back to the per-light aggregate only when room.on has never
+  // been seen (stale localStorage cache from an older version).
+  const anyOn = room.on !== undefined ? room.on : roomLights.some((l) => l.on);
   const roomFav = !!favoritesRaw['room:' + room.id];
   const roomGradient = multiGradientStyle(roomLights);
   // Same rule as light cards and scene chips: no star in the Favorites view,
@@ -705,10 +714,13 @@ function renderRoomTile(room, roomLights) {
   const showFavBtn = filter !== 'favorites';
   const hasBrightness = roomLights.some((l) => l.dimmable);
   const hasColor = roomLights.some((l) => l.colorable);
-  const onLights = roomLights.filter((l) => l.on && l.dimmable);
-  const avgBrightness = onLights.length
-    ? Math.round(onLights.reduce((sum, l) => sum + l.brightness, 0) / onLights.length)
-    : 50;
+  // Prefer the grouped_light's own brightness; fall back to per-light
+  // average only when the field is absent (stale cache).
+  const roomBrightness = room.brightness !== undefined
+    ? Math.round(room.brightness)
+    : (roomLights.filter((l) => l.on && l.dimmable).length
+        ? Math.round(roomLights.filter((l) => l.on && l.dimmable).reduce((sum, l) => sum + l.brightness, 0) / roomLights.filter((l) => l.on && l.dimmable).length)
+        : 50);
   return `
     <div class="light-card all-lights-tile" data-room-id="${escapeHtml(room.id)}">
       ${roomGradient ? `<div class="light-card-gradient" style="${roomGradient}"></div>` : ''}
@@ -720,7 +732,7 @@ function renderRoomTile(room, roomLights) {
           <button type="button" class="icon-btn ${anyOn ? 'active' : ''}" data-action="toggle-room" data-room-id="${escapeHtml(room.id)}" data-id="${escapeHtml(room.grouped_light_id)}" title="${escapeHtml(HueMuxI18n.t(anyOn ? 'lights.turnAllOff' : 'lights.turnAllOn'))}">${anyOn ? ICONS.powerOn : ICONS.powerOff}</button>
         </div>
       </div>
-      ${hasBrightness ? `<input type="range" class="brightness-slider" min="0" max="100" value="${avgBrightness}" data-action="brightness-room" data-id="room:${escapeHtml(room.grouped_light_id)}">` : ''}
+      ${hasBrightness ? `<input type="range" class="brightness-slider" min="0" max="100" value="${roomBrightness}" data-action="brightness-room" data-id="room:${escapeHtml(room.grouped_light_id)}">` : ''}
     </div>`;
 }
 

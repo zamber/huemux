@@ -90,6 +90,12 @@ body { margin: 0; }
   background: var(--card);
   border-radius: 16px;
   padding: 1rem;
+  /* The per-light colour moves to a tinted left border in every theme —
+     previously simple-theme-only at 4px, now a uniform 6px. Aggregate
+     tiles override with .all-lights-tile's 2px ink border and are
+     unaffected. */
+  border-inline-start-width: 6px;
+  border-inline-start-color: var(--card-accent, var(--border));
   transition: transform 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease, opacity 0.3s ease;
 }
 .light-card:hover { transform: translateY(-2px); border-color: var(--border-strong); box-shadow: 0 6px 18px var(--shadow); }
@@ -127,6 +133,29 @@ body { margin: 0; }
 .icon-btn svg { width: 20px; height: 20px; }
 .icon-btn:hover { border-color: var(--border-strong); color: var(--ink); }
 .icon-btn.active { border: 2px solid var(--ink); background: rgba(127,127,127,0.12); color: var(--ink); }
+
+/* Inside a light card the active-button state speaks the light's own
+   colour rather than the generic ink. Aggregate tiles have no
+   --card-accent and fall back to ink — unchanged. */
+.light-card .icon-btn.active {
+  border-color: var(--card-accent, var(--ink));
+  color: var(--card-accent, var(--ink));
+}
+
+/* Per-card brightness slider inherits the light's colour: --card-accent
+   is set inline on the card at render time. Non-colour lights and the
+   aggregate tiles (no --card-accent) fall back to the global accent /
+   ink, same as before. accent-color tints the filled track portion;
+   the thumb overrides re-colour the ring. */
+.light-card input[type=range] {
+  accent-color: var(--card-accent, var(--accent));
+}
+.light-card input[type=range]::-webkit-slider-thumb {
+  border-color: var(--card-accent, var(--ink));
+}
+.light-card input[type=range]::-moz-range-thumb {
+  border-color: var(--card-accent, var(--ink));
+}
 
 /* The 20px icon is right on a phone, where each CSS pixel is ~2.5 physical
    pixels, and reads tiny in a desktop window on a large monitor where the

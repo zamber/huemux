@@ -41,8 +41,8 @@ huemux-header { display: block; }
 .ls-header-actions { display: flex; gap: 0.4rem; }
 
 .ls-icon-btn {
-  width: 36px;
-  height: 36px;
+  width: 44px;
+  height: 44px;
   padding: 0;
   display: flex;
   align-items: center;
@@ -58,12 +58,8 @@ huemux-header { display: block; }
 }
 .ls-icon-btn:hover { background: var(--card-hover); }
 
-/* 36px is comfortable with a mouse and below the 44px minimum for a finger.
-   Grow it only where the pointer is actually coarse, so the desktop header
-   keeps its proportions. */
-@media (pointer: coarse) {
-  .ls-icon-btn { width: 44px; height: 44px; }
-}
+/* 44px everywhere — the touch-target minimum regardless of pointer type,
+   matching .icon-btn on the lights page. */
 .ls-icon-btn:active { transform: scale(0.94); }
 
 /* The effects toggle is one glyph in two states rather than two lookalike

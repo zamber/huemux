@@ -411,8 +411,6 @@ html[data-simple] .light-card-gradient {
 }
 html[data-simple] .light-card {
   transition: none;
-  border-inline-start-width: 4px;
-  border-inline-start-color: var(--card-accent, var(--border));
 }
 html[data-simple] .light-card:hover {
   transform: none;
