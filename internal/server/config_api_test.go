@@ -141,7 +141,7 @@ func TestConfigPatchLiveApply(t *testing.T) {
 	dir := t.TempDir()
 	withConfigDir(t, dir)
 	s := New(appconfig.Default(), nil, nil, nil, nil)
-	defer s.Close()
+	defer s.Close() //nolint:errcheck // test teardown; the listener is already released by the test's own Close when relevant
 
 	do := func(body string) (newURL string) {
 		rec := httptest.NewRecorder()

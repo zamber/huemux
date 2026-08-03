@@ -205,10 +205,6 @@ func Parse(data []byte) (*Preset, error) {
 		}
 	}
 
-	type inRef struct {
-		to, inPort string
-	}
-	fromCount := map[string]int{} // edges out of each node, for cycle detection
 	for _, re := range raw.Edges {
 		if _, ok := p.byID[re.From]; !ok {
 			return nil, fmt.Errorf("preset %q: edge from unknown node %q", raw.Name, re.From)
@@ -217,7 +213,6 @@ func Parse(data []byte) (*Preset, error) {
 		if !ok {
 			return nil, fmt.Errorf("preset %q: edge to unknown node %q", raw.Name, re.To)
 		}
-		fromCount[re.From]++
 		// Edges out of a source node carry no scalar; the audio frame is
 		// injected into every Env directly.
 		if p.sources[re.From] {

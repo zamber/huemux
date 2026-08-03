@@ -28,13 +28,6 @@ func frame(bands ...float32) music.Frame {
 	return f
 }
 
-func step(r *Runner, n int) {
-	now := time.Unix(1_700_000_000, 0)
-	for i := 0; i < n; i++ {
-		r.Step(now.Add(time.Duration(i) * 40 * time.Millisecond))
-	}
-}
-
 func TestParseRejectsMalformed(t *testing.T) {
 	cases := []struct {
 		name, json, wantErr string
