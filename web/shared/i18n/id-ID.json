@@ -179,6 +179,16 @@
     "directionRtl": "Kanan ke kiri",
     "directionHint": "Biasanya mengikuti bahasa — hanya bahasa Arab yang kanan ke kiri. Memaksanya adalah untuk memeriksa bahwa tata letak cermin benar tanpa perlu membaca bahasa yang terkait dengannya."
   },
+  "auth": {
+    "heading": "Enter your access token",
+    "hint": "This server requires authentication.",
+    "placeholder": "e.g. otter.beacon.willow.cougar",
+    "submit": "Authenticate",
+    "checking": "Checking…",
+    "errorEmpty": "Enter a token.",
+    "errorBadToken": "That token was not accepted. Check it and try again.",
+    "errorNetwork": "Could not reach the server. Check that HueMux is running."
+  },
   "about": {
     "heading": "Tentang",
     "version": "Versi",

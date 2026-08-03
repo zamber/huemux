@@ -179,6 +179,16 @@
     "directionRtl": "오른쪽에서 왼쪽",
     "directionHint": "일반적으로 언어를 따릅니다 — 아랍어만 오른쪽에서 왼쪽입니다. 강제 설정은 언어를 읽지 않고 미러 레이아웃이 올바른지 확인하기 위한 것입니다."
   },
+  "auth": {
+    "heading": "Enter your access token",
+    "hint": "This server requires authentication.",
+    "placeholder": "e.g. otter.beacon.willow.cougar",
+    "submit": "Authenticate",
+    "checking": "Checking…",
+    "errorEmpty": "Enter a token.",
+    "errorBadToken": "That token was not accepted. Check it and try again.",
+    "errorNetwork": "Could not reach the server. Check that HueMux is running."
+  },
   "about": {
     "heading": "정보",
     "version": "버전",

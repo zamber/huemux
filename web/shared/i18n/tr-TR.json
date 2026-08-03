@@ -179,6 +179,16 @@
     "directionRtl": "Sağdan sola",
     "directionHint": "Normalde dili izler — yalnızca Arapça sağdan sola yazılır. Bunu zorlamak, aynı dili okumak zorunda kalmadan yansıtılmış düzenin doğru olup olmadığını kontrol etmek içindir."
   },
+  "auth": {
+    "heading": "Enter your access token",
+    "hint": "This server requires authentication.",
+    "placeholder": "e.g. otter.beacon.willow.cougar",
+    "submit": "Authenticate",
+    "checking": "Checking…",
+    "errorEmpty": "Enter a token.",
+    "errorBadToken": "That token was not accepted. Check it and try again.",
+    "errorNetwork": "Could not reach the server. Check that HueMux is running."
+  },
   "about": {
     "heading": "Hakkında",
     "version": "Sürüm",

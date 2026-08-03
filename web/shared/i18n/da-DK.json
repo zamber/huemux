@@ -179,6 +179,16 @@
     "directionRtl": "Højre til venstre",
     "directionHint": "Følger normalt sproget — kun arabisk er højre til venstre. At tvinge det er for at kontrollere, at det spejlede layout er korrekt uden at skulle læse sproget, det tilhører."
   },
+  "auth": {
+    "heading": "Enter your access token",
+    "hint": "This server requires authentication.",
+    "placeholder": "e.g. otter.beacon.willow.cougar",
+    "submit": "Authenticate",
+    "checking": "Checking…",
+    "errorEmpty": "Enter a token.",
+    "errorBadToken": "That token was not accepted. Check it and try again.",
+    "errorNetwork": "Could not reach the server. Check that HueMux is running."
+  },
   "about": {
     "heading": "Om",
     "version": "Version",

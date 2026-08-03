@@ -179,6 +179,16 @@
     "directionRtl": "从右到左",
     "directionHint": "通常跟随语言 — 仅阿拉伯语是从右到左。强制它是为了检查镜像布局是否正确，而无需阅读它所属的语言。"
   },
+  "auth": {
+    "heading": "Enter your access token",
+    "hint": "This server requires authentication.",
+    "placeholder": "e.g. otter.beacon.willow.cougar",
+    "submit": "Authenticate",
+    "checking": "Checking…",
+    "errorEmpty": "Enter a token.",
+    "errorBadToken": "That token was not accepted. Check it and try again.",
+    "errorNetwork": "Could not reach the server. Check that HueMux is running."
+  },
   "about": {
     "heading": "关于",
     "version": "版本",

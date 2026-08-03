@@ -179,6 +179,16 @@
     "directionRtl": "Zprava doleva",
     "directionHint": "Normálně sleduje jazyk — pouze arabština je psána zprava doleva. Vynucení je pro kontrolu zrcadleného rozvržení bez nutnosti rozumět příslušnému jazyku."
   },
+  "auth": {
+    "heading": "Enter your access token",
+    "hint": "This server requires authentication.",
+    "placeholder": "e.g. otter.beacon.willow.cougar",
+    "submit": "Authenticate",
+    "checking": "Checking…",
+    "errorEmpty": "Enter a token.",
+    "errorBadToken": "That token was not accepted. Check it and try again.",
+    "errorNetwork": "Could not reach the server. Check that HueMux is running."
+  },
   "about": {
     "heading": "O aplikaci",
     "version": "Verze",

@@ -179,6 +179,16 @@
     "directionRtl": "De droite à gauche",
     "directionHint": "Suit normalement la langue — seul l'arabe s'écrit de droite à gauche. La forcer sert à vérifier que la mise en page en miroir est correcte sans avoir à lire la langue à laquelle elle appartient."
   },
+  "auth": {
+    "heading": "Enter your access token",
+    "hint": "This server requires authentication.",
+    "placeholder": "e.g. otter.beacon.willow.cougar",
+    "submit": "Authenticate",
+    "checking": "Checking…",
+    "errorEmpty": "Enter a token.",
+    "errorBadToken": "That token was not accepted. Check it and try again.",
+    "errorNetwork": "Could not reach the server. Check that HueMux is running."
+  },
   "about": {
     "heading": "À propos",
     "version": "Version",
