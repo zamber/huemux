@@ -132,16 +132,20 @@
   },
   "music": {
     "heading": "ミュージックリアクティブ",
-    "hint": "マイク音声を取得し、音声分析をエンジンに送信します。",
-    "start": "マイクキャプチャを開始",
+    "hint": "音声分析をエンジンに送信します。プリセットが分析を光に変えます。",
+    "start": "キャプチャを開始",
     "stop": "停止",
     "idle": "キャプチャしていません",
     "capturing": "キャプチャ中 — {n} フレーム",
-    "error": "マイクキャプチャを開始できませんでした",
+    "error": "キャプチャを開始できませんでした",
     "preset": "プリセット",
     "presetOff": "オフ",
     "presetBassPulse": "Bass Pulse",
-    "presetChillAmbient": "Chill Ambient"
+    "presetChillAmbient": "Chill Ambient",
+    "source": "ソース",
+    "sourceMic": "マイク",
+    "sourceInternal": "内部オーディオ",
+    "sourceUnavailable": "このデバイスでは利用できません"
   },
   "settings": {
     "heading": "設定",

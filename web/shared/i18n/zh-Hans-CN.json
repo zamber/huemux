@@ -132,16 +132,20 @@
   },
   "music": {
     "heading": "音乐响应",
-    "hint": "捕获麦克风并将音频分析流式传输到引擎。",
-    "start": "开始麦克风捕获",
+    "hint": "将音频分析流式传输到引擎。预设将该分析转化为光。",
+    "start": "开始捕获",
     "stop": "停止",
     "idle": "未在捕获",
     "capturing": "捕获中 — {n} 帧",
-    "error": "无法启动麦克风捕获",
+    "error": "无法开始捕获",
     "preset": "预设",
     "presetOff": "关闭",
     "presetBassPulse": "Bass Pulse",
-    "presetChillAmbient": "Chill Ambient"
+    "presetChillAmbient": "Chill Ambient",
+    "source": "来源",
+    "sourceMic": "麦克风",
+    "sourceInternal": "内部音频",
+    "sourceUnavailable": "此设备上不可用"
   },
   "settings": {
     "heading": "设置",

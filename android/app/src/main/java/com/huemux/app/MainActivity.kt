@@ -1,8 +1,10 @@
 package com.huemux.app
 
+import android.Manifest
 import android.annotation.SuppressLint
 import android.content.ContentValues
 import android.content.Intent
+import android.content.pm.PackageManager
 import android.media.projection.MediaProjectionManager
 import android.net.Uri
 import android.net.wifi.WifiManager
@@ -12,6 +14,8 @@ import android.os.Bundle
 import android.util.Log
 import android.view.ViewGroup
 import android.webkit.JavascriptInterface
+import android.webkit.PermissionRequest
+import android.webkit.WebChromeClient
 import android.webkit.WebResourceRequest
 import android.webkit.WebView
 import android.webkit.WebViewClient
@@ -111,6 +115,32 @@ class MainActivity : AppCompatActivity() {
                     startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url)))
                 } catch (e: Exception) {
                     Log.e(TAG, "could not open download: $url", e)
+                }
+            }
+
+            // Music reactivity captures the microphone through getUserMedia
+            // (web/music.js). A WebView refuses every such request unless a
+            // WebChromeClient grants it — which is the whole reason the mic
+            // returned NotAllowedError. The app's own page only ever asks
+            // for audio capture; anything else is refused outright.
+            webChromeClient = object : WebChromeClient() {
+                override fun onPermissionRequest(request: PermissionRequest) {
+                    val wantsMic = request.resources.any { it == PermissionRequest.RESOURCE_AUDIO_CAPTURE }
+                    if (!wantsMic) {
+                        request.deny()
+                        return
+                    }
+                    if (checkSelfPermission(Manifest.permission.RECORD_AUDIO) ==
+                        PackageManager.PERMISSION_GRANTED
+                    ) {
+                        request.grant(request.resources)
+                        return
+                    }
+                    // RECORD_AUDIO is a dangerous permission: the OS asks the
+                    // user for it at runtime, and the WebView request has to
+                    // wait for that answer before it can be granted.
+                    pendingMicRequest = request
+                    micPermissionLauncher.launch(Manifest.permission.RECORD_AUDIO)
                 }
             }
         }
@@ -246,6 +276,25 @@ class MainActivity : AppCompatActivity() {
     // needs to distinguish "running" from "declined" to reset its buttons.
 
     private var pendingCaptureCallback: String? = null
+
+    // The WebView's mic request parked while the OS runtime dialog is up;
+    // granted or denied once the user answers (see onPermissionRequest).
+    private var pendingMicRequest: PermissionRequest? = null
+
+    private val micPermissionLauncher = registerForActivityResult(
+        ActivityResultContracts.RequestPermission()
+    ) { granted ->
+        val request = pendingMicRequest
+        pendingMicRequest = null
+        if (request == null) return@registerForActivityResult
+        if (granted) {
+            request.grant(request.resources)
+        } else {
+            // Denied — tell the WebView so the page surfaces a real error
+            // instead of hanging on "Checking…".
+            request.deny()
+        }
+    }
 
     private val projectionLauncher = registerForActivityResult(
         ActivityResultContracts.StartActivityForResult()
@@ -502,6 +551,11 @@ class MainActivity : AppCompatActivity() {
             val sb = StringBuilder()
             sb.append("android sdk           ${Build.VERSION.SDK_INT}\n")
             sb.append("device                ${Build.MANUFACTURER} ${Build.MODEL}\n")
+            sb.append("mic permission        ${
+                if (checkSelfPermission(Manifest.permission.RECORD_AUDIO) ==
+                    PackageManager.PERMISSION_GRANTED
+                ) "granted" else "not granted"
+            }\n")
             val svc = ScreenCaptureService.instance
             if (svc != null) {
                 sb.append(svc.diagnosticsBlock())

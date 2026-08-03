@@ -132,16 +132,20 @@
   },
   "music": {
     "heading": "Reattività musicale",
-    "hint": "Cattura il microfono e invia l'analisi audio al motore.",
-    "start": "Avvia cattura microfono",
+    "hint": "Invia l'analisi audio al motore. Un preset trasforma quell'analisi in luce.",
+    "start": "Avvia cattura",
     "stop": "Ferma",
     "idle": "Nessuna cattura",
     "capturing": "Cattura in corso — {n} fotogrammi",
-    "error": "Impossibile avviare la cattura del microfono",
+    "error": "Impossibile avviare la cattura",
     "preset": "Preset",
     "presetOff": "Spento",
     "presetBassPulse": "Bass Pulse",
-    "presetChillAmbient": "Chill Ambient"
+    "presetChillAmbient": "Chill Ambient",
+    "source": "Sorgente",
+    "sourceMic": "Microfono",
+    "sourceInternal": "Audio interno",
+    "sourceUnavailable": "Non disponibile su questo dispositivo"
   },
   "settings": {
     "heading": "Impostazioni",

@@ -132,16 +132,20 @@
   },
   "music": {
     "heading": "Musikreaktivitet",
-    "hint": "Fångar in mikrofonen och strömmar ljudanalys till motorn.",
-    "start": "Starta mikrofoninspelning",
+    "hint": "Strömmar ljudanalys till motorn. En förinställning gör analysen till ljus.",
+    "start": "Starta inspelning",
     "stop": "Stoppa",
     "idle": "Spelar inte in",
     "capturing": "Spelar in — {n} bildrutor",
-    "error": "Det gick inte att starta mikrofoninspelningen",
+    "error": "Det gick inte att starta inspelningen",
     "preset": "Förinställning",
     "presetOff": "Av",
     "presetBassPulse": "Bass Pulse",
-    "presetChillAmbient": "Chill Ambient"
+    "presetChillAmbient": "Chill Ambient",
+    "source": "Källa",
+    "sourceMic": "Mikrofon",
+    "sourceInternal": "Internt ljud",
+    "sourceUnavailable": "Inte tillgängligt på den här enheten"
   },
   "settings": {
     "heading": "Inställningar",

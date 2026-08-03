@@ -255,15 +255,12 @@
       </div>
     </details>
   </section>
-  </div>
 
   <!-- Music reactivity (Phase 1): the audio-source half of the multiplexer.
-       Mic capture streams analysis frames to the engine over the same WS.
-       Deliberately outside #app (which hides until the bridge is paired):
-       music analysis needs no bridge and no selected area — Phase 1's whole
-       point is that it drives nothing yet — so it must work (and be
-       testable) before pairing exists. Its own tab and the full analysis UI
-       come with the later phases. -->
+       Mic or internal-audio capture streams analysis frames to the engine
+       over the same WS. Inside #app, like everything else: the pairing
+       screen exists to pair, and a half-working music panel on it reads as
+       broken rather than as a preview. -->
   <section id="music-panel">
     <h2 data-i18n="music.heading">Music reactivity</h2>
     <div class="record-row">
@@ -271,15 +268,21 @@
       <span id="music-status" class="hint"></span>
     </div>
     <div class="record-row">
+      <label for="music-source" data-i18n="music.source">Source</label>
+      <select id="music-source">
+        <option value="mic" data-i18n="music.sourceMic">Microphone</option>
+        <option value="internal" data-i18n="music.sourceInternal">Internal audio</option>
+      </select>
       <label for="music-preset" data-i18n="music.preset">Preset</label>
       <select id="music-preset" disabled></select>
     </div>
     <p class="hint" data-i18n="music.hint">
-      Captures the microphone and streams audio analysis to the engine.
-      A preset turns that analysis into light output.
+      Streams audio analysis to the engine. A preset turns that analysis
+      into light output.
     </p>
     <canvas id="music-spectrum" width="600" height="90" hidden></canvas>
   </section>
+  </div>
 </main>
 
 <script src="/shared/theme.js"></script>

@@ -132,16 +132,20 @@
   },
   "music": {
     "heading": "Musiikkireaktiivisuus",
-    "hint": "Kaappaa mikrofonin äänen ja lähettää analyysin moottorille.",
-    "start": "Käynnistä mikrofonin kaappaus",
+    "hint": "Lähettää äänianalyysin moottorille. Esiasetus muuttaa analyysin valoksi.",
+    "start": "Käynnistä kaappaus",
     "stop": "Pysäytä",
     "idle": "Ei kaappausta",
     "capturing": "Kaapataan — {n} kuvaa",
-    "error": "Mikrofonin kaappausta ei voitu käynnistää",
+    "error": "Kaappausta ei voitu käynnistää",
     "preset": "Esiasetus",
     "presetOff": "Pois päältä",
     "presetBassPulse": "Bass Pulse",
-    "presetChillAmbient": "Chill Ambient"
+    "presetChillAmbient": "Chill Ambient",
+    "source": "Lähde",
+    "sourceMic": "Mikrofoni",
+    "sourceInternal": "Sisäinen ääni",
+    "sourceUnavailable": "Ei käytettävissä tällä laitteella"
   },
   "settings": {
     "heading": "Asetukset",

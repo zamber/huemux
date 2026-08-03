@@ -132,16 +132,20 @@
   },
   "music": {
     "heading": "音樂反應",
-    "hint": "擷取麥克風並將音訊分析串流到引擎。",
-    "start": "開始麥克風擷取",
+    "hint": "將音訊分析串流到引擎。預設將分析轉化為光。",
+    "start": "開始擷取",
     "stop": "停止",
     "idle": "未在擷取",
     "capturing": "擷取中 — {n} 影格",
-    "error": "無法啟動麥克風擷取",
+    "error": "無法開始擷取",
     "preset": "預設",
     "presetOff": "關閉",
     "presetBassPulse": "Bass Pulse",
-    "presetChillAmbient": "Chill Ambient"
+    "presetChillAmbient": "Chill Ambient",
+    "source": "來源",
+    "sourceMic": "麥克風",
+    "sourceInternal": "內部音訊",
+    "sourceUnavailable": "此裝置上無法使用"
   },
   "settings": {
     "heading": "設定",

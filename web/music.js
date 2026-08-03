@@ -22,6 +22,7 @@
     status: document.getElementById('music-status'),
     spectrum: document.getElementById('music-spectrum'),
     preset: document.getElementById('music-preset'),
+    source: document.getElementById('music-source'),
   };
 
   // Built-in presets, keyed by the slug the server knows (engine
@@ -76,30 +77,49 @@
     return edges;
   }
 
-  async function startCapture() {
-    // Raw dynamics matter here: AGC, echo cancellation and noise
+  // acquireAudioTrack asks the OS for one audio track from the selected
+  // source. "mic" is getUserMedia; "internal" is getDisplayMedia audio —
+  // the OS picker chooses which tab/app makes the sound, which works with
+  // headphones and does not hear the room (Phase 4's "system audio capture"
+  // in its browser form). Android WebViews have no getDisplayMedia, so the
+  // internal option is disabled there; its MediaProjection audio path is
+  // future work.
+  async function acquireAudioTrack(source) {
+    if (source === 'internal') {
+      let stream = null;
+      try {
+        stream = await navigator.mediaDevices.getDisplayMedia({ audio: true });
+      } catch (err) {
+        // Older Chromium insists on a video track; ask for a 2x2 one and
+        // discard it — the audio is all this path ever uses.
+        stream = await navigator.mediaDevices.getDisplayMedia({ audio: true, video: { width: 2, height: 2 } });
+        stream.getVideoTracks().forEach((t) => t.stop());
+      }
+      const track = stream.getAudioTracks()[0];
+      if (!track) throw new Error('shared source had no audio track');
+      return track;
+    }
+    // Mic. Raw dynamics matter: AGC, echo cancellation and noise
     // suppression all compress or filter the signal, which blunts beat
     // detection. Not every device lets a page turn them off, so fall back
     // to defaults when the strict constraints are refused.
     try {
-      stream = await navigator.mediaDevices.getUserMedia({
+      return (await navigator.mediaDevices.getUserMedia({
         audio: { echoCancellation: false, noiseSuppression: false, autoGainControl: false },
-      });
+      })).getAudioTracks()[0];
     } catch (err) {
-      try {
-        stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      } catch (err2) {
-        stream = null;
-        throw err2;
-      }
+      return (await navigator.mediaDevices.getUserMedia({ audio: true })).getAudioTracks()[0];
     }
+  }
 
-    // A mic unplugged (or permission revoked) ends the track on its own;
-    // unwind the whole capture state rather than leaving a dead timer
-    // claiming to capture.
-    stream.getAudioTracks().forEach((track) => {
-      track.onended = () => stopCapture();
-    });
+  async function startCapture() {
+    const track = await acquireAudioTrack(musicEls.source.value);
+    stream = new MediaStream([track]);
+
+    // A source ending on its own (mic unplugged, permission revoked, the
+    // user ending the share from the OS picker) unwinds the whole capture
+    // state rather than leaving a dead timer claiming to capture.
+    track.onended = () => stopCapture();
 
     audioCtx = new AudioContext();
     const src = audioCtx.createMediaStreamSource(stream);
@@ -205,6 +225,10 @@
   function render() {
     musicEls.toggleBtn.textContent = t(running ? 'music.stop' : 'music.start');
     musicEls.toggleBtn.classList.toggle('recording', running);
+    // The source is fixed for the duration of a capture: swapping the
+    // input under a live analyser would need a teardown/rebuild dance for
+    // no benefit — stop and restart instead.
+    musicEls.source.disabled = running;
     musicEls.status.textContent = running
       ? t('music.capturing', { n: frameCount })
       : t('music.idle');
@@ -239,6 +263,16 @@
     init(opts) {
       send = opts.send;
       control = opts.control || null;
+      // Internal audio rides getDisplayMedia, which Android WebViews do not
+      // implement. Grey the option out there rather than offer a source
+      // that fails on every attempt.
+      if (!(navigator.mediaDevices && navigator.mediaDevices.getDisplayMedia)) {
+        const opt = musicEls.source.querySelector('option[value="internal"]');
+        if (opt) {
+          opt.disabled = true;
+          opt.title = t('music.sourceUnavailable');
+        }
+      }
       renderPresetOptions();
       render();
     },

@@ -132,16 +132,20 @@
   },
   "music": {
     "heading": "Musik-Reaktivität",
-    "hint": "Nimmt das Mikrofon auf und streamt die Audioanalyse an die Engine.",
-    "start": "Mikrofonaufnahme starten",
+    "hint": "Streamt die Audioanalyse an die Engine. Ein Preset macht aus der Analyse Licht.",
+    "start": "Aufnahme starten",
     "stop": "Stoppen",
     "idle": "Nicht am Aufnehmen",
     "capturing": "Aufnahme — {n} Frames",
-    "error": "Mikrofonaufnahme konnte nicht gestartet werden",
+    "error": "Aufnahme konnte nicht gestartet werden",
     "preset": "Preset",
     "presetOff": "Aus",
     "presetBassPulse": "Bass Pulse",
-    "presetChillAmbient": "Chill Ambient"
+    "presetChillAmbient": "Chill Ambient",
+    "source": "Quelle",
+    "sourceMic": "Mikrofon",
+    "sourceInternal": "Interner Ton",
+    "sourceUnavailable": "Auf diesem Gerät nicht verfügbar"
   },
   "settings": {
     "heading": "Einstellungen",

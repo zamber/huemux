@@ -53,12 +53,20 @@ func NewClient(bridgeIP, username, certSHA256 string) *Client {
 // bridge certificate is pinned to it; with an empty one the connection falls
 // back to InsecureSkipVerify, for backward compatibility with configs saved
 // before pinning existed.
+//
+// The pin is the verification, and InsecureSkipVerify must be true for it to
+// run: the bridge's self-signed certificate commonly carries no IP SANs, and
+// with skip=false Go's normal hostname verification fails *before* the pin
+// callback ever executes — a freshly-paired install could never connect
+// (the exact "doesn't contain any IP SANs" failure from the Android report
+// that led here). Skipping the default chain check and gating the handshake
+// solely on the fingerprint is the standard self-signed-pinning pattern.
 func tlsConfigForCert(certSHA256 string) *tls.Config {
 	if certSHA256 == "" {
 		return &tls.Config{InsecureSkipVerify: true} //nolint:gosec // unpinned fallback; see NewClient
 	}
 	return &tls.Config{
-		InsecureSkipVerify: false,
+		InsecureSkipVerify: true, //nolint:gosec // the pin below is the verification; see above
 		VerifyPeerCertificate: func(rawCerts [][]byte, _ [][]*x509.Certificate) error {
 			return verifyCertSHA256(rawCerts, certSHA256)
 		},

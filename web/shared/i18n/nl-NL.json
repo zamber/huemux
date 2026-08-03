@@ -132,16 +132,20 @@
   },
   "music": {
     "heading": "Muziekreactiviteit",
-    "hint": "Vangt de microfoon op en streamt audio-analyse naar de engine.",
-    "start": "Microfoonopname starten",
+    "hint": "Streamt audio-analyse naar de engine. Een voorinstelling maakt er licht van.",
+    "start": "Opname starten",
     "stop": "Stoppen",
     "idle": "Niet aan het opnemen",
     "capturing": "Opnemen — {n} frames",
-    "error": "Kan microfoonopname niet starten",
+    "error": "Kan opname niet starten",
     "preset": "Voorinstelling",
     "presetOff": "Uit",
     "presetBassPulse": "Bass Pulse",
-    "presetChillAmbient": "Chill Ambient"
+    "presetChillAmbient": "Chill Ambient",
+    "source": "Bron",
+    "sourceMic": "Microfoon",
+    "sourceInternal": "Interne audio",
+    "sourceUnavailable": "Niet beschikbaar op dit apparaat"
   },
   "settings": {
     "heading": "Instellingen",

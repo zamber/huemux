@@ -132,16 +132,20 @@
   },
   "music": {
     "heading": "Reaktivitas musik",
-    "hint": "Menangkap mikrofon dan mengirim analisis audio ke mesin.",
-    "start": "Mulai tangkap mikrofon",
+    "hint": "Mengirim analisis audio ke mesin. Preset mengubah analisis itu menjadi cahaya.",
+    "start": "Mulai tangkap",
     "stop": "Berhenti",
     "idle": "Tidak menangkap",
     "capturing": "Menangkap — {n} bingkai",
-    "error": "Tidak dapat memulai tangkapan mikrofon",
+    "error": "Tidak dapat memulai tangkapan",
     "preset": "Preset",
     "presetOff": "Mati",
     "presetBassPulse": "Bass Pulse",
-    "presetChillAmbient": "Chill Ambient"
+    "presetChillAmbient": "Chill Ambient",
+    "source": "Sumber",
+    "sourceMic": "Mikrofon",
+    "sourceInternal": "Audio internal",
+    "sourceUnavailable": "Tidak tersedia di perangkat ini"
   },
   "settings": {
     "heading": "Pengaturan",

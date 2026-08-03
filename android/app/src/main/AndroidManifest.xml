@@ -20,6 +20,11 @@
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MEDIA_PROJECTION" />
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
 
+    <!-- Music reactivity: the WebView's getUserMedia for the microphone.
+         Dangerous permission, so it is also requested at runtime (see
+         MainActivity's micPermissionLauncher). -->
+    <uses-permission android:name="android.permission.RECORD_AUDIO" />
+
     <application
         android:allowBackup="false"
         android:icon="@mipmap/ic_launcher"

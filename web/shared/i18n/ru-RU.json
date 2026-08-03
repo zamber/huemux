@@ -132,16 +132,20 @@
   },
   "music": {
     "heading": "Музыкальная реактивность",
-    "hint": "Захватывает микрофон и передаёт анализ звука в движок.",
-    "start": "Начать захват микрофона",
+    "hint": "Передаёт анализ звука в движок. Пресет превращает анализ в свет.",
+    "start": "Начать захват",
     "stop": "Остановить",
     "idle": "Не захватывает",
     "capturing": "Захват — {n} кадров",
-    "error": "Не удалось запустить захват микрофона",
+    "error": "Не удалось запустить захват",
     "preset": "Пресет",
     "presetOff": "Выкл",
     "presetBassPulse": "Bass Pulse",
-    "presetChillAmbient": "Chill Ambient"
+    "presetChillAmbient": "Chill Ambient",
+    "source": "Источник",
+    "sourceMic": "Микрофон",
+    "sourceInternal": "Внутренний звук",
+    "sourceUnavailable": "Недоступно на этом устройстве"
   },
   "settings": {
     "heading": "Параметры",

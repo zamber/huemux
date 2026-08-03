@@ -466,8 +466,11 @@ tap to activate, tweak brightness range from bottom sheet.
 **Goal:** Internal audio, spatial routing, visualization mode,
 external control.
 
-- [ ] System audio capture via `getDisplayMedia({audio: true})`
-      (tab/share audio, not mic — works with headphones)
+- [x] System audio capture via `getDisplayMedia({audio: true})`
+      (tab/share audio, not mic — works with headphones) — browser form
+      landed with the source selector (mic | internal audio) on
+      2026-08-03; Android's MediaProjection audio path is still pending,
+      and the internal option is disabled there until it lands
 - [ ] Interactive visualization mode (light grid + spectrum + trails)
 - [ ] Spatial routing: `zone_split` using existing zone geometry,
       `spatial_panner` mapping virtual position to nearest lights

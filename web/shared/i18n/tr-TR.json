@@ -132,16 +132,20 @@
   },
   "music": {
     "heading": "Müzik tepkisi",
-    "hint": "Mikrofonu yakalar ve ses analizini motora iletir.",
-    "start": "Mikrofon yakalamayı başlat",
+    "hint": "Ses analizini motora iletir. Bir ön ayar analizi ışığa dönüştürür.",
+    "start": "Yakalamayı başlat",
     "stop": "Durdur",
     "idle": "Yakalamıyor",
     "capturing": "Yakalıyor — {n} kare",
-    "error": "Mikrofon yakalama başlatılamadı",
+    "error": "Yakalama başlatılamadı",
     "preset": "Ön ayarı",
     "presetOff": "Kapalı",
     "presetBassPulse": "Bass Pulse",
-    "presetChillAmbient": "Chill Ambient"
+    "presetChillAmbient": "Chill Ambient",
+    "source": "Kaynak",
+    "sourceMic": "Mikrofon",
+    "sourceInternal": "Dahili ses",
+    "sourceUnavailable": "Bu cihazda kullanılamaz"
   },
   "settings": {
     "heading": "Ayarlar",

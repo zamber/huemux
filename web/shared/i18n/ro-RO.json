@@ -132,16 +132,20 @@
   },
   "music": {
     "heading": "Reactivitate muzicală",
-    "hint": "Captează microfonul și transmite analiza audio către motor.",
-    "start": "Pornește captura microfonului",
+    "hint": "Trimite analiza audio către motor. Un preset transformă analiza în lumină.",
+    "start": "Pornește captura",
     "stop": "Oprește",
     "idle": "Nu captează",
     "capturing": "Captează — {n} cadre",
-    "error": "Nu s-a putut porni captura microfonului",
+    "error": "Nu s-a putut porni captura",
     "preset": "Preset",
     "presetOff": "Oprit",
     "presetBassPulse": "Bass Pulse",
-    "presetChillAmbient": "Chill Ambient"
+    "presetChillAmbient": "Chill Ambient",
+    "source": "Sursă",
+    "sourceMic": "Microfon",
+    "sourceInternal": "Audio intern",
+    "sourceUnavailable": "Indisponibil pe acest dispozitiv"
   },
   "settings": {
     "heading": "Setări",

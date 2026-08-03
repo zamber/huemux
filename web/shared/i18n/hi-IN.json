@@ -132,16 +132,20 @@
   },
   "music": {
     "heading": "संगीत प्रतिक्रिया",
-    "hint": "माइक्रोफ़ोन कैप्चर करता है और ऑडियो विश्लेषण इंजन को भेजता है।",
-    "start": "माइक कैप्चर शुरू करें",
+    "hint": "ऑडियो विश्लेषण इंजन को भेजता है। प्रीसेट उस विश्लेषण को रोशनी में बदलता है।",
+    "start": "कैप्चर शुरू करें",
     "stop": "रोकें",
     "idle": "कैप्चर नहीं हो रहा",
     "capturing": "कैप्चर हो रहा है — {n} फ़्रेम",
-    "error": "माइक्रोफ़ोन कैप्चर शुरू नहीं किया जा सका",
+    "error": "कैप्चर शुरू नहीं किया जा सका",
     "preset": "प्रीसेट",
     "presetOff": "बंद",
     "presetBassPulse": "Bass Pulse",
-    "presetChillAmbient": "Chill Ambient"
+    "presetChillAmbient": "Chill Ambient",
+    "source": "स्रोत",
+    "sourceMic": "माइक्रोफ़ोन",
+    "sourceInternal": "आंतरिक ऑडियो",
+    "sourceUnavailable": "इस डिवाइस पर उपलब्ध नहीं"
   },
   "settings": {
     "heading": "सेटिंग्स",

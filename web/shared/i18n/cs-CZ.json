@@ -132,16 +132,20 @@
   },
   "music": {
     "heading": "Reakce na hudbu",
-    "hint": "Zachycuje mikrofon a streamuje analýzu zvuku do enginu.",
-    "start": "Spustit snímání mikrofonu",
+    "hint": "Streamuje analýzu zvuku do enginu. Preset přemění tuto analýzu na světlo.",
+    "start": "Spustit snímání",
     "stop": "Zastavit",
     "idle": "Nesnímá",
     "capturing": "Snímá — {n} snímků",
-    "error": "Nelze spustit snímání mikrofonu",
+    "error": "Nelze spustit snímání",
     "preset": "Preset",
     "presetOff": "Vypnuto",
     "presetBassPulse": "Bass Pulse",
-    "presetChillAmbient": "Chill Ambient"
+    "presetChillAmbient": "Chill Ambient",
+    "source": "Zdroj",
+    "sourceMic": "Mikrofon",
+    "sourceInternal": "Interní zvuk",
+    "sourceUnavailable": "Na tomto zařízení není k dispozici"
   },
   "settings": {
     "heading": "Nastavení",

@@ -132,16 +132,20 @@
   },
   "music": {
     "heading": "Musikreaktivitet",
-    "hint": "Optager mikrofonen og streamer lydanalyse til motoren.",
-    "start": "Start mikrofonoptagelse",
+    "hint": "Streamer lydanalyse til motoren. En preset gør analysen til lys.",
+    "start": "Start optagelse",
     "stop": "Stop",
     "idle": "Optager ikke",
     "capturing": "Optager — {n} frames",
-    "error": "Kunne ikke starte mikrofonoptagelse",
+    "error": "Kunne ikke starte optagelsen",
     "preset": "Preset",
     "presetOff": "Fra",
     "presetBassPulse": "Bass Pulse",
-    "presetChillAmbient": "Chill Ambient"
+    "presetChillAmbient": "Chill Ambient",
+    "source": "Kilde",
+    "sourceMic": "Mikrofon",
+    "sourceInternal": "Intern lyd",
+    "sourceUnavailable": "Ikke tilgængelig på denne enhed"
   },
   "settings": {
     "heading": "Indstillinger",

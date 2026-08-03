@@ -132,16 +132,20 @@
   },
   "music": {
     "heading": "استجابة للموسيقى",
-    "hint": "يلتقط الميكروفون ويرسل تحليل الصوت إلى المحرك.",
-    "start": "بدء التقاط الميكروفون",
+    "hint": "يرسل تحليل الصوت إلى المحرك. يحول البرنامج هذا التحليل إلى ضوء.",
+    "start": "بدء الالتقاط",
     "stop": "إيقاف",
     "idle": "لا يلتقط",
     "capturing": "يلتقط — {n} إطارات",
-    "error": "تعذر بدء التقاط الميكروفون",
+    "error": "تعذر بدء الالتقاط",
     "preset": "البرنامج",
     "presetOff": "إيقاف",
     "presetBassPulse": "Bass Pulse",
-    "presetChillAmbient": "Chill Ambient"
+    "presetChillAmbient": "Chill Ambient",
+    "source": "المصدر",
+    "sourceMic": "ميكروفون",
+    "sourceInternal": "الصوت الداخلي",
+    "sourceUnavailable": "غير متاح على هذا الجهاز"
   },
   "settings": {
     "heading": "الإعدادات",
