@@ -60,7 +60,7 @@ class ScreenCaptureService : Service() {
     // The same MediaProjection consent that unlocks the screen also unlocks
     // playback audio (AudioPlaybackCapture, API 29+): the OS treats them as
     // one "record the screen" permission, which is exactly what the user
-    // expects. The recorded PCM goes straight to Go (Mobile.pushAudioPcm),
+    // expects. The recorded PCM goes straight to Go (Mobile.pushAudioPCM),
     // which runs the FFT that the browser's AnalyserNode does for mic
     // capture — no JavaScript, no Web Audio, no second consent.
 
@@ -220,7 +220,10 @@ class ScreenCaptureService : Service() {
             val n = record.read(buf, 0, buf.size, AudioRecord.READ_BLOCKING)
             if (n <= 0) continue
             try {
-                Mobile.pushAudioPcm(buf.copyOf(n), AUDIO_SAMPLE_RATE)
+                // gomobile keeps the Go acronym casing: PushAudioPCM binds
+                // as pushAudioPCM, not pushAudioPcm (the CI Kotlin compile
+                // caught this exact mismatch once).
+                Mobile.pushAudioPCM(buf.copyOf(n), AUDIO_SAMPLE_RATE.toLong())
             } catch (e: Exception) {
                 // The server may be mid-restart; the next chunk succeeds.
                 Log.w(TAG, "pushAudioPcm failed", e)
