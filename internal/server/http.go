@@ -305,6 +305,18 @@ func (s *Server) setPaired(eng *engine.Engine, lights *lightctl.Service) {
 	s.p = paired{eng: eng, lights: lights, cancel: cancel}
 	s.pairedMu.Unlock()
 
+	// The music capture lives in the server (it owns the WS), the output
+	// clock in the engine — wire the two together whenever an engine comes
+	// into existence, at startup and after a web-driven pairing alike. The
+	// engine wants (frame, active); the state's Snapshot also carries a
+	// frame counter, dropped here.
+	if eng != nil {
+		eng.SetMusicFrameSource(func() (music.Frame, bool) {
+			f, ok, _ := s.music.Snapshot()
+			return f, ok
+		})
+	}
+
 	// Gated on the Lights tab existing, not merely on lights being non-nil.
 	// Subscribe opens a long-lived eventstream connection to the bridge, and
 	// under a sync-only profile lightctl exists solely to answer /api/scenes
@@ -708,6 +720,10 @@ type controlMessage struct {
 	R          uint8   `json:"r"`
 	G          uint8   `json:"g"`
 	B          uint8   `json:"b"`
+
+	// Preset names a built-in music-reactivity preset for music_preset;
+	// "" deactivates music and hands the output back to screen sync.
+	Preset string `json:"preset"`
 }
 
 func (s *Server) handleWS(w http.ResponseWriter, r *http.Request) {
@@ -1034,10 +1050,29 @@ func (s *Server) handleControlMessage(conn *Conn, payload []byte) {
 	}
 
 	switch msg.Type {
+	case "music_preset":
+		// Activate a built-in music-reactivity preset (or deactivate with
+		// ""). Needs the engine for the area's light/channel layout; the
+		// audio frames are already flowing through SetMusicFrameSource.
+		// An unknown slug or an unselected area fails loudly in the log
+		// rather than leaving the UI guessing.
+		channels, positions := eng.MusicLayout()
+		if err := eng.ActivateMusic(msg.Preset, channels, positions); err != nil {
+			log.Printf("huemux: music_preset %q: %v", msg.Preset, err)
+		}
 	case "select_area":
 		s.claimFrameSource(conn)
 		if err := eng.SelectArea(ctx, msg.AreaID); err != nil {
 			log.Printf("huemux: select_area %s: %v", msg.AreaID, err)
+		}
+		// A music preset pins the light→channel layout of the area it was
+		// activated on. Switching areas must re-apply it or the runner
+		// keeps painting the old area's channel ids.
+		if slug := eng.MusicPreset(); slug != "" {
+			channels, positions := eng.MusicLayout()
+			if err := eng.ActivateMusic(slug, channels, positions); err != nil {
+				log.Printf("huemux: re-activate music preset after area switch: %v", err)
+			}
 		}
 	case "stop":
 		eng.Stop(ctx)

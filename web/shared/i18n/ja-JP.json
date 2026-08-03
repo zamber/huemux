@@ -137,7 +137,11 @@
     "stop": "停止",
     "idle": "キャプチャしていません",
     "capturing": "キャプチャ中 — {n} フレーム",
-    "error": "マイクキャプチャを開始できませんでした"
+    "error": "マイクキャプチャを開始できませんでした",
+    "preset": "プリセット",
+    "presetOff": "オフ",
+    "presetBassPulse": "Bass Pulse",
+    "presetChillAmbient": "Chill Ambient"
   },
   "settings": {
     "heading": "設定",

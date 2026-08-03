@@ -137,7 +137,11 @@
     "stop": "Stopp",
     "idle": "Tar ikke opp",
     "capturing": "Tar opp — {n} rammer",
-    "error": "Kunne ikke starte mikrofonopptak"
+    "error": "Kunne ikke starte mikrofonopptak",
+    "preset": "Forhåndsinnstilling",
+    "presetOff": "Av",
+    "presetBassPulse": "Bass Pulse",
+    "presetChillAmbient": "Chill Ambient"
   },
   "settings": {
     "heading": "Innstillinger",

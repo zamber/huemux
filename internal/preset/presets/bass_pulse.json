@@ -1,0 +1,25 @@
+{
+  "version": 1,
+  "name": "Bass Pulse",
+  "description": "Bass drives brightness on all lights; the beat triggers an orange strobe flash",
+  "nodes": [
+    { "id": "src", "type": "mic_capture", "params": {} },
+    { "id": "beat", "type": "beat_detector", "params": { "threshold": 1.3, "min_interval_ms": 200 } },
+    { "id": "bands", "type": "freq_bands", "params": { "bass_cutoff": 200, "treble_cutoff": 4000 } },
+    { "id": "bass_brightness", "type": "brightness_energy", "params": { "curve": "exp", "min": 0.05, "max": 1.0 } },
+    { "id": "beat_strobe", "type": "strobe_beat", "params": { "color": "#FF6600", "duration_ms": 250 } },
+    { "id": "all_lights", "type": "all_lights", "params": {} },
+    { "id": "strobe_lights", "type": "light_group", "params": { "light_ids": [] } }
+  ],
+  "edges": [
+    { "from": "src", "to": "beat" },
+    { "from": "src", "to": "bands" },
+    { "from": "bands", "out_port": "bass", "to": "bass_brightness", "in_port": "energy" },
+    { "from": "bass_brightness", "out_port": "out", "to": "all_lights", "in_port": "in" },
+    { "from": "beat", "out_port": "beat", "to": "beat_strobe", "in_port": "beat" },
+    { "from": "beat_strobe", "out_port": "out", "to": "strobe_lights", "in_port": "in" },
+    { "from": "beat_strobe", "out_port": "r", "to": "strobe_lights", "in_port": "r" },
+    { "from": "beat_strobe", "out_port": "g", "to": "strobe_lights", "in_port": "g" },
+    { "from": "beat_strobe", "out_port": "b", "to": "strobe_lights", "in_port": "b" }
+  ]
+}

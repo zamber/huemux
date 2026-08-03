@@ -137,7 +137,11 @@
     "stop": "Stoppen",
     "idle": "Nicht am Aufnehmen",
     "capturing": "Aufnahme — {n} Frames",
-    "error": "Mikrofonaufnahme konnte nicht gestartet werden"
+    "error": "Mikrofonaufnahme konnte nicht gestartet werden",
+    "preset": "Preset",
+    "presetOff": "Aus",
+    "presetBassPulse": "Bass Pulse",
+    "presetChillAmbient": "Chill Ambient"
   },
   "settings": {
     "heading": "Einstellungen",

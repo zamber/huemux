@@ -137,7 +137,11 @@
     "stop": "停止",
     "idle": "未在擷取",
     "capturing": "擷取中 — {n} 影格",
-    "error": "無法啟動麥克風擷取"
+    "error": "無法啟動麥克風擷取",
+    "preset": "預設",
+    "presetOff": "關閉",
+    "presetBassPulse": "Bass Pulse",
+    "presetChillAmbient": "Chill Ambient"
   },
   "settings": {
     "heading": "設定",

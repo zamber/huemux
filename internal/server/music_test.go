@@ -6,6 +6,8 @@ import (
 	"testing"
 
 	"github.com/zamber/huemux/internal/appconfig"
+	"github.com/zamber/huemux/internal/config"
+	"github.com/zamber/huemux/internal/engine"
 	"github.com/zamber/huemux/internal/music"
 )
 
@@ -115,6 +117,32 @@ func TestMusicStopClearsState(t *testing.T) {
 	s.handleAudioFrame(c, audioPayload(t, [32]float32{0.5}))
 	if msg := s.statusMessage(nil); msg.Music == nil || !msg.Music.Active {
 		t.Fatal("new frames not accepted after music_stop")
+	}
+}
+
+// TestMusicPresetControlMessage drives the activation path from the WS
+// control message down to the engine. No area is selected, so the layout is
+// empty — the activation still must succeed and report.
+func TestMusicPresetControlMessage(t *testing.T) {
+	eng := engine.New(config.Bridge{BridgeIP: "192.0.2.10"}, nil)
+	s := New(appconfig.Default(), nil, nil, eng, nil)
+	c := &Conn{}
+
+	s.handleControlMessage(c, []byte(`{"type": "music_preset", "preset": "bass_pulse"}`))
+	if got := eng.MusicPreset(); got != "bass_pulse" {
+		t.Fatalf("MusicPreset = %q after activation, want bass_pulse", got)
+	}
+
+	// Unknown slug: loud failure, preset stays untouched.
+	s.handleControlMessage(c, []byte(`{"type": "music_preset", "preset": "nope"}`))
+	if got := eng.MusicPreset(); got != "bass_pulse" {
+		t.Fatalf("failed activation clobbered the preset: %q", got)
+	}
+
+	// Deactivate.
+	s.handleControlMessage(c, []byte(`{"type": "music_preset", "preset": ""}`))
+	if got := eng.MusicPreset(); got != "" {
+		t.Fatalf("preset not cleared: %q", got)
 	}
 }
 

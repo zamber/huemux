@@ -137,7 +137,11 @@
     "stop": "Arrêter",
     "idle": "Pas de capture",
     "capturing": "Capture — {n} trames",
-    "error": "Impossible de démarrer la capture du microphone"
+    "error": "Impossible de démarrer la capture du microphone",
+    "preset": "Préréglage",
+    "presetOff": "Désactivé",
+    "presetBassPulse": "Bass Pulse",
+    "presetChillAmbient": "Chill Ambient"
   },
   "settings": {
     "heading": "Paramètres",

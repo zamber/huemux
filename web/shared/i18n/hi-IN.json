@@ -137,7 +137,11 @@
     "stop": "रोकें",
     "idle": "कैप्चर नहीं हो रहा",
     "capturing": "कैप्चर हो रहा है — {n} फ़्रेम",
-    "error": "माइक्रोफ़ोन कैप्चर शुरू नहीं किया जा सका"
+    "error": "माइक्रोफ़ोन कैप्चर शुरू नहीं किया जा सका",
+    "preset": "प्रीसेट",
+    "presetOff": "बंद",
+    "presetBassPulse": "Bass Pulse",
+    "presetChillAmbient": "Chill Ambient"
   },
   "settings": {
     "heading": "सेटिंग्स",

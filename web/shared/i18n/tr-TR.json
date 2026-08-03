@@ -137,7 +137,11 @@
     "stop": "Durdur",
     "idle": "Yakalamıyor",
     "capturing": "Yakalıyor — {n} kare",
-    "error": "Mikrofon yakalama başlatılamadı"
+    "error": "Mikrofon yakalama başlatılamadı",
+    "preset": "Ön ayarı",
+    "presetOff": "Kapalı",
+    "presetBassPulse": "Bass Pulse",
+    "presetChillAmbient": "Chill Ambient"
   },
   "settings": {
     "heading": "Ayarlar",

@@ -141,6 +141,16 @@ connection stays open — without it the status push would keep reporting the
 last audio frame as live analysis forever. Any connection may send it, the
 same rule as `stop` for the grid stream.
 
+`{"type": "music_preset", "preset": "bass_pulse"}` activates a built-in
+music-reactivity preset; `"preset": ""` deactivates it and hands the output
+back to screen sync. Only one preset is active at a time (DP-9). While
+active, the engine's output loop runs the preset's graph each tick, sampling
+the latest 0x02 audio frame, and screen sync is paused — the music block
+still carries the analysis frames, and the snapshot's `MusicPreset` field
+carries the active preset slug. Built-in slugs: `bass_pulse`,
+`chill_ambient`. An area switch re-applies the active preset to the new
+area's channel layout.
+
 ### State: service → browser (JSON text)
 
 Pushed once per second and on change:

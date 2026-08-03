@@ -137,7 +137,11 @@
     "stop": "إيقاف",
     "idle": "لا يلتقط",
     "capturing": "يلتقط — {n} إطارات",
-    "error": "تعذر بدء التقاط الميكروفون"
+    "error": "تعذر بدء التقاط الميكروفون",
+    "preset": "البرنامج",
+    "presetOff": "إيقاف",
+    "presetBassPulse": "Bass Pulse",
+    "presetChillAmbient": "Chill Ambient"
   },
   "settings": {
     "heading": "الإعدادات",

@@ -13,7 +13,9 @@ import (
 
 	"github.com/zamber/huemux/internal/config"
 	"github.com/zamber/huemux/internal/hue"
+	"github.com/zamber/huemux/internal/music"
 	"github.com/zamber/huemux/internal/pipeline"
+	"github.com/zamber/huemux/internal/preset"
 )
 
 // ZoneStatus is a zone plus the color currently being sent for it — enough
@@ -51,6 +53,10 @@ type Status struct {
 	GridW          int     `json:"GridW"`
 	GridH          int     `json:"GridH"`
 
+	// MusicPreset is the active music-reactivity preset slug; empty while
+	// screen sync drives the output.
+	MusicPreset string `json:"MusicPreset"`
+
 	Settings config.AreaSettings `json:"Settings"`
 	Zones    []ZoneStatus        `json:"Zones"`
 }
@@ -86,6 +92,15 @@ type Engine struct {
 	smoother *pipeline.Smoother
 	cancel   context.CancelFunc
 	loopDone chan struct{}
+
+	// Music reactivity. The runner is non-nil while a preset drives the
+	// output; the frame source is wired once by the server (the audio state
+	// lives there, the output clock here). musicPreset is the active preset
+	// slug — re-activation after an area switch needs the slug, not the
+	// display name. All guarded by mu like the rest.
+	musicRunner *preset.Runner
+	musicFrame  func() (music.Frame, bool)
+	musicPreset string
 }
 
 // New builds an Engine for an already-paired bridge.
@@ -256,6 +271,73 @@ func (e *Engine) stopLocked(ctx context.Context) {
 	}
 }
 
+// SetMusicFrameSource wires the audio analysis state reader. The music
+// capture lives in the server layer, the output clock here; called once at
+// pairing time (or at construction, when an engine already exists). A nil fn
+// is fine — presets then run on silence.
+func (e *Engine) SetMusicFrameSource(fn func() (music.Frame, bool)) {
+	e.mu.Lock()
+	e.musicFrame = fn
+	e.mu.Unlock()
+}
+
+// ActivateMusic starts driving the output loop from the named built-in
+// preset; pass "" to hand control back to screen sync. channels maps light
+// RIDs to area channel ids, positions their room coordinates — both derived
+// from the current area's zone layout by the caller.
+func (e *Engine) ActivateMusic(slug string, channels map[string]uint8, positions map[string]preset.Pos3) error {
+	e.mu.Lock()
+	defer e.mu.Unlock()
+	if slug == "" {
+		e.musicRunner = nil
+		e.musicPreset = ""
+		return nil
+	}
+	p, err := preset.Builtin(slug)
+	if err != nil {
+		return err
+	}
+	e.musicRunner = preset.NewRunner(p, channels, positions, e.musicFrame)
+	e.musicPreset = slug
+	return nil
+}
+
+// MusicPreset returns the active music preset slug, or "" while screen sync
+// drives the output.
+func (e *Engine) MusicPreset() string {
+	e.mu.Lock()
+	defer e.mu.Unlock()
+	return e.musicPreset
+}
+
+// MusicLayout derives the light→channel and light→position maps a preset
+// runner needs, from the current area's zone layout. Returns nil maps when
+// no area is selected — activation then still succeeds, but paints nothing
+// until one is.
+func (e *Engine) MusicLayout() (channels map[string]uint8, positions map[string]preset.Pos3) {
+	e.mu.Lock()
+	defer e.mu.Unlock()
+	posByChannel := make(map[uint8]hue.Position, len(e.areaCfg.Channels))
+	for _, ch := range e.areaCfg.Channels {
+		posByChannel[ch.ChannelID] = ch.Position
+	}
+	channels = make(map[string]uint8, len(e.zones))
+	positions = make(map[string]preset.Pos3, len(e.zones))
+	for _, z := range e.zones {
+		if z.LightRID == "" {
+			continue
+		}
+		channels[z.LightRID] = z.ChannelID
+		if p, ok := posByChannel[z.ChannelID]; ok {
+			positions[z.LightRID] = preset.Pos3{X: p.X, Y: p.Y, Z: p.Z}
+		}
+	}
+	if len(channels) == 0 {
+		return nil, nil
+	}
+	return channels, positions
+}
+
 // SetFrame is called by the server layer with every grid received from the
 // browser tab designated as the frame source. It only updates state; the
 // output loop, on its own ticker, is what decides when to act on it.
@@ -353,16 +435,29 @@ func (e *Engine) tick(now time.Time) {
 	settings := e.settings
 	features := e.lightFeature
 	stream := e.stream
+	musicRunner := e.musicRunner
 	e.mu.Unlock()
 
-	if stream == nil || len(zones) == 0 {
+	if stream == nil {
 		return
 	}
 
-	raw := make(map[uint8]pipeline.LinearColor, len(zones))
-	for _, z := range zones {
-		r, g, b := pipeline.SampleZoneLinear(grid, mask, z)
-		raw[z.ChannelID] = pipeline.LinearColor{R: r, G: g, B: b}
+	// Two input paths share one output clock (DP-8): an active music preset
+	// replaces the grid as the color source (screen sync is "paused"; a
+	// blend mode is Phase 4). Zones are still what names the channels, so
+	// the per-channel processing below is unchanged either way.
+	var raw map[uint8]pipeline.LinearColor
+	if musicRunner != nil {
+		raw = musicRunner.Step(now)
+	} else {
+		if len(zones) == 0 {
+			return
+		}
+		raw = make(map[uint8]pipeline.LinearColor, len(zones))
+		for _, z := range zones {
+			r, g, b := pipeline.SampleZoneLinear(grid, mask, z)
+			raw[z.ChannelID] = pipeline.LinearColor{R: r, G: g, B: b}
+		}
 	}
 
 	smoothed := e.smoother.Step(raw, now, settings.Reactivity)
@@ -446,6 +541,7 @@ func (e *Engine) snapshotLocked(zones []pipeline.Zone, colors map[uint8][3]byte)
 		GridW:           gridW(e.grid),
 		GridH:           gridH(e.grid),
 		Settings:        e.settings,
+		MusicPreset:     e.musicPreset,
 		Zones:           zs,
 	}
 }

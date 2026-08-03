@@ -270,8 +270,13 @@
       <button type="button" id="music-toggle" data-i18n="music.start">Start mic capture</button>
       <span id="music-status" class="hint"></span>
     </div>
+    <div class="record-row">
+      <label for="music-preset" data-i18n="music.preset">Preset</label>
+      <select id="music-preset" disabled></select>
+    </div>
     <p class="hint" data-i18n="music.hint">
       Captures the microphone and streams audio analysis to the engine.
+      A preset turns that analysis into light output.
     </p>
     <canvas id="music-spectrum" width="600" height="90" hidden></canvas>
   </section>

@@ -137,7 +137,11 @@
     "stop": "Zastavit",
     "idle": "Nesnímá",
     "capturing": "Snímá — {n} snímků",
-    "error": "Nelze spustit snímání mikrofonu"
+    "error": "Nelze spustit snímání mikrofonu",
+    "preset": "Preset",
+    "presetOff": "Vypnuto",
+    "presetBassPulse": "Bass Pulse",
+    "presetChillAmbient": "Chill Ambient"
   },
   "settings": {
     "heading": "Nastavení",

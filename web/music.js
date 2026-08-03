@@ -21,7 +21,16 @@
     toggleBtn: document.getElementById('music-toggle'),
     status: document.getElementById('music-status'),
     spectrum: document.getElementById('music-spectrum'),
+    preset: document.getElementById('music-preset'),
   };
+
+  // Built-in presets, keyed by the slug the server knows (engine
+  // ActivateMusic). Slugs are stable; labels are translated.
+  const PRESETS = [
+    { slug: '', key: 'music.presetOff' },
+    { slug: 'bass_pulse', key: 'music.presetBassPulse' },
+    { slug: 'chill_ambient', key: 'music.presetChillAmbient' },
+  ];
 
   let send = null;    // binary frames — wired by init() to the page's WS send
   let control = null; // JSON control messages, e.g. music_stop
@@ -181,6 +190,18 @@
     if (running) previewRAF = requestAnimationFrame(drawPreview);
   }
 
+  function renderPresetOptions() {
+    const value = musicEls.preset.value;
+    musicEls.preset.innerHTML = '';
+    for (const p of PRESETS) {
+      const opt = document.createElement('option');
+      opt.value = p.slug;
+      opt.textContent = t(p.key);
+      musicEls.preset.appendChild(opt);
+    }
+    musicEls.preset.value = value;
+  }
+
   function render() {
     musicEls.toggleBtn.textContent = t(running ? 'music.stop' : 'music.start');
     musicEls.toggleBtn.classList.toggle('recording', running);
@@ -188,6 +209,10 @@
       ? t('music.capturing', { n: frameCount })
       : t('music.idle');
   }
+
+  musicEls.preset.addEventListener('change', () => {
+    if (control) control({ type: 'music_preset', preset: musicEls.preset.value });
+  });
 
   musicEls.toggleBtn.addEventListener('click', async () => {
     if (running) { stopCapture(); return; }
@@ -201,17 +226,36 @@
     }
   });
 
-  document.addEventListener('huemux:langchange', render);
+  document.addEventListener('huemux:langchange', () => {
+    renderPresetOptions();
+    render();
+  });
 
   window.HueMuxMusic = {
-    // init wires the WebSocket send function and arms the toggle. Takes an
-    // options object (send) so future options do not change the call shape.
-    // Called from the page's own script, which owns the connection
-    // (AGENTS.md: each page opens its own WS).
-    init(opts) { send = opts.send; control = opts.control || null; render(); },
+    // init wires the WebSocket senders and arms the controls. Takes an
+    // options object (send/control) so future options do not change the
+    // call shape. Called from the page's own script, which owns the
+    // connection (AGENTS.md: each page opens its own WS).
+    init(opts) {
+      send = opts.send;
+      control = opts.control || null;
+      renderPresetOptions();
+      render();
+    },
     stop() { stopCapture(); },
     isRunning: () => running,
+    // onStatus reconciles the preset control with the server's view: the
+    // engine is the authority on what runs (another tab, a restart, or a
+    // rejected slug all leave the select wrong), and only a paired engine
+    // can run presets at all.
+    onStatus(msg) {
+      if (!msg) return;
+      musicEls.preset.disabled = !msg.paired;
+      const slug = msg.snapshot ? msg.snapshot.MusicPreset : '';
+      if (musicEls.preset.value !== (slug || '')) musicEls.preset.value = slug || '';
+    },
   };
 
+  renderPresetOptions();
   render();
 })();

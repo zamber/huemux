@@ -132,12 +132,16 @@
   },
   "music": {
     "heading": "Reakcja na muzykę",
-    "hint": "Przechwytuje mikrofon i przesyła analizę audio do silnika.",
+    "hint": "Przechwytuje mikrofon i przesyła analizę audio do silnika. Preset zamienia tę analizę na światło.",
     "start": "Start przechwytywania mikrofonu",
     "stop": "Zatrzymaj",
     "idle": "Brak przechwytywania",
     "capturing": "Przechwytuje — {n} klatek",
-    "error": "Nie udało się uruchomić przechwytywania mikrofonu"
+    "error": "Nie udało się uruchomić przechwytywania mikrofonu",
+    "preset": "Preset",
+    "presetOff": "Wyłączony",
+    "presetBassPulse": "Bass Pulse",
+    "presetChillAmbient": "Chill Ambient"
   },
   "settings": {
     "heading": "Ustawienia",

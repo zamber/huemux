@@ -137,7 +137,11 @@
     "stop": "Stoppen",
     "idle": "Niet aan het opnemen",
     "capturing": "Opnemen — {n} frames",
-    "error": "Kan microfoonopname niet starten"
+    "error": "Kan microfoonopname niet starten",
+    "preset": "Voorinstelling",
+    "presetOff": "Uit",
+    "presetBassPulse": "Bass Pulse",
+    "presetChillAmbient": "Chill Ambient"
   },
   "settings": {
     "heading": "Instellingen",

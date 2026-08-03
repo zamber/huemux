@@ -137,7 +137,11 @@
     "stop": "停止",
     "idle": "未在捕获",
     "capturing": "捕获中 — {n} 帧",
-    "error": "无法启动麦克风捕获"
+    "error": "无法启动麦克风捕获",
+    "preset": "预设",
+    "presetOff": "关闭",
+    "presetBassPulse": "Bass Pulse",
+    "presetChillAmbient": "Chill Ambient"
   },
   "settings": {
     "heading": "设置",

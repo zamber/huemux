@@ -137,7 +137,11 @@
     "stop": "Stoppa",
     "idle": "Spelar inte in",
     "capturing": "Spelar in — {n} bildrutor",
-    "error": "Det gick inte att starta mikrofoninspelningen"
+    "error": "Det gick inte att starta mikrofoninspelningen",
+    "preset": "Förinställning",
+    "presetOff": "Av",
+    "presetBassPulse": "Bass Pulse",
+    "presetChillAmbient": "Chill Ambient"
   },
   "settings": {
     "heading": "Inställningar",

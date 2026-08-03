@@ -137,7 +137,11 @@
     "stop": "중지",
     "idle": "캡처 중 아님",
     "capturing": "캡처 중 — {n}프레임",
-    "error": "마이크 캡처를 시작할 수 없습니다"
+    "error": "마이크 캡처를 시작할 수 없습니다",
+    "preset": "프리셋",
+    "presetOff": "끔",
+    "presetBassPulse": "Bass Pulse",
+    "presetChillAmbient": "Chill Ambient"
   },
   "settings": {
     "heading": "설정",

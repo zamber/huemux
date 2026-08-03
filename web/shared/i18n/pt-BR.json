@@ -137,7 +137,11 @@
     "stop": "Parar",
     "idle": "Sem captura",
     "capturing": "Capturando — {n} quadros",
-    "error": "Não foi possível iniciar a captura do microfone"
+    "error": "Não foi possível iniciar a captura do microfone",
+    "preset": "Preset",
+    "presetOff": "Desligado",
+    "presetBassPulse": "Bass Pulse",
+    "presetChillAmbient": "Chill Ambient"
   },
   "settings": {
     "heading": "Configurações",

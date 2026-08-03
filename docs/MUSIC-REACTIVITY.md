@@ -406,11 +406,15 @@ No lights change yet. The analysis values appear in the browser UI.
 - [x] FFT data sent over WebSocket to Go at ~30 Hz (binary frame, `0x02`
       type byte, interleaved `float32`) — `internal/music.ParseFrame`,
       surfaced in the status push as `music.{active,frames,fft,wave}`
-- [ ] Go-side `BeatDetector` primitive (energy-based onset detection)
-- [ ] Go-side `FreqBands` primitive (bass/mid/treble split)
+- [x] Go-side `BeatDetector` primitive (energy-based onset detection) —
+      `internal/preset/analysis.go`, plan's algorithm + beat hold so the
+      25 Hz effect clock reliably samples ~30 Hz onsets
+- [x] Go-side `FreqBands` primitive (bass/mid/treble split)
 - [ ] Browser UI: live FFT spectrum, beat indicator, BPM display
-- [ ] Go-side preset engine: load a preset JSON, instantiate primitives,
-      run the graph each tick
+      (the mini FFT strip ships; the full visualization is later)
+- [x] Go-side preset engine: load a preset JSON, instantiate primitives,
+      run the graph each tick — `internal/preset`, wired into the engine's
+      output loop (`music_preset` WS message, `MusicPreset` in the status)
 
 **Exit test:** Clap your hands near the mic → beat indicator flashes.
 Play a song → BPM estimate stabilizes within 5 seconds. Frequency bars
@@ -421,20 +425,23 @@ move in sync with the music.
 **Goal:** Turn analysis features into actual light changes. First
 presets ship.
 
-- [ ] `brightness_energy` — map energy to brightness per light
-- [ ] `color_map_energy` — map energy to hue in a palette
-- [ ] `color_map_frequency` — map bass/mid/treble to assigned colors
-- [ ] `strobe_beat` — flash a light on beat detection
-- [ ] `chase_trigger` — advance activation through lights on trigger
-- [ ] `pulse_energy` — brightness pulse expanding from a center light
-- [ ] Routing primitives: `all_lights`, `light_group`, `threshold_gate`
-- [ ] Modulation: `smoother` (reuse existing `internal/pipeline/smooth.go`),
-      `adsr_envelope` (new)
+- [x] `brightness_energy` — map energy to brightness per light
+- [x] `color_map_energy` — map energy to hue in a palette
+- [x] `color_map_frequency` — map bass/mid/treble to assigned colors
+- [x] `strobe_beat` — flash a light on beat detection
+- [x] `chase_trigger` — advance activation through lights on trigger
+- [x] `pulse_energy` — brightness pulse expanding from a center light
+- [x] Routing primitives: `all_lights`, `light_group`, `threshold_gate`
+- [x] Modulation: `smoother` (scalar counterpart of
+      `internal/pipeline/smooth.go`'s time-constant math), `adsr_envelope`,
+      plus `lfo` (Chill Ambient's cycling needs it) — all Phase 2
+      primitives landed 2026-08-03 in `internal/preset/`
 
 **Exit test:** Load "Bass Pulse" preset → bass frequencies drive
 brightness on selected lights, beat triggers a strobe flash. Load
 "Chill Ambient" preset → slow color cycling, no strobe, smooth
-transitions.
+transitions. (Presets ship with `light_ids: []` = all lights, since
+RIDs are bridge-specific; a per-user light picker arrives with Phase 3.)
 
 ### Phase 3 — Preset Builder & Gallery (Milestone: "build a preset without editing JSON")
 

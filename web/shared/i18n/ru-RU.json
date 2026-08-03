@@ -137,7 +137,11 @@
     "stop": "Остановить",
     "idle": "Не захватывает",
     "capturing": "Захват — {n} кадров",
-    "error": "Не удалось запустить захват микрофона"
+    "error": "Не удалось запустить захват микрофона",
+    "preset": "Пресет",
+    "presetOff": "Выкл",
+    "presetBassPulse": "Bass Pulse",
+    "presetChillAmbient": "Chill Ambient"
   },
   "settings": {
     "heading": "Параметры",

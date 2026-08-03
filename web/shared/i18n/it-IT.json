@@ -137,7 +137,11 @@
     "stop": "Ferma",
     "idle": "Nessuna cattura",
     "capturing": "Cattura in corso — {n} fotogrammi",
-    "error": "Impossibile avviare la cattura del microfono"
+    "error": "Impossibile avviare la cattura del microfono",
+    "preset": "Preset",
+    "presetOff": "Spento",
+    "presetBassPulse": "Bass Pulse",
+    "presetChillAmbient": "Chill Ambient"
   },
   "settings": {
     "heading": "Impostazioni",

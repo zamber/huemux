@@ -137,7 +137,11 @@
     "stop": "Oprește",
     "idle": "Nu captează",
     "capturing": "Captează — {n} cadre",
-    "error": "Nu s-a putut porni captura microfonului"
+    "error": "Nu s-a putut porni captura microfonului",
+    "preset": "Preset",
+    "presetOff": "Oprit",
+    "presetBassPulse": "Bass Pulse",
+    "presetChillAmbient": "Chill Ambient"
   },
   "settings": {
     "heading": "Setări",

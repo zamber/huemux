@@ -132,12 +132,16 @@
   },
   "music": {
     "heading": "Music reactivity",
-    "hint": "Captures the microphone and streams audio analysis to the engine.",
+    "hint": "Captures the microphone and streams audio analysis to the engine. A preset turns that analysis into light output.",
     "start": "Start mic capture",
     "stop": "Stop",
     "idle": "Not capturing",
     "capturing": "Capturing — {n} frames",
-    "error": "Could not start microphone capture"
+    "error": "Could not start microphone capture",
+    "preset": "Preset",
+    "presetOff": "Off",
+    "presetBassPulse": "Bass Pulse",
+    "presetChillAmbient": "Chill Ambient"
   },
   "settings": {
     "heading": "Settings",

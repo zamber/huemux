@@ -137,7 +137,11 @@
     "stop": "Stop",
     "idle": "Optager ikke",
     "capturing": "Optager — {n} frames",
-    "error": "Kunne ikke starte mikrofonoptagelse"
+    "error": "Kunne ikke starte mikrofonoptagelse",
+    "preset": "Preset",
+    "presetOff": "Fra",
+    "presetBassPulse": "Bass Pulse",
+    "presetChillAmbient": "Chill Ambient"
   },
   "settings": {
     "heading": "Indstillinger",

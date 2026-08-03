@@ -126,6 +126,9 @@ function handleControlMessage(msg) {
   // Status is one of the two inputs to the button state, so re-render it here
   // rather than only where this page changes its own mind.
   renderSyncButtons();
+  // The music panel's preset control follows the server's view of what is
+  // actually running (see HueMuxMusic.onStatus).
+  if (typeof HueMuxMusic !== 'undefined') HueMuxMusic.onStatus(msg);
   // Another connected client (a second tab, or the desktop app running
   // alongside a browser tab) can be the one actually holding the frame
   // source — this client would otherwise show a perfectly normal-looking

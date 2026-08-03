@@ -137,7 +137,11 @@
     "stop": "Pysäytä",
     "idle": "Ei kaappausta",
     "capturing": "Kaapataan — {n} kuvaa",
-    "error": "Mikrofonin kaappausta ei voitu käynnistää"
+    "error": "Mikrofonin kaappausta ei voitu käynnistää",
+    "preset": "Esiasetus",
+    "presetOff": "Pois päältä",
+    "presetBassPulse": "Bass Pulse",
+    "presetChillAmbient": "Chill Ambient"
   },
   "settings": {
     "heading": "Asetukset",

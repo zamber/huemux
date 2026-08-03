@@ -137,7 +137,11 @@
     "stop": "Berhenti",
     "idle": "Tidak menangkap",
     "capturing": "Menangkap — {n} bingkai",
-    "error": "Tidak dapat memulai tangkapan mikrofon"
+    "error": "Tidak dapat memulai tangkapan mikrofon",
+    "preset": "Preset",
+    "presetOff": "Mati",
+    "presetBassPulse": "Bass Pulse",
+    "presetChillAmbient": "Chill Ambient"
   },
   "settings": {
     "heading": "Pengaturan",
