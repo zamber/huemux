@@ -74,7 +74,7 @@ func TestTone(bpm float64, freqHz float64, phase int) Frame {
 func TestToneSource(bpm float64, freqHz float64) func() (Frame, bool) {
 	phase := 0
 	ticker := time.NewTicker(time.Second / 30) // ~30 fps
-	_ = ticker // for future rate-limiting; currently caller-driven
+	_ = ticker                                 // for future rate-limiting; currently caller-driven
 	return func() (Frame, bool) {
 		f := TestTone(bpm, freqHz, phase)
 		phase++

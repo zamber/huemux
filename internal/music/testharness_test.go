@@ -24,10 +24,10 @@ func TestTestToneShape(t *testing.T) {
 		}
 	}
 
-// At 120 BPM (2 Hz), the beat envelope is: early frames (phase 0-4)
-// have higher energy than trough frames (phase ~11-15) because the sine
-// envelope starts at 0, peaks at quarter-cycle, and dips at three-quarter cycle.
-// We compare a peak region against a trough region.
+	// At 120 BPM (2 Hz), the beat envelope is: early frames (phase 0-4)
+	// have higher energy than trough frames (phase ~11-15) because the sine
+	// envelope starts at 0, peaks at quarter-cycle, and dips at three-quarter cycle.
+	// We compare a peak region against a trough region.
 	peak := bassSum(frames, 3, 7)
 	trough := bassSum(frames, 11, 15)
 	if peak <= trough {
