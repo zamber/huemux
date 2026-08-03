@@ -141,12 +141,10 @@
     "auth": "المصادقة",
     "authHint": "ثلاث كلمات سهلة التذكر. الاتصالات من هذا الكمبيوتر لا يتم السؤال عنها أبدا.",
     "tokenPlaceholder": "على سبيل المثال otter.beacon.willow.cougar",
-    "tokenSet": "(دون تغيير — اكتب للاستبدال)",
     "generate": "توليد",
     "tls": "TLS",
     "tlsHint": "HueMux لا يحصل على شهادات. \"الملفات\" تستخدم الملفات التي توفرها — من Tailscale أو مجالك الخاص.",
     "saved": "تم الحفظ.",
-    "savedRestart": "تم الحفظ — أعد تشغيل HueMux ليصبح ساريا.",
     "loadFailed": "فشل تحميل الإعدادات: ",
     "diagnostics": "التشخيصات",
     "diagnosticsHint": "يجمع الإصدار والتكوين وحالة الاتصال والسجلات الأخيرة في ملف واحد. أرفقه بتقرير خطأ — إنها الطريقة الأسرع لفهم المشكلة. لا تتضمن أبدا رمز المصادقة token.",
@@ -177,7 +175,12 @@
     "directionAuto": "اتبع اللغة",
     "directionLtr": "من اليسار إلى اليمين",
     "directionRtl": "من اليمين إلى اليسار",
-    "directionHint": "عادة يتبع اللغة — العربية فقط من اليمين إلى اليسار. فرضه لفحص التخطيط المعكوس دون الحاجة إلى قراءة اللغة المرتبطة به."
+    "directionHint": "عادة يتبع اللغة — العربية فقط من اليمين إلى اليسار. فرضه لفحص التخطيط المعكوس دون الحاجة إلى قراءة اللغة المرتبطة به.",
+    "copied": "Copied.",
+    "reconnecting": "Reconnecting to new address…",
+    "shareLabel": "Share control on local network",
+    "shareUrls": "Reachable at:",
+    "tokenSave": "Save token"
   },
   "auth": {
     "heading": "Enter your access token",

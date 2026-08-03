@@ -141,12 +141,10 @@
     "auth": "Todennus",
     "authHint": "Kolme helposti muistettavaa sanaa. Yhteydet tältä koneelta eivät koskaan kysy sitä.",
     "tokenPlaceholder": "esim. otter.beacon.willow.cougar",
-    "tokenSet": "(muuttumaton — kirjoita korvataksesi)",
     "generate": "Luo",
     "tls": "TLS",
     "tlsHint": "HueMux ei hanki varmenteita. \"files\" käyttää niitä, jotka toimitat — Tailscalesta tai omasta verkkotunnuksesta.",
     "saved": "Tallennettu.",
-    "savedRestart": "Tallennettu — käynnistä HueMux uudelleen ottaaksesi muutokset käyttöön.",
     "loadFailed": "Ei voitu ladata asetuksia: ",
     "diagnostics": "Diagnostiikka",
     "diagnosticsHint": "Kerää version, konfiguraation, yhteyden tilan ja viimeaikaiset lokit yhteen tiedostoon. Liitä se virheilmoitukseen — se on nopein tapa saada ongelma ymmärretyksi. Ei koskaan sisällä todentamistokenin.",
@@ -177,7 +175,12 @@
     "directionAuto": "Seuraa kieltä",
     "directionLtr": "Vasemmalta oikealle",
     "directionRtl": "Oikealta vasemmalle",
-    "directionHint": "Yleensä seuraa kieltä — vain arabia on oikealta vasemmalle. Pakottaminen on peilatun asettelun tarkastamista varten tarvitsematta lukea siihen liittyvää kieltä."
+    "directionHint": "Yleensä seuraa kieltä — vain arabia on oikealta vasemmalle. Pakottaminen on peilatun asettelun tarkastamista varten tarvitsematta lukea siihen liittyvää kieltä.",
+    "copied": "Copied.",
+    "reconnecting": "Reconnecting to new address…",
+    "shareLabel": "Share control on local network",
+    "shareUrls": "Reachable at:",
+    "tokenSave": "Save token"
   },
   "auth": {
     "heading": "Enter your access token",

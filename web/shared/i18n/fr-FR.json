@@ -141,12 +141,10 @@
     "auth": "Authentification",
     "authHint": "Trois mots faciles à retenir. Les connexions depuis cette machine ne les demandent jamais.",
     "tokenPlaceholder": "ex. otter.beacon.willow.cougar",
-    "tokenSet": "(inchangé — tapez pour remplacer)",
     "generate": "Générer",
     "tls": "TLS",
     "tlsHint": "HueMux n'obtient pas de certificats. « files » utilise ceux que vous fournissez — de Tailscale ou votre propre domaine.",
     "saved": "Enregistré.",
-    "savedRestart": "Enregistré — redémarrez HueMux pour que ce changement prenne effet.",
     "loadFailed": "Impossible de charger les paramètres : ",
     "diagnostics": "Diagnostics",
     "diagnosticsHint": "Collecte la version, la configuration, l'état de la connexion et les journaux récents dans un seul fichier. Joignez-le à un rapport de bug — c'est le moyen le plus rapide pour qu'un problème soit compris. N'inclut jamais votre token d'authentification.",
@@ -177,7 +175,12 @@
     "directionAuto": "Suivre la langue",
     "directionLtr": "De gauche à droite",
     "directionRtl": "De droite à gauche",
-    "directionHint": "Suit normalement la langue — seul l'arabe s'écrit de droite à gauche. La forcer sert à vérifier que la mise en page en miroir est correcte sans avoir à lire la langue à laquelle elle appartient."
+    "directionHint": "Suit normalement la langue — seul l'arabe s'écrit de droite à gauche. La forcer sert à vérifier que la mise en page en miroir est correcte sans avoir à lire la langue à laquelle elle appartient.",
+    "copied": "Copied.",
+    "reconnecting": "Reconnecting to new address…",
+    "shareLabel": "Share control on local network",
+    "shareUrls": "Reachable at:",
+    "tokenSave": "Save token"
   },
   "auth": {
     "heading": "Enter your access token",

@@ -141,12 +141,10 @@
     "auth": "인증",
     "authHint": "기억하기 쉬운 세 단어입니다. 이 컴퓨터에서의 연결은 절대 요청하지 않습니다.",
     "tokenPlaceholder": "예: otter.beacon.willow.cougar",
-    "tokenSet": "(변경 없음 — 교체하려면 입력)",
     "generate": "생성",
     "tls": "TLS",
     "tlsHint": "HueMux는 인증서를 획득하지 않습니다. \"files\"는 사용자가 제공한 것 (Tailscale 또는 자체 도메인)을 사용합니다.",
     "saved": "저장됨.",
-    "savedRestart": "저장됨 — 적용하려면 HueMux를 다시 시작하세요.",
     "loadFailed": "설정을 로드할 수 없습니다: ",
     "diagnostics": "진단",
     "diagnosticsHint": "버전, 구성, 연결 상태 및 최근 로그를 한 파일로 수집합니다. 버그 보고서에 첨부하세요 — 이것이 문제를 이해하는 가장 빠른 방법입니다. 인증 토큰을 포함하지 않습니다.",
@@ -177,7 +175,12 @@
     "directionAuto": "언어를 따름",
     "directionLtr": "왼쪽에서 오른쪽",
     "directionRtl": "오른쪽에서 왼쪽",
-    "directionHint": "일반적으로 언어를 따릅니다 — 아랍어만 오른쪽에서 왼쪽입니다. 강제 설정은 언어를 읽지 않고 미러 레이아웃이 올바른지 확인하기 위한 것입니다."
+    "directionHint": "일반적으로 언어를 따릅니다 — 아랍어만 오른쪽에서 왼쪽입니다. 강제 설정은 언어를 읽지 않고 미러 레이아웃이 올바른지 확인하기 위한 것입니다.",
+    "copied": "Copied.",
+    "reconnecting": "Reconnecting to new address…",
+    "shareLabel": "Share control on local network",
+    "shareUrls": "Reachable at:",
+    "tokenSave": "Save token"
   },
   "auth": {
     "heading": "Enter your access token",

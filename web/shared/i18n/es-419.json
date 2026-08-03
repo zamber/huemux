@@ -141,12 +141,10 @@
     "auth": "Autenticación",
     "authHint": "Tres palabras fáciles de recordar. Las conexiones desde esta computadora nunca las piden.",
     "tokenPlaceholder": "p. ej. otter.beacon.willow.cougar",
-    "tokenSet": "(sin cambios — escribe para reemplazar)",
     "generate": "Generar",
     "tls": "TLS",
     "tlsHint": "HueMux no obtiene certificados. «files» usa los que suministres — de Tailscale o tu propio dominio.",
     "saved": "Guardado.",
-    "savedRestart": "Guardado — reinicia HueMux para que esto surta efecto.",
     "loadFailed": "No se pudo cargar la configuración: ",
     "diagnostics": "Diagnósticos",
     "diagnosticsHint": "Recopila la versión, configuración, estado de conexión y registro reciente en un archivo. Adjúntalo a un informe de fallo — es la forma más rápida de que se entienda un problema. Nunca incluye tu token de autenticación.",
@@ -177,7 +175,12 @@
     "directionAuto": "Según el idioma",
     "directionLtr": "De izquierda a derecha",
     "directionRtl": "De derecha a izquierda",
-    "directionHint": "Normalmente sigue al idioma — solo el árabe va de derecha a izquierda. Forzarlo es para comprobar que el diseño reflejado es correcto sin tener que leer el idioma al que pertenece."
+    "directionHint": "Normalmente sigue al idioma — solo el árabe va de derecha a izquierda. Forzarlo es para comprobar que el diseño reflejado es correcto sin tener que leer el idioma al que pertenece.",
+    "copied": "Copied.",
+    "reconnecting": "Reconnecting to new address…",
+    "shareLabel": "Share control on local network",
+    "shareUrls": "Reachable at:",
+    "tokenSave": "Save token"
   },
   "auth": {
     "heading": "Enter your access token",

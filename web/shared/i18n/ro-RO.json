@@ -141,12 +141,10 @@
     "auth": "Autentificare",
     "authHint": "Trei cuvinte ușor de reținut. Conexiunile de pe acest calculator nu vi se cer niciodată.",
     "tokenPlaceholder": "de ex. otter.beacon.willow.cougar",
-    "tokenSet": "(neschimbat — tastați pentru a înlocui)",
     "generate": "Generează",
     "tls": "TLS",
     "tlsHint": "HueMux nu obține certificate. \"files\" folosește pe cele pe care le furnizați — din Tailscale sau domeniu propriu.",
     "saved": "Salvat.",
-    "savedRestart": "Salvat — reporniți HueMux pentru ca aceasta să aibă efect.",
     "loadFailed": "Nu s-au putut încărca setările: ",
     "diagnostics": "Diagnostică",
     "diagnosticsHint": "Colectează versiunea, configurația, starea conexiunii și jurnalele recente într-un singur fișier. Atașați-l la un raport de eroare — este cel mai rapid mod de a înțelege o problemă. Nu include niciodată tokenul dvs de autentificare.",
@@ -177,7 +175,12 @@
     "directionAuto": "Urmăriți limba",
     "directionLtr": "De la stânga la dreapta",
     "directionRtl": "De la dreapta la stânga",
-    "directionHint": "De obicei urmărește limba — doar arabii este scris de la dreapta la stânga. Forțarea acesteia este pentru verificarea aspectului oglinzit fără a fi nevoie să înțelegi limba din care face parte."
+    "directionHint": "De obicei urmărește limba — doar arabii este scris de la dreapta la stânga. Forțarea acesteia este pentru verificarea aspectului oglinzit fără a fi nevoie să înțelegi limba din care face parte.",
+    "copied": "Copied.",
+    "reconnecting": "Reconnecting to new address…",
+    "shareLabel": "Share control on local network",
+    "shareUrls": "Reachable at:",
+    "tokenSave": "Save token"
   },
   "auth": {
     "heading": "Enter your access token",

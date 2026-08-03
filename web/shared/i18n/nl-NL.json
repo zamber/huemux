@@ -141,12 +141,10 @@
     "auth": "Verificatie",
     "authHint": "Drie gemakkelijk te onthouden woorden. Verbindingen van deze computer vragen hier nooit om.",
     "tokenPlaceholder": "bijv. otter.beacon.willow.cougar",
-    "tokenSet": "(ongewijzigd — typ om te vervangen)",
     "generate": "Genereer",
     "tls": "TLS",
     "tlsHint": "HueMux verkrijgt geen certificaten. \"Bestanden\" gebruikt de certificaten die u opgeeft — van Tailscale of uw eigen domein.",
     "saved": "Opgeslagen.",
-    "savedRestart": "Opgeslagen — start HueMux opnieuw om deze wijziging van kracht te laten worden.",
     "loadFailed": "Kan instellingen niet laden: ",
     "diagnostics": "Diagnostische gegevens",
     "diagnosticsHint": "Verzamelt de versie, configuratie, verbindingsstatus en recente logboeken in één bestand. Voeg het toe aan een foutenrapport — dit is de snelste manier om een probleem te begrijpen. Bevat nooit uw verificatie-token.",
@@ -177,7 +175,12 @@
     "directionAuto": "Volg de taal",
     "directionLtr": "Van links naar rechts",
     "directionRtl": "Van rechts naar links",
-    "directionHint": "Volgt normaliter de taal — alleen Arabisch gaat van rechts naar links. Dit forceren dient om te controleren of de gespiegelde indeling correct is zonder de bijbehorende taal te hoeven lezen."
+    "directionHint": "Volgt normaliter de taal — alleen Arabisch gaat van rechts naar links. Dit forceren dient om te controleren of de gespiegelde indeling correct is zonder de bijbehorende taal te hoeven lezen.",
+    "copied": "Copied.",
+    "reconnecting": "Reconnecting to new address…",
+    "shareLabel": "Share control on local network",
+    "shareUrls": "Reachable at:",
+    "tokenSave": "Save token"
   },
   "auth": {
     "heading": "Enter your access token",

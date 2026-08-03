@@ -141,12 +141,10 @@
     "auth": "Autentikasi",
     "authHint": "Tiga kata yang mudah diingat. Koneksi dari mesin ini tidak pernah diminta.",
     "tokenPlaceholder": "mis. otter.beacon.willow.cougar",
-    "tokenSet": "(tidak berubah — ketik untuk ganti)",
     "generate": "Hasilkan",
     "tls": "TLS",
     "tlsHint": "HueMux tidak mendapatkan sertifikat. \"file\" menggunakan yang Anda sediakan — dari Tailscale, atau domain Anda sendiri.",
     "saved": "Disimpan.",
-    "savedRestart": "Disimpan — mulai ulang HueMux agar berlaku.",
     "loadFailed": "Tidak dapat memuat pengaturan: ",
     "diagnostics": "Diagnostik",
     "diagnosticsHint": "Mengumpulkan versi, konfigurasi, status koneksi, dan log terakhir ke satu file. Lampirkan ke laporan bug — ini adalah cara tercepat untuk memahami masalah. Tidak pernah termasuk token autentikasi Anda.",
@@ -177,7 +175,12 @@
     "directionAuto": "Ikuti bahasa",
     "directionLtr": "Kiri ke kanan",
     "directionRtl": "Kanan ke kiri",
-    "directionHint": "Biasanya mengikuti bahasa — hanya bahasa Arab yang kanan ke kiri. Memaksanya adalah untuk memeriksa bahwa tata letak cermin benar tanpa perlu membaca bahasa yang terkait dengannya."
+    "directionHint": "Biasanya mengikuti bahasa — hanya bahasa Arab yang kanan ke kiri. Memaksanya adalah untuk memeriksa bahwa tata letak cermin benar tanpa perlu membaca bahasa yang terkait dengannya.",
+    "copied": "Copied.",
+    "reconnecting": "Reconnecting to new address…",
+    "shareLabel": "Share control on local network",
+    "shareUrls": "Reachable at:",
+    "tokenSave": "Save token"
   },
   "auth": {
     "heading": "Enter your access token",

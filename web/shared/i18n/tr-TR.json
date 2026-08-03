@@ -141,12 +141,10 @@
     "auth": "Kimlik doğrulama",
     "authHint": "Hatırlanması kolay üç kelime. Bu makineden gelen bağlantılar asla istemez.",
     "tokenPlaceholder": "ör. otter.beacon.willow.cougar",
-    "tokenSet": "(değişmedi — değiştirmek için yazın)",
     "generate": "Oluştur",
     "tls": "TLS",
     "tlsHint": "HueMux sertifika almaz. \"files\" sağladığınızları kullanır — Tailscale'den veya kendi alanınızdan.",
     "saved": "Kaydedildi.",
-    "savedRestart": "Kaydedildi — bunun etkili olması için HueMux'u yeniden başlatın.",
     "loadFailed": "Ayarlar yüklenemedi: ",
     "diagnostics": "Tanılama",
     "diagnosticsHint": "Sürüm, yapılandırma, bağlantı durumu ve son günlükleri bir dosyaya toplar. Bir hata raporuna ekleyin — bir sorunu anlamanın en hızlı yoludur. Kimlik doğrulama token'inizi asla içermez.",
@@ -177,7 +175,12 @@
     "directionAuto": "Dili izle",
     "directionLtr": "Soldan sağa",
     "directionRtl": "Sağdan sola",
-    "directionHint": "Normalde dili izler — yalnızca Arapça sağdan sola yazılır. Bunu zorlamak, aynı dili okumak zorunda kalmadan yansıtılmış düzenin doğru olup olmadığını kontrol etmek içindir."
+    "directionHint": "Normalde dili izler — yalnızca Arapça sağdan sola yazılır. Bunu zorlamak, aynı dili okumak zorunda kalmadan yansıtılmış düzenin doğru olup olmadığını kontrol etmek içindir.",
+    "copied": "Copied.",
+    "reconnecting": "Reconnecting to new address…",
+    "shareLabel": "Share control on local network",
+    "shareUrls": "Reachable at:",
+    "tokenSave": "Save token"
   },
   "auth": {
     "heading": "Enter your access token",

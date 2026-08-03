@@ -141,12 +141,10 @@
     "auth": "Ověřování",
     "authHint": "Tři lehce zapamatovatelná slova. Připojení z tohoto počítače o něj nikdy nepožádáno.",
     "tokenPlaceholder": "např. otter.beacon.willow.cougar",
-    "tokenSet": "(beze změn — zadejte pro výměnu)",
     "generate": "Vytvořit",
     "tls": "TLS",
     "tlsHint": "HueMux nezískává certifikáty. \"files\" používá ty, které poskytnete — z Tailscale nebo vlastní domény.",
     "saved": "Uloženo.",
-    "savedRestart": "Uloženo — restartujte HueMux, aby se změny projevily.",
     "loadFailed": "Nelze načíst nastavení: ",
     "diagnostics": "Diagnostika",
     "diagnosticsHint": "Shromažďuje verzi, konfiguraci, stav připojení a nedávné protokoly do jednoho souboru. Přiložte jej k hlášení chyby — je to nejrychlejší způsob, jak pochopit problém. Nikdy neobsahuje váš autentizační token.",
@@ -177,7 +175,12 @@
     "directionAuto": "Sledovat jazyk",
     "directionLtr": "Zleva doprava",
     "directionRtl": "Zprava doleva",
-    "directionHint": "Normálně sleduje jazyk — pouze arabština je psána zprava doleva. Vynucení je pro kontrolu zrcadleného rozvržení bez nutnosti rozumět příslušnému jazyku."
+    "directionHint": "Normálně sleduje jazyk — pouze arabština je psána zprava doleva. Vynucení je pro kontrolu zrcadleného rozvržení bez nutnosti rozumět příslušnému jazyku.",
+    "copied": "Copied.",
+    "reconnecting": "Reconnecting to new address…",
+    "shareLabel": "Share control on local network",
+    "shareUrls": "Reachable at:",
+    "tokenSave": "Save token"
   },
   "auth": {
     "heading": "Enter your access token",

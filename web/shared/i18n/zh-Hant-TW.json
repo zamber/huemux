@@ -141,12 +141,10 @@
     "auth": "驗證",
     "authHint": "三個容易記住的單詞。此電腦的連線永遠不會要求此項。",
     "tokenPlaceholder": "例如 otter.beacon.willow.cougar",
-    "tokenSet": "（未變更 — 輸入以取代）",
     "generate": "產生",
     "tls": "TLS",
     "tlsHint": "HueMux 不會取得憑證。「檔案」會使用您提供的憑證 — 來自 Tailscale 或您自己的網域。",
     "saved": "已儲存。",
-    "savedRestart": "已儲存 — 重新啟動 HueMux 使此變更生效。",
     "loadFailed": "無法載入設定：",
     "diagnostics": "診斷",
     "diagnosticsHint": "將版本、組態、連線狀態和最近的日誌收集到一個檔案。將其附加至錯誤報告 — 這是理解問題的最快方式。永遠不包含您的驗證 token。",
@@ -177,7 +175,12 @@
     "directionAuto": "跟隨語言",
     "directionLtr": "由左至右",
     "directionRtl": "由右至左",
-    "directionHint": "通常跟隨語言 — 只有阿拉伯文是由右至左。強制執行是用來檢查鏡射配置是否正確，而無需閱讀其對應的語言。"
+    "directionHint": "通常跟隨語言 — 只有阿拉伯文是由右至左。強制執行是用來檢查鏡射配置是否正確，而無需閱讀其對應的語言。",
+    "copied": "Copied.",
+    "reconnecting": "Reconnecting to new address…",
+    "shareLabel": "Share control on local network",
+    "shareUrls": "Reachable at:",
+    "tokenSave": "Save token"
   },
   "auth": {
     "heading": "Enter your access token",
