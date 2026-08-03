@@ -10,14 +10,19 @@ or wants to add a new packaging target — most of this doesn't change often.
 > [PUBLISHING.md](PUBLISHING.md). This file is about producing artifacts;
 > that one is about being allowed to distribute them.
 
-## Current state vs. what's described below
+## Current state (2026-08-02)
 
-Today, `.github/workflows/release.yml` builds and publishes **plain,
-unsigned** binaries for every OS on a tag push. Nothing here is optional
-extra polish except explicitly marked as such — but no code signing has
-been set up yet (see below for exactly what's needed and why it hasn't
-happened automatically). Treat the code-signing sections as "how to do
-this when you're ready to," not "already done."
+- **Android APK** — signed with the huemux keystore (keystore secrets in
+  `environment: signing`, verified in `release.yml`).
+- **GPG release signatures** — `SHA256SUMS.asc` signed with the GPG
+  private key from CI secrets; `RELEASE-SIGNING-KEY.asc` published.
+- **Windows and macOS binaries** — unsigned (code-signing certificates
+  not yet obtained). See the code-signing sections below for the steps.
+- **Homebrew tap** — live at `zamber/homebrew-huemux` with `huemux` and
+  `huemux-desktop` formulas + auto-bump workflow via `scripts/bump.py`.
+- **AppImage** — continuous channel publishes on push to `main`.
+- **Lint/test/vet** — `release.yml` also runs `golangci-lint` before
+  building. See [.golangci.yml](.golangci.yml).
 
 ## Bumping the version (semver)
 

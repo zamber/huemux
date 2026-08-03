@@ -129,8 +129,7 @@ setting with real consequences, so it comes with two others.
   machine itself are exempt, so nothing about local use changes and you can
   never lock yourself out. Failed attempts are rate limited — the token is
   short and memorable by design, which is only defensible with a limiter in
-  front of it. Generate one from the settings page, or let HueMux print one on
-  first non-loopback start.
+  front of it. Generate one from the settings page.
 - **`tls.mode`** — `selfsigned` generates and reuses a certificate (browsers
   will warn; it covers both loopback and your LAN address). `files` uses a
   real certificate you already have. HueMux obtains nothing itself, which
@@ -404,7 +403,7 @@ web/app.html            shell that hosts both pages, each in its own iframe,
 ## Known issues
 
 See [KNOWN_ISSUES.md](KNOWN_ISSUES.md) — currently one open item (a
-Wayland/Electron-specific green preview on first sync), including how to
+system-level PipeWire/portal green preview on first sync), including how to
 capture a `-debug` log if you hit it.
 
 ## Security

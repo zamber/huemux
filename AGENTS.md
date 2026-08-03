@@ -6,10 +6,7 @@ in [PACKAGING.md](PACKAGING.md); store submission, accounts and the legal
 prerequisites are in [PUBLISHING.md](PUBLISHING.md); designs for unstarted work
 are in [plans/](plans/).
 
-One thing blocks distribution: there is **no `LICENSE` file**, and a public
-repo without one is all rights reserved, so no packager may redistribute it.
-GPL-3.0-or-later is the recommendation — see PUBLISHING.md §0.1, which also
-covers why GPL-2.0 specifically would not work here.
+The project is licensed under GPL-3.0-or-later (see [LICENSE](LICENSE)).
 
 Publishing is planned FOSS-first (Obtainium, IzzyOnDroid, Flathub, F-Droid),
 none of which needs money or approval. PUBLISHING.md has the order.

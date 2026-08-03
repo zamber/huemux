@@ -24,23 +24,25 @@ so the order is also roughly the order to do them in.
 
 ## 0. Blockers — nothing ships until these are done
 
-### 0.1 There is no LICENSE file
+### 0.1 LICENSE — GPL-3.0-or-later (done 2026-08-02)
 
-The repository is public with no licence, which under copyright law means
-**all rights reserved**: nobody may redistribute it, and that includes
-F-Droid, Flathub and anyone packaging it downstream. Several channels will
-refuse the submission outright, and the ones that do not are relying on a
-permission that has not been given.
+The project is licensed under **GPL-3.0-or-later** (see [LICENSE](LICENSE),
+committed 2026-08-02). This closes the single biggest legal gate: every
+FOSS channel (F-Droid, Flathub, IzzyOnDroid, Obtainium, AUR) can now
+redistribute the project without a licence exception.
 
-#### Recommendation: GPL-3.0-or-later
+The recommendation below is preserved for the historical record — the
+decision was made as documented, and the rationale (GPL-3.0-or-later vs.
+the alternatives) still stands.
 
-For a project you want in the FOSS ecosystem and do not want quietly
-repackaged, **GPL-3.0-or-later** is the right fit, and the dependency set
-allows it.
+<details>
+<summary>Historical: the licence recommendation (resolved)</summary>
+
+#### Why GPL-3.0-or-later
 
 | Option | Fit here |
 |---|---|
-| **GPL-3.0-or-later** | **Recommended.** A distributed fork must publish its source. Compatible with every dependency below. F-Droid's natural licence. |
+| **GPL-3.0-or-later** | **Chosen.** A distributed fork must publish its source. Compatible with every dependency below. F-Droid's natural licence. |
 | AGPL-3.0 | GPL plus the network clause. Worth considering only because HueMux *is* a server — it would bind someone who hosted it as a service. Scares off some contributors, and hosting this is an unlikely threat for a LAN app. |
 | GPL-2.0-only | **Do not.** AndroidX is Apache-2.0, which is incompatible with GPLv2 (though fine with GPLv3). Choosing v2 would create a real conflict. |
 | MIT / Apache-2.0 | Simplest, and what the dependencies use — but permits exactly the closed repackaging you want to prevent. |
@@ -196,7 +198,7 @@ Free-software channels, in the order they cost you effort. None of them wants
 money, an identity check, or a trademark opinion, and there is a genuine gap
 here: the FOSS Hue app selection is thin.
 
-All of them need §0.1's `LICENSE` file first. That is the whole gate.
+The LICENSE gate is closed (GPL-3.0-or-later, 2026-08-02). All channels below are legally unblocked.
 
 ### 2A.1 Obtainium — works today, zero effort
 
