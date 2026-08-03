@@ -169,7 +169,12 @@ function handleMessage(msg) {
       // Entertainment streaming (from any client) holds exclusive control
       // of its lights' color/brightness, same as the real Hue app — this
       // is how you get manual control back without switching to Sync.
-      els.stopStreamingBtn.hidden = !(msg.snapshot && msg.snapshot.StreamActive);
+      // The button also appears when another instance holds the area (the
+      // snapshot's busy state): this local instance's "stop" then releases
+      // that stream on the bridge — the only way to take over an area
+      // someone else is streaming.
+      els.stopStreamingBtn.hidden = !(msg.snapshot &&
+        (msg.snapshot.StreamActive || msg.snapshot.AreaBusyBy));
       break;
     case 'light_event':
       mergeLightEvent(msg.event);

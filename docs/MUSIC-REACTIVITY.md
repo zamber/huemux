@@ -469,8 +469,11 @@ external control.
 - [x] System audio capture via `getDisplayMedia({audio: true})`
       (tab/share audio, not mic — works with headphones) — browser form
       landed with the source selector (mic | internal audio) on
-      2026-08-03; Android's MediaProjection audio path is still pending,
-      and the internal option is disabled there until it lands
+      2026-08-03; Android's MediaProjection audio path landed the same day:
+      `AudioPlaybackCapture` rides the same screen-recording consent
+      (exactly what the user expects), PCM goes over the mobile facade to
+      a pure-Go FFT (`internal/music/analyzer.go`) that produces the same
+      32-band frames the browser sends — DP-7's headless case
 - [ ] Interactive visualization mode (light grid + spectrum + trails)
 - [ ] Spatial routing: `zone_split` using existing zone geometry,
       `spatial_panner` mapping virtual position to nearest lights

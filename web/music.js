@@ -45,6 +45,25 @@
   let tickTimer = null;
   let previewRAF = null;
   let frameCount = 0;
+  // Native audio capture (Android internal audio): no MediaStream reaches
+  // the page — Kotlin records the playback and pushes PCM into Go, and the
+  // analysis comes back in the status push. The preview and frame count
+  // are drawn from that instead of a local analyser.
+  let nativeAudio = false;
+  let statusFft = null;
+  const audioWaiters = {};
+
+  function nativeAudioAvailable() {
+    return !!(window.HueMuxNative && typeof window.HueMuxNative.startAudioCapture === 'function');
+  }
+
+  // Resolvers keyed by request id, called from Kotlin. Same handshake shape
+  // as app.js's screen-capture waiters, deliberately a separate registry
+  // and entry point (window.__huemuxAudioResult).
+  window.__huemuxAudioResult = function (id, ok, err) {
+    const fn = audioWaiters[id];
+    if (fn) fn(ok, err);
+  };
 
   // i18n's init() fetches the locale file asynchronously, so the very first
   // render of this module can land before the strings exist and t() returns
@@ -112,7 +131,43 @@
     }
   }
 
+  // startNativeAudioCapture asks Kotlin for internal-audio capture. The
+  // consent dialog is the same MediaProjection one screen sync uses — the
+  // OS treats screen and audio as one "record the screen" permission — and
+  // resolution arrives through __huemuxAudioResult (see the waiter registry
+  // above). The actual analysis happens in Go; the page just watches the
+  // status push.
+  function startNativeAudioCapture() {
+    return new Promise((resolve, reject) => {
+      const id = 'a' + Date.now() + Math.random().toString(36).slice(2, 8);
+      audioWaiters[id] = (ok, err) => {
+        delete audioWaiters[id];
+        ok ? resolve() : reject(new Error(err || 'audio capture was not permitted'));
+      };
+      window.HueMuxNative.startAudioCapture(id);
+    });
+  }
+
+  function stopNativeAudioCapture() {
+    try {
+      if (window.HueMuxNative && window.HueMuxNative.stopAudioCapture) {
+        window.HueMuxNative.stopAudioCapture();
+      }
+    } catch (e) { /* the service may already be gone */ }
+  }
+
   async function startCapture() {
+    if (musicEls.source.value === 'internal' && nativeAudioAvailable()) {
+      await startNativeAudioCapture();
+      nativeAudio = true;
+      running = true;
+      frameCount = 0;
+      statusFft = null;
+      musicEls.spectrum.hidden = false;
+      requestAnimationFrame(drawPreview);
+      render();
+      return;
+    }
     const track = await acquireAudioTrack(musicEls.source.value);
     stream = new MediaStream([track]);
 
@@ -149,6 +204,11 @@
     // reporting stale analysis as live. The page's WS stays open, so the
     // disconnect path never fires.
     if (control) control({ type: 'music_stop' });
+    if (nativeAudio) {
+      stopNativeAudioCapture();
+      nativeAudio = false;
+      statusFft = null;
+    }
     if (tickTimer) { clearInterval(tickTimer); tickTimer = null; }
     if (previewRAF) { cancelAnimationFrame(previewRAF); previewRAF = null; }
     if (audioCtx) { audioCtx.close().catch(() => {}); audioCtx = null; }
@@ -189,23 +249,32 @@
     if (frameCount % 15 === 0) render(); // keep the count fresh without thrashing
   }
 
-  // Local preview: the same 32 bands, drawn from the analyser directly. The
-  // full spectrum UI is a later Phase-1 item; this bar strip exists so the
-  // capture has an immediate, honest "is there signal" answer. All bars in
-  // ink: contrast carries meaning, colour does not (AGENTS.md UX rules).
+  // Local preview: the same 32 bands, drawn from the analyser directly (or,
+  // for native audio, from the status push's copy of what Go analysed — the
+  // page has no local analyser for that path). The full spectrum UI is a
+  // later Phase-1 item; this bar strip exists so the capture has an
+  // immediate, honest "is there signal" answer. All bars in ink: contrast
+  // carries meaning, colour does not (AGENTS.md UX rules).
   function drawPreview() {
-    if (!running || !analyser) return;
-    analyser.getByteFrequencyData(freqData);
+    if (!running) return;
     const ctx = musicEls.spectrum.getContext('2d');
     const w = musicEls.spectrum.width, h = musicEls.spectrum.height;
     ctx.clearRect(0, 0, w, h);
     ctx.fillStyle = 'var(--ink)';
     const bw = w / FFT_BANDS;
-    for (let b = 0; b < FFT_BANDS; b++) {
-      let sum = 0, n = 0;
-      for (let i = bandEdges[b]; i < bandEdges[b + 1]; i++) { sum += freqData[i]; n++; }
-      const v = n ? sum / n / 255 : 0;
-      if (v > 0.02) ctx.fillRect(b * bw + 1, h - v * h, bw - 2, Math.max(1, v * h));
+    if (statusFft && statusFft.length === FFT_BANDS) {
+      for (let b = 0; b < FFT_BANDS; b++) {
+        const v = statusFft[b];
+        if (v > 0.02) ctx.fillRect(b * bw + 1, h - v * h, bw - 2, Math.max(1, v * h));
+      }
+    } else if (analyser) {
+      analyser.getByteFrequencyData(freqData);
+      for (let b = 0; b < FFT_BANDS; b++) {
+        let sum = 0, n = 0;
+        for (let i = bandEdges[b]; i < bandEdges[b + 1]; i++) { sum += freqData[i]; n++; }
+        const v = n ? sum / n / 255 : 0;
+        if (v > 0.02) ctx.fillRect(b * bw + 1, h - v * h, bw - 2, Math.max(1, v * h));
+      }
     }
     if (running) previewRAF = requestAnimationFrame(drawPreview);
   }
@@ -263,10 +332,11 @@
     init(opts) {
       send = opts.send;
       control = opts.control || null;
-      // Internal audio rides getDisplayMedia, which Android WebViews do not
-      // implement. Grey the option out there rather than offer a source
-      // that fails on every attempt.
-      if (!(navigator.mediaDevices && navigator.mediaDevices.getDisplayMedia)) {
+      // Internal audio rides getDisplayMedia on browsers; on Android it
+      // rides the native bridge's MediaProjection audio capture instead.
+      // Only when neither exists is the option greyed out.
+      const hasDisplay = !!(navigator.mediaDevices && navigator.mediaDevices.getDisplayMedia);
+      if (!hasDisplay && !nativeAudioAvailable()) {
         const opt = musicEls.source.querySelector('option[value="internal"]');
         if (opt) {
           opt.disabled = true;
@@ -281,12 +351,25 @@
     // onStatus reconciles the preset control with the server's view: the
     // engine is the authority on what runs (another tab, a restart, or a
     // rejected slug all leave the select wrong), and only a paired engine
-    // can run presets at all.
+    // can run presets at all. For native audio it also feeds the preview
+    // and frame count from Go's analysis.
     onStatus(msg) {
       if (!msg) return;
       musicEls.preset.disabled = !msg.paired;
       const slug = msg.snapshot ? msg.snapshot.MusicPreset : '';
       if (musicEls.preset.value !== (slug || '')) musicEls.preset.value = slug || '';
+      if (nativeAudio) {
+        if (msg.music && msg.music.fft) statusFft = msg.music.fft;
+        if (msg.music) frameCount = msg.music.frames;
+        render();
+      }
+    },
+    // onCaptureEnded fires when the OS ends the projection (user stops the
+    // recording from the system UI, or Android reclaims it). The page has
+    // to stop claiming to capture — same story as screen sync's handler.
+    onCaptureEnded() {
+      if (!nativeAudio) return;
+      stopCapture();
     },
   };
 

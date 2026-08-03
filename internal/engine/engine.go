@@ -86,6 +86,7 @@ type Engine struct {
 	uiClients    int
 	handshakeMS  int64
 	busyBy       string
+	busyAreaID   string            // area another app holds, remembered so a stop can release it on the bridge
 	lastColors   map[uint8][3]byte // per-channel color from the most recent tick, for the status snapshot
 
 	stream   *hue.Stream
@@ -133,8 +134,13 @@ func (e *Engine) SelectArea(ctx context.Context, areaID string) error {
 		return fmt.Errorf("fetch entertainment configuration: %w", err)
 	}
 	if cfg.IsActive() {
+		// Remember which area is busy: the local instance did not get to
+		// stream, so a later "stop" has to release *this* area on the
+		// bridge — that is the only way the user can take over from
+		// whichever other instance is holding it.
 		e.mu.Lock()
 		e.busyBy = cfg.ActiveStreamer.RID
+		e.busyAreaID = cfg.ID
 		e.mu.Unlock()
 		return hue.ErrAreaBusy
 	}
@@ -194,6 +200,7 @@ func (e *Engine) SelectArea(ctx context.Context, areaID string) error {
 	e.stream = stream
 	e.handshakeMS = handshakeMS
 	e.busyBy = ""
+	e.busyAreaID = ""
 	e.grid = nil
 	e.lastColors = nil
 	e.mu.Unlock()
@@ -251,24 +258,45 @@ func (e *Engine) stopLocked(ctx context.Context) {
 	cancel := e.cancel
 	stream := e.stream
 	areaID := e.areaCfg.ID
+	busyAreaID := e.busyAreaID
 	done := e.loopDone
 	e.cancel = nil
 	e.stream = nil
 	e.mu.Unlock()
 
-	if cancel == nil {
+	if cancel == nil && busyAreaID == "" {
 		return
 	}
-	cancel()
-	if done != nil {
-		<-done
+	// cancel is nil exactly when there is no local stream to end (the
+	// busy-release path below) — calling a nil func value panics, and the
+	// WS handler does not recover from it.
+	if cancel != nil {
+		cancel()
+		if done != nil {
+			<-done
+		}
 	}
 	if stream != nil {
 		_ = stream.Close()
 	}
 	if areaID != "" {
 		_ = e.client.StopStreaming(ctx, areaID)
+	} else if busyAreaID != "" {
+		// No local stream to end — but the area the user tried to select
+		// is held by another instance, and this stop is the only way to
+		// prise it loose. The bridge accepts {"action":"stop"} from any
+		// authenticated client and releases the active streamer.
+		log.Printf("huemux: releasing busy area %s on the bridge", busyAreaID)
+		if err := e.client.StopStreaming(ctx, busyAreaID); err != nil {
+			log.Printf("huemux: release busy area %s: %v", busyAreaID, err)
+		}
 	}
+	e.mu.Lock()
+	if e.busyAreaID == busyAreaID && busyAreaID != "" {
+		e.busyAreaID = ""
+		e.busyBy = ""
+	}
+	e.mu.Unlock()
 }
 
 // SetMusicFrameSource wires the audio analysis state reader. The music

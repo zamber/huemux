@@ -70,6 +70,12 @@ type Server struct {
 	// construction, so it needs no lock of its own on top of State's.
 	music *music.State
 
+	// audioAna turns raw PCM (Android internal audio, pushed over the mobile
+	// facade) into the same frames the browser's 0x02 path sends. Guarded by
+	// audioMu: gomobile invokes from arbitrary threads.
+	audioMu  sync.Mutex
+	audioAna *music.Analyzer
+
 	Addr string
 }
 
@@ -100,6 +106,7 @@ func New(cfg appconfig.Config, store *config.Store, favorites *config.FavoritesS
 		uiConns:   map[*Conn]struct{}{},
 		authLimit: newAuthLimiter(),
 		music:     music.New(),
+		audioAna:  &music.Analyzer{},
 	}
 	if eng != nil || lights != nil {
 		s.setPaired(eng, lights)
@@ -769,6 +776,22 @@ func (s *Server) handleWS(w http.ResponseWriter, r *http.Request) {
 		case opText:
 			s.handleControlMessage(conn, payload)
 		}
+	}
+}
+
+// PushAudioPCM feeds raw PCM captured on the host (Android internal audio
+// via the mobile facade) into the same music state the browser's 0x02
+// frames write. Analysis runs here with a pure-Go FFT — DP-7's headless
+// case, arrived with Android's MediaProjection audio capture.
+func (s *Server) PushAudioPCM(pcm []byte, sampleRate int) {
+	if len(pcm) == 0 || sampleRate <= 0 {
+		return
+	}
+	s.audioMu.Lock()
+	frames := s.audioAna.Feed(pcm, sampleRate)
+	s.audioMu.Unlock()
+	for _, f := range frames {
+		s.music.Update(f)
 	}
 }
 

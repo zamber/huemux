@@ -9,6 +9,10 @@ import android.content.Intent
 import android.content.pm.ServiceInfo
 import android.graphics.PixelFormat
 import android.hardware.display.DisplayManager
+import android.media.AudioAttributes
+import android.media.AudioFormat
+import android.media.AudioPlaybackCaptureConfiguration
+import android.media.AudioRecord
 import android.media.ImageReader
 import android.media.projection.MediaProjection
 import android.media.projection.MediaProjectionManager
@@ -50,6 +54,28 @@ class ScreenCaptureService : Service() {
      */
     private var pipelineThread: HandlerThread? = null
     private var pipeline: Handler? = null
+
+    // --- internal audio capture (music reactivity) -------------------------
+    //
+    // The same MediaProjection consent that unlocks the screen also unlocks
+    // playback audio (AudioPlaybackCapture, API 29+): the OS treats them as
+    // one "record the screen" permission, which is exactly what the user
+    // expects. The recorded PCM goes straight to Go (Mobile.pushAudioPcm),
+    // which runs the FFT that the browser's AnalyserNode does for mic
+    // capture — no JavaScript, no Web Audio, no second consent.
+
+    private var audioRecord: AudioRecord? = null
+    private var audioThread: Thread? = null
+
+    /** True while the audio loop is reading. Read from the bridge thread. */
+    @Volatile
+    private var audioRunning = false
+
+    /** True when this service instance exists only to hold the projection
+     *  for audio capture. Read by MainActivity to decide whether stopping
+     *  the audio should also stop the service. */
+    @Volatile
+    var audioOnly = false
 
     override fun onBind(intent: Intent?): IBinder? = null
 
@@ -111,11 +137,95 @@ class ScreenCaptureService : Service() {
         }
 
         instance = this
-        val t = HandlerThread("huemux-capture").also { it.start() }
-        pipelineThread = t
-        pipeline = Handler(t.looper)
-        pipeline?.post { startCapture() }
+        // Audio-only mode (music reactivity's internal source): the service
+        // exists to hold the projection for AudioPlaybackCapture; there is
+        // no VirtualDisplay and no colour pipeline to feed.
+        val audioOnly = intent?.getBooleanExtra(EXTRA_AUDIO_ONLY, false) ?: false
+        this.audioOnly = audioOnly
+        if (!audioOnly) {
+            val t = HandlerThread("huemux-capture").also { it.start() }
+            pipelineThread = t
+            pipeline = Handler(t.looper)
+            pipeline?.post { startCapture() }
+        } else {
+            Mobile.logHost("audio: audio-only capture service up")
+        }
         return START_NOT_STICKY
+    }
+
+    /**
+     * Starts recording internal playback audio through the projection.
+     * No-op (returns null) when already running; returns a message on
+     * failure. Called from the bridge thread; @Synchronized against the
+     * audio thread's teardown.
+     */
+    @Synchronized
+    fun startAudioRecording(): String? {
+        if (audioRunning) return null
+        val p = projection ?: return "screen capture is not running"
+        if (Build.VERSION.SDK_INT < 29) return "internal audio needs Android 10+"
+        try {
+            val config = AudioPlaybackCaptureConfiguration.Builder(p)
+                .addMatchingUsage(AudioAttributes.USAGE_MEDIA)
+                .addMatchingUsage(AudioAttributes.USAGE_GAME)
+                .build()
+            val minBuf = AudioRecord.getMinBufferSize(
+                AUDIO_SAMPLE_RATE, AudioFormat.CHANNEL_IN_MONO, AudioFormat.ENCODING_PCM_16BIT,
+            )
+            val record = AudioRecord.Builder()
+                .setAudioFormat(
+                    AudioFormat.Builder()
+                        .setEncoding(AudioFormat.ENCODING_PCM_16BIT)
+                        .setSampleRate(AUDIO_SAMPLE_RATE)
+                        .setChannelMask(AudioFormat.CHANNEL_IN_MONO)
+                        .build()
+                )
+                .setBufferSizeInBytes(minBuf * 2)
+                .setAudioPlaybackCaptureConfig(config)
+                .build()
+            record.startRecording()
+            audioRecord = record
+            audioRunning = true
+            audioThread = Thread({ audioLoop(record) }, "huemux-audio").also { it.start() }
+            Mobile.logHost("audio: internal capture started (${AUDIO_SAMPLE_RATE} Hz)")
+            return null
+        } catch (e: Exception) {
+            Log.e(TAG, "audio capture start failed", e)
+            Mobile.logHost("audio: start failed: ${e.message}")
+            return e.message ?: e.toString()
+        }
+    }
+
+    /** Stops the audio loop; safe to call when not running. */
+    @Synchronized
+    fun stopAudioRecording() {
+        audioRunning = false
+        audioThread?.interrupt()
+        audioThread = null
+        audioRecord?.let {
+            try {
+                it.stop()
+            } catch (e: Exception) {
+                Log.w(TAG, "audio record stop", e)
+            }
+            it.release()
+        }
+        audioRecord = null
+        Mobile.logHost("audio: internal capture stopped")
+    }
+
+    private fun audioLoop(record: AudioRecord) {
+        val buf = ByteArray(AUDIO_CHUNK_BYTES)
+        while (audioRunning) {
+            val n = record.read(buf, 0, buf.size, AudioRecord.READ_BLOCKING)
+            if (n <= 0) continue
+            try {
+                Mobile.pushAudioPcm(buf.copyOf(n), AUDIO_SAMPLE_RATE)
+            } catch (e: Exception) {
+                // The server may be mid-restart; the next chunk succeeds.
+                Log.w(TAG, "pushAudioPcm failed", e)
+            }
+        }
     }
 
     /**
@@ -201,6 +311,7 @@ class ScreenCaptureService : Service() {
         val last = lastRecordingLocation()
         if (last.isNotEmpty()) sb.append("last recording        $last\n")
         frameRecorder?.let { sb.append("frame encoder         ${it.stats()}\n") }
+        sb.append("audio capture         ${if (audioRunning) "recording" else "not recording"}\n")
         return sb.toString()
     }
 
@@ -439,6 +550,10 @@ class ScreenCaptureService : Service() {
         // Covers every other way this ends — stopSelf from the page, the
         // system reclaiming the service, the activity going away.
         onCaptureEnded?.invoke()
+        // The audio loop must stop before the projection: AudioRecord reads
+        // from it, and releasing the projection underneath a blocking read
+        // surfaces as a crash on some devices.
+        stopAudioRecording()
         // Before the projection goes: stopping the recorder finalises the MP4
         // and clears its MediaStore pending flag. Skipping it on this path
         // would leave every recording that ended by the user swiping the app
@@ -559,6 +674,9 @@ class ScreenCaptureService : Service() {
         const val ACTION_RECONFIGURE = "com.huemux.app.RECONFIGURE_CAPTURE"
         const val EXTRA_RESULT_CODE = "resultCode"
         const val EXTRA_RESULT_DATA = "resultData"
+        const val EXTRA_AUDIO_ONLY = "audioOnly"
+        const val AUDIO_SAMPLE_RATE = 44100
+        const val AUDIO_CHUNK_BYTES = 8192
         private const val CHANNEL_ID = "huemux-capture"
         private const val NOTIFICATION_ID = 1
 
@@ -603,10 +721,11 @@ class ScreenCaptureService : Service() {
         @Volatile
         var capturedH: Int = 0
 
-        fun startForegroundService(ctx: Context, resultCode: Int, data: Intent) {
+        fun startForegroundService(ctx: Context, resultCode: Int, data: Intent, audioOnly: Boolean = false) {
             val i = Intent(ctx, ScreenCaptureService::class.java)
                 .putExtra(EXTRA_RESULT_CODE, resultCode)
                 .putExtra(EXTRA_RESULT_DATA, data)
+                .putExtra(EXTRA_AUDIO_ONLY, audioOnly)
             ctx.startForegroundService(i)
         }
 

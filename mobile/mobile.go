@@ -282,6 +282,24 @@ func PushFrame(w, h int, rgb []byte) error {
 	return nil
 }
 
+// PushAudioPCM feeds raw PCM captured by the host (Android internal audio,
+// AudioPlaybackCapture in the screen-capture service) into the music engine.
+// Little-endian signed-16 mono at sampleRate Hz, the AudioRecord default —
+// same bytes Kotlin's AudioRecord produces with ENCODING_PCM_16BIT.
+//
+// Safe before the server exists: returns ErrNotStarted and the caller drops
+// the chunk.
+func PushAudioPCM(pcm []byte, sampleRate int) error {
+	mu.Lock()
+	s := srv
+	mu.Unlock()
+	if s == nil {
+		return ErrNotStarted
+	}
+	s.PushAudioPCM(pcm, sampleRate)
+	return nil
+}
+
 func stopSyncLocked() {
 	if srv == nil {
 		return

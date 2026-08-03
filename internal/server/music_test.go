@@ -146,6 +146,43 @@ func TestMusicPresetControlMessage(t *testing.T) {
 	}
 }
 
+// TestPushAudioPCM is the Android internal-audio path in miniature: raw PCM
+// over the mobile facade must land in the same music state the browser's
+// 0x02 frames write, and show up in the status push with real energy.
+func TestPushAudioPCM(t *testing.T) {
+	s := New(appconfig.Default(), nil, nil, nil, nil)
+
+	// One second of a 440 Hz sine at 44.1 kHz, little-endian s16 (2 bytes
+	// per sample — the buffer size is a common off-by-factor-two here).
+	const rate = 44100
+	pcm := make([]byte, rate*2) // zeros first: silence
+	s.PushAudioPCM(pcm, rate)
+	if msg := s.statusMessage(nil); msg.Music == nil || !msg.Music.Active {
+		t.Fatalf("silence did not mark the source active: %+v", msg.Music)
+	}
+
+	var sum float32
+	for i := 0; i < rate; i++ {
+		v := int16(math.Sin(2*math.Pi*440*float64(i)/float64(rate)) * 30000)
+		pcm[i*2] = byte(v)
+		pcm[i*2+1] = byte(v >> 8)
+	}
+	s.PushAudioPCM(pcm, rate)
+	msg := s.statusMessage(nil)
+	if msg.Music == nil {
+		t.Fatal("no music block after PCM")
+	}
+	for _, v := range msg.Music.FFT {
+		sum += v
+	}
+	if sum < 0.1 {
+		t.Fatalf("440 Hz tone produced no band energy: sum=%v", sum)
+	}
+	if msg.Music.Wave[0] == 0 {
+		t.Fatal("waveform is silent")
+	}
+}
+
 func TestAudioFrameRejectsMalformed(t *testing.T) {
 	s := New(appconfig.Default(), nil, nil, nil, nil)
 	c := &Conn{}
