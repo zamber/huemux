@@ -26,7 +26,14 @@ func TestDiagnosticsNeverIncludesToken(t *testing.T) {
 	cfg.Auth.Token = "otter.beacon.willow"
 	s := New(cfg, nil, nil, nil, nil)
 
-	body := getDiag(s, "127.0.0.1:1").Body.String()
+	// A set passphrase gates loopback too, so the request authenticates.
+	rec := httptest.NewRecorder()
+	req := httptest.NewRequest(http.MethodGet, "/api/diagnostics", nil)
+	req.RemoteAddr = "127.0.0.1:1"
+	req.Header.Set("Authorization", "Bearer otter.beacon.willow")
+	s.mux.ServeHTTP(rec, req)
+
+	body := rec.Body.String()
 	if strings.Contains(body, "otter.beacon.willow") {
 		t.Fatal("diagnostics leaked the auth token")
 	}

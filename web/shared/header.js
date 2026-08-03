@@ -44,7 +44,7 @@ class HueMuxHeader extends HTMLElement {
     this._onLangChange = () => { this._renderTheme(); HueMuxI18n.applyTo(this); };
     document.addEventListener('huemux:themechange', this._onThemeChange);
     document.addEventListener('huemux:langchange', this._onLangChange);
-    this._onFeatures = () => this._renderNav();
+    this._onFeatures = () => { this._renderNav(); this._updateLogout(); };
     document.addEventListener('huemux:features', this._onFeatures);
   }
 
@@ -87,17 +87,24 @@ class HueMuxHeader extends HTMLElement {
     this._themeBtn.addEventListener('click', () => HueMuxTheme.cycle());
     this._simpleBtn.addEventListener('click', () => HueMuxTheme.toggleSimple());
 
-    // Logout button — only shown when a token is stored.
+    // Logout button — only shown when the server actually has a passphrase.
+    // A stale token in localStorage is not a login: auth may have been
+    // disabled since, and offering a logout that leads nowhere (a login form
+    // with nothing to validate) is worse than no button at all.
     if (this._logoutBtn) {
       this._logoutBtn.addEventListener('click', function () { logout(); });
-      if (typeof hasAuthToken === 'function' && hasAuthToken()) {
-        this._logoutBtn.hidden = false;
-      }
+      this._updateLogout();
     }
 
     this._renderNav();
     this._renderTheme();
     HueMuxI18n.applyTo(this);
+  }
+
+  _updateLogout() {
+    if (!this._logoutBtn) return;
+    var auth = (typeof HueMuxFeatures !== 'undefined' && HueMuxFeatures.current().auth) || {};
+    this._logoutBtn.hidden = !(auth.has_token && auth.mode === 'token');
   }
 
   _renderNav() {

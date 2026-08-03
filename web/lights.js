@@ -178,8 +178,9 @@ function handleMessage(msg) {
       mergeFavorite(msg.id, msg.favorite);
       break;
     case 'config_changed':
-      // Re-fetch features so the shell header re-renders its tabs.
-      if (typeof HueMuxFeatures !== 'undefined') HueMuxFeatures.load();
+      // set(), not load(): the push is fresher than load()'s cached fetch,
+      // and the header re-renders tabs and the logout button from this.
+      if (typeof HueMuxFeatures !== 'undefined') HueMuxFeatures.set(msg);
       break;
   }
 }

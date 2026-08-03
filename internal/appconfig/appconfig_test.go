@@ -20,6 +20,9 @@ func TestDefaultIsValidAndLoopback(t *testing.T) {
 	if cfg.Auth.Mode != AuthNone {
 		t.Errorf("Default() auth = %q, want %q: adding auth by default would break every existing desktop install", cfg.Auth.Mode, AuthNone)
 	}
+	if cfg.Auth.AllowLoopbackUnauthenticated {
+		t.Error("Default() must not exempt loopback from a configured passphrase — a loopback-exempt login accepts any input")
+	}
 	if !cfg.NeedsEngine() || !cfg.NeedsLightctl() {
 		t.Error("Default() must run both halves, matching pre-appconfig behavior")
 	}
@@ -228,8 +231,8 @@ func TestPartialFileKeepsOtherDefaults(t *testing.T) {
 	if cfg.Listen.Host != DefaultHost || cfg.Listen.Port != 0 {
 		t.Errorf("listen = %+v, want defaults preserved for keys absent from the file", cfg.Listen)
 	}
-	if !cfg.Auth.AllowLoopbackUnauthenticated {
-		t.Error("allow_loopback_unauthenticated should keep its true default when absent from the file")
+	if cfg.Auth.AllowLoopbackUnauthenticated {
+		t.Error("allow_loopback_unauthenticated should keep its false default when absent from the file")
 	}
 }
 

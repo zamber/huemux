@@ -78,8 +78,10 @@ type Auth struct {
 	Mode  AuthMode `json:"mode"`
 	Token string   `json:"token"`
 	// AllowLoopbackUnauthenticated exempts connections originating from the
-	// loopback interface. Defaults true. Set false only if you don't trust
-	// other local users on the machine.
+	// loopback interface. Defaults false: the passphrase is the gate, even
+	// for a local browser — otherwise the login form accepts any input on
+	// the default loopback bind and the passphrase protects nothing. Set
+	// true if you trust every local user and want the convenience back.
 	AllowLoopbackUnauthenticated bool `json:"allow_loopback_unauthenticated"`
 }
 
@@ -110,7 +112,7 @@ func Default() Config {
 		Listen: Listen{Host: DefaultHost, Port: 0},
 		Auth: Auth{
 			Mode:                         AuthNone,
-			AllowLoopbackUnauthenticated: true,
+			AllowLoopbackUnauthenticated: false,
 		},
 		TLS: TLS{Mode: TLSOff},
 	}

@@ -253,6 +253,17 @@ function apply() {
       var res = JSON.parse(text);
       say(t('settings.saved', 'Saved.'));
 
+      // The passphrase now gates loopback too, so enabling auth with a
+      // typed token must store it — otherwise the very next request 401s
+      // to the auth page to re-enter what was just saved. Disabling auth
+      // clears the stored token; a stale one is what used to leave a
+      // meaningless logout button behind.
+      if (els.auth.value === 'token' && els.token.value.trim()) {
+        setAuthToken(els.token.value.trim());
+      } else if (els.auth.value === 'none') {
+        clearAuthToken();
+      }
+
       // If the listen address changed, the server returns the new URL.
       // Navigate there so the page stays connected.
       if (res.new_url) {

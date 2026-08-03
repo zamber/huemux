@@ -34,13 +34,32 @@ func TestAuthDisabledByDefault(t *testing.T) {
 	}
 }
 
-// Turning auth on must not put a login in front of ordinary desktop use.
-func TestLoopbackExemptFromToken(t *testing.T) {
+// A set passphrase gates loopback too: the login form would otherwise accept
+// any input on the default loopback bind, and the passphrase would protect
+// nothing.
+func TestTokenRequiredOnLoopbackByDefault(t *testing.T) {
 	s := New(tokenCfg("0.0.0.0"), nil, nil, nil, nil)
 	for _, addr := range []string{"127.0.0.1:1", "[::1]:1", "127.0.0.53:1"} {
-		if rec := get(s, "/api/lights", addr, nil); rec.Code == http.StatusUnauthorized {
-			t.Errorf("loopback %s should be exempt, got 401", addr)
+		if rec := get(s, "/api/lights", addr, nil); rec.Code != http.StatusUnauthorized {
+			t.Errorf("loopback %s without token: status %d, want 401", addr, rec.Code)
 		}
+	}
+	// The valid token works from loopback as well.
+	rec := get(s, "/api/lights", "127.0.0.1:1", func(r *http.Request) {
+		r.Header.Set("Authorization", "Bearer otter.beacon.willow")
+	})
+	if rec.Code == http.StatusUnauthorized {
+		t.Error("valid token rejected on loopback")
+	}
+}
+
+// The opt-in flag restores the old convenience for trusted local machines.
+func TestLoopbackExemptWhenFlagSet(t *testing.T) {
+	c := tokenCfg("0.0.0.0")
+	c.Auth.AllowLoopbackUnauthenticated = true
+	s := New(c, nil, nil, nil, nil)
+	if rec := get(s, "/api/lights", "127.0.0.1:1", nil); rec.Code == http.StatusUnauthorized {
+		t.Error("loopback should be exempt when the flag is set, got 401")
 	}
 }
 

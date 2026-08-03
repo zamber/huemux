@@ -16,19 +16,34 @@ window.HueMuxFeatures = (() => {
   // fetch resolves should show the normal full UI and then narrow, rather than
   // flashing an empty header — and if /api/config is unreachable the sensible
   // failure is a complete UI, not a crippled one.
-  let features = { lights: true, sync: true, profile: 'full', loaded: false };
+  let features = {
+    lights: true, sync: true, profile: 'full', loaded: false,
+    auth: { mode: 'none', has_token: false },
+  };
   let pending = null;
 
   function current() {
     return features;
   }
 
+  function announce() {
+    document.dispatchEvent(new CustomEvent('huemux:features', { detail: features }));
+  }
+
   // load fetches once and caches. Repeated calls share the same in-flight
   // promise, so the shell plus two iframes do not make three requests for a
   // value that cannot differ between them.
+  //
+  // The request authenticates when a token is stored. This file loads before
+  // shared/auth.js and cannot call its helpers, so the key name is repeated
+  // here — keep it in sync with AUTH_KEY there. Without this, /api/config
+  // 401s once a passphrase gates loopback, and the header would never learn
+  // that auth is on (no logout button, wrong nav).
   function load() {
     if (pending) return pending;
-    pending = fetch('/api/config')
+    var token = '';
+    try { token = localStorage.getItem('huemux-auth-token') || ''; } catch (_) {}
+    pending = fetch('/api/config', token ? { headers: { 'Authorization': 'Bearer ' + token } } : undefined)
       .then((r) => (r.ok ? r.json() : Promise.reject(new Error('HTTP ' + r.status))))
       .then((cfg) => {
         features = {
@@ -36,20 +51,38 @@ window.HueMuxFeatures = (() => {
           sync: cfg.sync !== false,
           profile: cfg.profile || 'full',
           editable: !!cfg.editable,
+          auth: cfg.auth || { mode: 'none', has_token: false },
           loaded: true,
         };
-        document.dispatchEvent(new CustomEvent('huemux:features', { detail: features }));
+        announce();
         return features;
       })
       .catch(() => {
         // Keep the permissive defaults. An unreachable config endpoint should
         // not be able to hide half the app.
         features = { ...features, loaded: true };
-        document.dispatchEvent(new CustomEvent('huemux:features', { detail: features }));
+        announce();
         return features;
       });
     return pending;
   }
 
-  return { current, load };
+  // set applies a config_changed push from the WebSocket. The server is the
+  // authority on profile and auth, and the push is fresher than any cached
+  // fetch — a PATCH applied a moment ago would otherwise stay hidden behind
+  // load()'s cache until the next full reload.
+  function set(cfg) {
+    features = {
+      lights: cfg.lights !== false,
+      sync: cfg.sync !== false,
+      profile: cfg.profile || features.profile,
+      editable: !!cfg.editable,
+      auth: cfg.auth || features.auth,
+      loaded: true,
+    };
+    announce();
+    return features;
+  }
+
+  return { current, load, set };
 })();

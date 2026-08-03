@@ -47,6 +47,7 @@ func TestConfigAPINeverExposesToken(t *testing.T) {
 	rec := httptest.NewRecorder()
 	req := httptest.NewRequest(http.MethodGet, "/api/config", nil)
 	req.RemoteAddr = "127.0.0.1:5555"
+	req.Header.Set("Authorization", "Bearer otter.beacon.willow") // a set passphrase gates loopback too
 	s.mux.ServeHTTP(rec, req)
 
 	body := rec.Body.String()

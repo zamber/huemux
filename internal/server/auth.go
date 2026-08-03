@@ -80,10 +80,11 @@ func (l *authLimiter) succeed(key string) {
 // authorized reports whether r may proceed, and writes the rejection itself
 // if not.
 //
-// Order matters: the loopback exemption is checked before the token, so
-// nothing about ordinary desktop use changes when auth is switched on, and a
-// user who forgets their own token can still fix it from the machine itself
-// rather than being locked out of their own lights.
+// The loopback exemption is opt-in (AllowLoopbackUnauthenticated) and off by
+// default: with a passphrase set, the login form must actually validate it —
+// a loopback-exempt server accepts any input and the passphrase protects
+// nothing. A user who forgets their own token recovers by editing app.json,
+// which has always been the real escape hatch anyway.
 func (s *Server) authorized(w http.ResponseWriter, r *http.Request) bool {
 	cfg := s.Config()
 	if cfg.Auth.Mode != appconfig.AuthToken {
