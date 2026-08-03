@@ -119,6 +119,89 @@ func (s *Server) Close() error {
 	return ln.Close()
 }
 
+// RestartListener closes the current listener and starts a new one on the
+// address in cfg. It validates the new bind before closing the old one, so a
+// bad address never tears down a working server. Returns the new display URL.
+func (s *Server) RestartListener(cfg appconfig.Config) (string, error) {
+	host := cfg.Listen.Host
+	if host == "" {
+		host = appconfig.DefaultHost
+	}
+	port := cfg.Listen.Port
+	if port == 0 {
+		port = appconfig.DefaultPort
+	}
+
+	addr := net.JoinHostPort(host, strconv.Itoa(port))
+	newLn, err := net.Listen("tcp", addr)
+	if err != nil {
+		return "", fmt.Errorf("listen on %s: %w", addr, err)
+	}
+
+	scheme := "http"
+	if cfg.TLS.Mode != appconfig.TLSOff {
+		tlsCfg, tlsErr := tlsConfigFor(cfg)
+		if tlsErr != nil {
+			_ = newLn.Close()
+			return "", tlsErr
+		}
+		newLn = tls.NewListener(newLn, tlsCfg)
+		scheme = "https"
+	}
+
+	// Close old listener — drops all WS connections, but every client
+	// reconnects on its own (1500ms backoff in app.js and lights.js).
+	_ = s.Close()
+
+	s.lnMu.Lock()
+	s.ln = newLn
+	s.lnMu.Unlock()
+
+	displayAddr := net.JoinHostPort(displayHost(host), strconv.Itoa(port))
+	s.Addr = displayAddr
+
+	go func() {
+		if err := http.Serve(newLn, s.mux); err != nil {
+			if !errors.Is(err, net.ErrClosed) {
+				log.Printf("huemux: http server stopped: %v", err)
+			}
+		}
+	}()
+
+	return scheme + "://" + displayAddr, nil
+}
+
+// broadcastConfigChanged pushes a config_changed message to every connected
+// WS client so each frame can update its features/auth state live.
+func (s *Server) broadcastConfigChanged() {
+	cfg := s.Config()
+	lanIPs := LocalAddresses()
+	lanStrs := make([]string, len(lanIPs))
+	for i, ip := range lanIPs {
+		lanStrs[i] = ip.String()
+	}
+	w := configChangedWire{
+		Type:    "config_changed",
+		Profile: string(cfg.Profile),
+		Lights:  cfg.ShowsLightsTab(),
+		Sync:    cfg.ShowsSyncTab(),
+		Auth: configAuthWire{
+			Mode:     string(cfg.Auth.Mode),
+			HasToken: cfg.Auth.Token != "",
+		},
+		Listen: configListenWire{
+			Host: displayHost(cfg.Listen.Host),
+			Port: listenPort(s.Addr),
+		},
+		LanAddresses: lanStrs,
+	}
+	raw, err := json.Marshal(w)
+	if err != nil {
+		return
+	}
+	s.broadcast(raw)
+}
+
 // guard wraps a handler with token authentication. Applied to every /api
 // route and the WebSocket upgrade — not to the static UI, which is just an
 // HTML shell that cannot do anything until one of these answers it.
@@ -266,6 +349,38 @@ type favoriteEventWire struct {
 	Favorite bool   `json:"favorite"`
 }
 
+// configChangedWire is broadcast to every WS client after /api/config changes,
+// so each frame can update its features/auth state without a full reload.
+type configChangedWire struct {
+	Type         string   `json:"type"`
+	Profile      string   `json:"profile"`
+	Lights       bool     `json:"lights"`
+	Sync         bool     `json:"sync"`
+	Auth         configAuthWire  `json:"auth"`
+	Listen       configListenWire `json:"listen"`
+	LanAddresses []string `json:"lan_addresses"`
+}
+
+type configAuthWire struct {
+	Mode     string `json:"mode"`
+	HasToken bool   `json:"has_token"`
+}
+
+type configListenWire struct {
+	Host string `json:"host"`
+	Port int    `json:"port"`
+}
+
+// displayHost returns 127.0.0.1 when host is a wildcard, so the printed URL
+// and Electron window URL are actually connectable. A browser cannot connect
+// to 0.0.0.0 or :: — those are bind-only meta-addresses.
+func displayHost(host string) string {
+	if isWildcardHost(host) {
+		return "127.0.0.1"
+	}
+	return host
+}
+
 func (s *Server) routes() {
 	webFS, err := fs.Sub(huemux.WebFS, "web")
 	if err != nil {
@@ -340,7 +455,7 @@ func (s *Server) ListenAndServe() (string, error) {
 		}
 	}
 
-	s.Addr = net.JoinHostPort(host, strconv.Itoa(port))
+	s.Addr = net.JoinHostPort(displayHost(host), strconv.Itoa(port))
 	scheme := "http"
 
 	if cfg.TLS.Mode != appconfig.TLSOff {

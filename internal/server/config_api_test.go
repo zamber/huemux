@@ -134,14 +134,16 @@ func TestConfigPatchValidatesAndPartiallyUpdates(t *testing.T) {
 	}
 }
 
-// Changing something that only takes effect at bind time must say so rather
-// than reporting success and quietly doing nothing.
-func TestConfigPatchReportsRestartRequired(t *testing.T) {
+// Listen-address changes are now live-applied via RestartListener. The
+// response includes new_url so the frontend can navigate to the new address.
+// Auth-only changes don't change the URL and must not include new_url.
+func TestConfigPatchLiveApply(t *testing.T) {
 	dir := t.TempDir()
 	withConfigDir(t, dir)
 	s := New(appconfig.Default(), nil, nil, nil, nil)
+	defer s.Close()
 
-	do := func(body string) bool {
+	do := func(body string) (newURL string) {
 		rec := httptest.NewRecorder()
 		req := httptest.NewRequest(http.MethodPatch, "/api/config", strings.NewReader(body))
 		req.RemoteAddr = "127.0.0.1:5555"
@@ -150,16 +152,16 @@ func TestConfigPatchReportsRestartRequired(t *testing.T) {
 			t.Fatalf("patch failed: %d %s", rec.Code, rec.Body.String())
 		}
 		var out struct {
-			RestartRequired bool `json:"restart_required"`
+			NewURL string `json:"new_url"`
 		}
 		_ = json.NewDecoder(rec.Body).Decode(&out)
-		return out.RestartRequired
+		return out.NewURL
 	}
 
-	if !do(`{"listen":{"host":"127.0.0.1","port":7777}}`) {
-		t.Error("a listen-address change requires a restart and must say so")
+	if u := do(`{"listen":{"host":"127.0.0.1","port":7777}}`); u == "" {
+		t.Error("a listen-address change must return new_url")
 	}
-	if do(`{"auth":{"mode":"token","token":"a.b.c"}}`) {
-		t.Error("an auth change applies live and must not demand a restart")
+	if u := do(`{"auth":{"mode":"token","token":"a.b.c"}}`); u != "" {
+		t.Error("an auth-only change must not return new_url")
 	}
 }

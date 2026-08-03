@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"net"
 	"net/http"
+	"strconv"
 
 	"github.com/zamber/huemux/internal/appconfig"
 	"github.com/zamber/huemux/internal/config"
@@ -43,6 +44,13 @@ type configWire struct {
 	// callers, so the settings screen can render read-only instead of
 	// offering controls that would 403.
 	Editable bool `json:"editable"`
+
+	// ShareControl is true when the server binds all interfaces (0.0.0.0 or ::).
+	ShareControl bool `json:"share_control"`
+
+	// LanAddresses holds this machine's non-loopback unicast IPs, for the
+	// settings UI to preview LAN-reachable URLs when sharing is on.
+	LanAddresses []string `json:"lan_addresses"`
 }
 
 // handleConfig serves the effective configuration, and accepts changes to it
@@ -65,12 +73,19 @@ func (s *Server) writeConfig(w http.ResponseWriter, r *http.Request) {
 	out.Profile = string(cfg.Profile)
 	out.Lights = cfg.ShowsLightsTab()
 	out.Sync = cfg.ShowsSyncTab()
-	out.Listen.Host = cfg.Listen.Host
-	out.Listen.Port = cfg.Listen.Port
+	out.Listen.Host = displayHost(cfg.Listen.Host)
+	out.Listen.Port = listenPort(s.Addr)
 	out.Auth.Mode = string(cfg.Auth.Mode)
 	out.Auth.HasToken = cfg.Auth.Token != ""
 	out.TLS.Mode = string(cfg.TLS.Mode)
 	out.Editable = isLoopbackRequest(r)
+	out.ShareControl = isWildcardHost(cfg.Listen.Host)
+
+	lanIPs := LocalAddresses()
+	out.LanAddresses = make([]string, len(lanIPs))
+	for i, ip := range lanIPs {
+		out.LanAddresses[i] = ip.String()
+	}
 
 	w.Header().Set("Content-Type", "application/json")
 	_ = json.NewEncoder(w).Encode(out)
@@ -112,22 +127,28 @@ func (s *Server) patchConfig(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Listen address and TLS are fixed at bind time, and the profile decides
-	// which services were constructed at startup. Rather than pretend a live
-	// swap happened, persist and report what still needs a restart — a
-	// settings screen that silently lies about having applied something is
-	// worse than one that asks you to restart.
-	restart := updated.Listen != current.Listen ||
-		updated.TLS != current.TLS ||
-		updated.Profile != current.Profile
+	listenChanged := updated.Listen != current.Listen ||
+		updated.TLS != current.TLS
 
 	s.setConfig(updated)
 
+	resp := map[string]any{"ok": true}
+
+	if listenChanged {
+		newURL, err := s.RestartListener(updated)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+		resp["new_url"] = newURL
+	}
+
+	// Broadcast to all connected WS clients so every frame can update its
+	// features/auth state without a reload.
+	go s.broadcastConfigChanged()
+
 	w.Header().Set("Content-Type", "application/json")
-	_ = json.NewEncoder(w).Encode(map[string]any{
-		"ok":               true,
-		"restart_required": restart,
-	})
+	_ = json.NewEncoder(w).Encode(resp)
 }
 
 // isLoopbackRequest reports whether r arrived over the loopback interface.
@@ -152,4 +173,18 @@ func splitHostPortLenient(addr string) (string, string, error) {
 		return addr, "", err
 	}
 	return host, port, nil
+}
+
+// listenPort extracts the port number from a "host:port" address string.
+// Returns 0 on parse failure.
+func listenPort(addr string) int {
+	_, portStr, err := net.SplitHostPort(addr)
+	if err != nil {
+		return 0
+	}
+	port, err := strconv.Atoi(portStr)
+	if err != nil {
+		return 0
+	}
+	return port
 }

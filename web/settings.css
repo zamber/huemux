@@ -70,6 +70,62 @@ body { margin: 0; }
    section below does not jump when a message appears. */
 .actions { display: flex; align-items: center; min-height: 1.4rem; margin-top: 1rem; }
 
+/* Share-control toggle row — inline checkbox + label. */
+.toggle-label {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 0.4rem;
+  font-weight: 400;
+  cursor: pointer;
+}
+.toggle-label input[type="checkbox"] {
+  width: 1.1rem;
+  height: 1.1rem;
+  accent-color: var(--accent);
+  margin: 0;
+  flex: 0 0 auto;
+}
+
+#share-detail { margin-bottom: 0.4rem; }
+#share-detail .row { align-items: center; }
+.port-label { font-weight: 400; font-size: 0.9rem; white-space: nowrap; }
+
+.share-urls {
+  list-style: none;
+  padding: 0;
+  margin: 0.3rem 0 0;
+  font-size: 0.82rem;
+}
+.share-urls li {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  margin-bottom: 0.2rem;
+  padding: 0.25rem 0.4rem;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+}
+.share-urls code {
+  flex: 1;
+  font-family: inherit;
+  word-break: break-all;
+}
+.share-urls .copy-btn {
+  flex: 0 0 auto;
+  font-family: inherit;
+  font-size: 0.72rem;
+  padding: 0.2rem 0.5rem;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  background: var(--card);
+  color: var(--ink);
+  cursor: pointer;
+}
+.share-urls .copy-btn:hover { border-color: var(--ink); }
+.share-urls .copy-btn:active { background: var(--ink); color: var(--bg); }
+
 /* Rows of buttons wrap on a narrow screen rather than overflowing, and keep
    an even gap when they do. */
 .setting .row { flex-wrap: wrap; }

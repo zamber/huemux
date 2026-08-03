@@ -10,11 +10,15 @@ const els = {
   readonly: document.getElementById('settings-readonly'),
   form: document.getElementById('settings-form'),
   profile: document.getElementById('set-profile'),
-  host: document.getElementById('set-host'),
+  share: document.getElementById('set-share'),
+  shareDetail: document.getElementById('share-detail'),
+  shareUrlList: document.getElementById('share-url-list'),
   port: document.getElementById('set-port'),
   auth: document.getElementById('set-auth'),
   token: document.getElementById('set-token'),
+  tokenRow: document.getElementById('token-row'),
   tokenGen: document.getElementById('set-token-gen'),
+  tokenSave: document.getElementById('set-token-save'),
   tls: document.getElementById('set-tls'),
   result: document.getElementById('set-result'),
 };
@@ -92,16 +96,20 @@ function suggestToken() {
 
 function render(cfg) {
   els.profile.value = cfg.profile || 'full';
-  els.host.value = cfg.listen.host;
-  els.port.value = cfg.listen.port;
   els.auth.value = cfg.auth.mode || 'none';
   els.tls.value = cfg.tls.mode || 'off';
 
-  // The server never sends the token back — only whether one exists. Leaving
-  // the field blank means "unchanged"; typing replaces it.
-  els.token.placeholder = cfg.auth.has_token
-    ? t('settings.tokenSet', '(unchanged — type to replace)')
-    : t('settings.tokenPlaceholder', 'e.g. otter.beacon.willow.cougar');
+  // Share control.
+  els.share.checked = !!cfg.share_control;
+  els.shareDetail.hidden = !cfg.share_control;
+  els.port.value = cfg.listen.port || 7654;
+
+  // Preview URLs.
+  renderShareURLs(cfg);
+
+  // Token row visibility.
+  els.tokenRow.hidden = cfg.auth.mode !== 'token';
+  els.token.placeholder = t('settings.tokenPlaceholder', 'e.g. otter.beacon.willow.cougar');
 
   els.status.hidden = true;
   els.form.hidden = false;
@@ -110,6 +118,59 @@ function render(cfg) {
     els.readonly.hidden = false;
     els.form.querySelectorAll('input, select, button').forEach((el) => { el.disabled = true; });
   }
+}
+
+function renderShareURLs(cfg) {
+  els.shareUrlList.innerHTML = '';
+  var port = cfg.listen.port || 7654;
+  var urls = ['http://127.0.0.1:' + port];
+  if (cfg.lan_addresses) {
+    cfg.lan_addresses.forEach(function (ip) {
+      urls.push('http://' + ip + ':' + port);
+    });
+  }
+  urls.forEach(function (url) {
+    var li = document.createElement('li');
+    var code = document.createElement('code');
+    code.textContent = url;
+    li.appendChild(code);
+
+    var btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'copy-btn';
+    btn.textContent = t('settings.diagnosticsCopy', 'Copy');
+    btn.addEventListener('click', function () {
+      copyURL(url, btn);
+    });
+    li.appendChild(btn);
+    els.shareUrlList.appendChild(li);
+  });
+}
+
+function copyURL(text, btn) {
+  if (navigator.clipboard && window.isSecureContext) {
+    navigator.clipboard.writeText(text).then(function () {
+      btn.textContent = t('settings.copied', 'Copied.');
+      setTimeout(function () { btn.textContent = t('settings.diagnosticsCopy', 'Copy'); }, 1500);
+    }).catch(function () {
+      fallbackSelect(text, btn);
+    });
+  } else {
+    fallbackSelect(text, btn);
+  }
+}
+
+function fallbackSelect(text, btn) {
+  var ta = document.createElement('textarea');
+  ta.value = text;
+  ta.style.position = 'fixed';
+  ta.style.left = '-9999px';
+  document.body.appendChild(ta);
+  ta.select();
+  try { document.execCommand('copy'); } catch (_) {}
+  document.body.removeChild(ta);
+  btn.textContent = t('settings.copied', 'Copied.');
+  setTimeout(function () { btn.textContent = t('settings.diagnosticsCopy', 'Copy'); }, 1500);
 }
 
 function load() {
@@ -124,7 +185,10 @@ function load() {
 els.tokenGen.addEventListener('click', () => {
   els.token.value = suggestToken();
   // Choosing a token is an unambiguous request to use one.
-  if (els.auth.value === 'none') els.auth.value = 'token';
+  if (els.auth.value === 'none') {
+    els.auth.value = 'token';
+    els.tokenRow.hidden = false;
+  }
 });
 
 // ---------- applying changes ----------
@@ -145,15 +209,19 @@ let inFlight = false;
 let pendingAgain = false;
 
 function currentBody() {
-  const body = {
+  var share = els.share.checked;
+  var body = {
     profile: els.profile.value,
-    listen: { host: els.host.value.trim(), port: Number(els.port.value) },
+    listen: {
+      host: share ? '0.0.0.0' : '127.0.0.1',
+      port: share ? Number(els.port.value) || 7654 : 0,
+    },
     auth: { mode: els.auth.value },
     tls: { mode: els.tls.value },
   };
   // Only send a token when one was typed, so changing an unrelated setting
   // does not wipe the existing credential.
-  const typed = els.token.value.trim();
+  var typed = els.token.value.trim();
   if (typed) body.auth.token = typed;
   return body;
 }
@@ -179,16 +247,24 @@ function apply() {
     .then((r) => r.text().then((text) => ({ ok: r.ok, text })))
     .then(({ ok, text }) => {
       if (!ok) {
-        // The server's message names the offending field; anything this page
-        // invented would be vaguer.
         say(text.trim(), true);
         return;
       }
-      const res = JSON.parse(text);
-      say(res.restart_required
-        ? t('settings.savedRestart', 'Saved — restart HueMux for this to take effect.')
-        : t('settings.saved', 'Saved.'));
-      els.token.value = '';
+      var res = JSON.parse(text);
+      say(t('settings.saved', 'Saved.'));
+
+      // If the listen address changed, the server returns the new URL.
+      // Navigate there so the page stays connected.
+      if (res.new_url) {
+        say(t('settings.reconnecting', 'Reconnecting to new address…'));
+        setTimeout(function () {
+          try { window.top.location.replace(res.new_url + '/settings.html'); } catch (_) {
+            window.location.replace(res.new_url + '/settings.html');
+          }
+        }, 300);
+        return;
+      }
+
       load();
     })
     .catch((e) => say(String(e), true))
@@ -207,18 +283,37 @@ function scheduleApply(immediate) {
   applyTimer = setTimeout(apply, 600);
 }
 
-[els.profile, els.auth, els.tls].forEach((el) =>
+[els.profile, els.tls].forEach((el) =>
   el.addEventListener('change', () => scheduleApply(true)));
-[els.host, els.port, els.token].forEach((el) => {
-  el.addEventListener('input', () => scheduleApply(false));
-  // Leaving a field is an unambiguous "I am done with this one".
-  el.addEventListener('blur', () => scheduleApply(true));
+
+// Auth select: toggle token row. Switching to "none" auto-applies.
+// Switching to "token" requires explicit save with a token.
+els.auth.addEventListener('change', function () {
+  els.tokenRow.hidden = els.auth.value !== 'token';
+  if (els.auth.value === 'none') {
+    scheduleApply(true);
+  }
 });
 
-// The token is also a credential every fetch and WebSocket on this device has
-// to send, so persist it to localStorage as it is typed — not on save.
+// Share control checkbox: toggle detail visibility, then apply.
+els.share.addEventListener('change', function () {
+  els.shareDetail.hidden = !els.share.checked;
+  scheduleApply(true);
+});
+
+// Port: debounce, apply on blur.
+els.port.addEventListener('input', () => scheduleApply(false));
+els.port.addEventListener('blur', () => scheduleApply(true));
+
+// Token field: persist to localStorage on keystroke but do NOT auto-apply.
+// The Save button triggers the PATCH.
 els.token.addEventListener('input', function () {
   setAuthToken(els.token.value);
+});
+
+// Token Save button.
+els.tokenSave.addEventListener('click', function () {
+  apply();
 });
 
 els.form.addEventListener('submit', (ev) => {

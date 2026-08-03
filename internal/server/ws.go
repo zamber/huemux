@@ -102,7 +102,7 @@ func checkOrigin(r *http.Request, allowedHost string) bool {
 	// for, and for the same reason.
 	if isWildcardHost(allowedHost) {
 		if ip := net.ParseIP(host); ip != nil {
-			for _, own := range localAddresses() {
+			for _, own := range LocalAddresses() {
 				if own.Equal(ip) {
 					return true
 				}

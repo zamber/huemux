@@ -114,7 +114,7 @@ func generateSelfSigned(host, certPath, keyPath string) (*tls.Certificate, error
 		// the certificate covers only loopback and every LAN browser gets a
 		// name-mismatch error stacked on top of the self-signed warning,
 		// which makes the whole mode useless for the case it exists to serve.
-		for _, ip := range localAddresses() {
+		for _, ip := range LocalAddresses() {
 			tmpl.IPAddresses = append(tmpl.IPAddresses, ip)
 		}
 	default:
@@ -154,10 +154,11 @@ func generateSelfSigned(host, certPath, keyPath string) (*tls.Certificate, error
 	return &cert, nil
 }
 
-// localAddresses returns this machine's non-loopback unicast IPs, for naming
-// in a self-signed certificate when the server binds a wildcard address.
+// LocalAddresses returns this machine's non-loopback unicast IPs, for naming
+// in a self-signed certificate when the server binds a wildcard address, and
+// for the settings UI to preview LAN reachable URLs.
 // Best-effort: a failure here costs a SAN entry, not the server starting.
-func localAddresses() []net.IP {
+func LocalAddresses() []net.IP {
 	var out []net.IP
 	addrs, err := net.InterfaceAddrs()
 	if err != nil {

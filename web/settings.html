@@ -57,15 +57,22 @@
     </section>
 
     <section class="setting">
-      <label data-i18n="settings.listen">Listen address</label>
-      <div class="row">
-        <input type="text" id="set-host" spellcheck="false">
-        <input type="number" id="set-port" min="0" max="65535">
+      <label data-i18n="settings.listen">Share control</label>
+      <label class="toggle-label">
+        <input type="checkbox" id="set-share">
+        <span data-i18n="settings.shareLabel">Share control on local network</span>
+      </label>
+      <div id="share-detail" hidden>
+        <div class="row">
+          <label for="set-port" class="port-label">Port</label>
+          <input type="number" id="set-port" min="1" max="65535" value="7654">
+        </div>
+        <p id="share-urls" class="hint" data-i18n="settings.shareUrls">Reachable at:</p>
+        <ul id="share-url-list" class="share-urls"></ul>
       </div>
       <p class="hint" data-i18n="settings.listenHint">
-        127.0.0.1 keeps HueMux reachable only from this machine. Anything else
-        exposes it to your network — set authentication below if you do that.
-        Port 0 picks the first free port from 7654.
+        When on, other devices on your local network can reach HueMux.
+        The port can be changed if another app already uses 7654.
       </p>
     </section>
 
@@ -75,14 +82,17 @@
         <option value="none" data-i18n="settings.authNone">None</option>
         <option value="token" data-i18n="settings.authToken">Token</option>
       </select>
-      <div class="row">
-        <input type="text" id="set-token" spellcheck="false"
-               data-i18n-attr="placeholder:settings.tokenPlaceholder">
-        <button type="button" id="set-token-gen" data-i18n="settings.generate">Generate</button>
+      <div id="token-row" hidden>
+        <div class="row">
+          <input type="text" id="set-token" spellcheck="false"
+                 data-i18n-attr="placeholder:settings.tokenPlaceholder">
+          <button type="button" id="set-token-gen" data-i18n="settings.generate">Generate</button>
+          <button type="button" id="set-token-save" data-i18n="settings.tokenSave">Save token</button>
+        </div>
       </div>
       <p class="hint" data-i18n="settings.authHint">
-        Three memorable words. Connections from this machine are never asked
-        for it.
+        4 memorable words or any password. Connections from this machine are
+        never asked for it.
       </p>
     </section>
 

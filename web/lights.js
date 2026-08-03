@@ -177,6 +177,10 @@ function handleMessage(msg) {
     case 'favorite_event':
       mergeFavorite(msg.id, msg.favorite);
       break;
+    case 'config_changed':
+      // Re-fetch features so the shell header re-renders its tabs.
+      if (typeof HueMuxFeatures !== 'undefined') HueMuxFeatures.load();
+      break;
   }
 }
 

@@ -142,7 +142,7 @@ func TestOriginStillRejectsForeignSitesWhenAuthEnabled(t *testing.T) {
 // upgrade was rejected while static assets still loaded — the page rendered
 // its header and then stayed empty.
 func TestOriginAcceptsOwnAddressOnWildcardBind(t *testing.T) {
-	own := localAddresses()
+	own := LocalAddresses()
 	if len(own) == 0 {
 		t.Skip("no non-loopback address on this host")
 	}

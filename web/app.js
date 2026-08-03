@@ -94,6 +94,12 @@ function handleControlMessage(msg) {
     renderSyncButtons();
     return;
   }
+  if (msg.type === 'config_changed') {
+    // Server-side config was updated (e.g. profile changed, auth toggled).
+    // Re-fetch features so the shell header re-renders its tabs.
+    if (typeof HueMuxFeatures !== 'undefined') HueMuxFeatures.load();
+    return;
+  }
   if (msg.type !== 'status') return;
 
   if (!msg.paired) {
