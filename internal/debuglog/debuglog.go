@@ -233,3 +233,21 @@ var captureOnce sync.Once
 func Note(line string) {
 	appendLine(time.Now().Format("2006/01/02 15:04:05.000000") + " " + line)
 }
+
+// Audiof records an audio-pipeline diagnostic line in the in-memory ring.
+// Like Note, it is never gated on Enabled — audio debugging on a phone is
+// otherwise impossible because there is no -debug flag and no filesystem.
+// The format is the same as the standard logger (timestamp + caller prefix).
+// Calls are expected to be throttled by the caller.
+func Audiof(format string, args ...any) {
+	msg := fmt.Sprintf(format, args...)
+	appendLine(time.Now().Format("2006/01/02 15:04:05.000000") + " huemux/audio: " + msg)
+}
+
+// Infof records a line in the ring when Enabled is true OR the ring is
+// capturing. This is for messages that are useful for diagnostics but too
+// frequent for the production log — the ring's 800-line cap bounds the cost.
+func Infof(format string, args ...any) {
+	msg := fmt.Sprintf(format, args...)
+	appendLine(time.Now().Format("2006/01/02 15:04:05.000000") + " " + msg)
+}

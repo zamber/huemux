@@ -12,10 +12,23 @@ import (
 	"time"
 
 	"github.com/zamber/huemux/internal/config"
+	"github.com/zamber/huemux/internal/debuglog"
 	"github.com/zamber/huemux/internal/hue"
 	"github.com/zamber/huemux/internal/music"
 	"github.com/zamber/huemux/internal/pipeline"
 	"github.com/zamber/huemux/internal/preset"
+)
+
+// CaptureMode selects which input source the output loop consumes.
+// It is a post-capture routing decision: on Android the single MediaProjection
+// session always captures both video and audio when available; this decides
+// which one the engine acts on.
+type CaptureMode string
+
+const (
+	CaptureVideo      CaptureMode = "video"
+	CaptureAudio      CaptureMode = "audio"
+	CaptureAudioVideo CaptureMode = "audiovideo"
 )
 
 // ZoneStatus is a zone plus the color currently being sent for it — enough
@@ -56,6 +69,9 @@ type Status struct {
 	// MusicPreset is the active music-reactivity preset slug; empty while
 	// screen sync drives the output.
 	MusicPreset string `json:"MusicPreset"`
+
+	// CaptureMode is the active input routing: video, audio, or audiovideo.
+	CaptureMode string `json:"CaptureMode"`
 
 	Settings config.AreaSettings `json:"Settings"`
 	Zones    []ZoneStatus        `json:"Zones"`
@@ -102,6 +118,16 @@ type Engine struct {
 	musicRunner *preset.Runner
 	musicFrame  func() (music.Frame, bool)
 	musicPreset string
+
+	// captureMode selects which input source drives the output loop.
+	// Defaults to CaptureVideo (backwards-compatible). Set by the server
+	// on capture_mode control messages. Guarded by mu.
+	captureMode CaptureMode
+
+	// tickDiagLogged is set after the first tick diagnostic is emitted,
+	// so the "no source active" warning fires once per session rather
+	// than on every tick.
+	tickDiagLogged bool
 }
 
 // New builds an Engine for an already-paired bridge.
@@ -309,6 +335,27 @@ func (e *Engine) SetMusicFrameSource(fn func() (music.Frame, bool)) {
 	e.mu.Unlock()
 }
 
+// SetCaptureMode selects which input source drives the output loop.
+// Safe to call while the stream is running — takes effect on the next tick.
+func (e *Engine) SetCaptureMode(mode CaptureMode) {
+	e.mu.Lock()
+	defer e.mu.Unlock()
+	if mode != CaptureVideo && mode != CaptureAudio && mode != CaptureAudioVideo {
+		return // ignore unknown modes
+	}
+	e.captureMode = mode
+}
+
+// CaptureMode reports the active input routing mode.
+func (e *Engine) CaptureMode() CaptureMode {
+	e.mu.Lock()
+	defer e.mu.Unlock()
+	if e.captureMode == "" {
+		return CaptureVideo // default
+	}
+	return e.captureMode
+}
+
 // ActivateMusic starts driving the output loop from the named built-in
 // preset; pass "" to hand control back to screen sync. channels maps light
 // RIDs to area channel ids, positions their room coordinates — both derived
@@ -464,27 +511,65 @@ func (e *Engine) tick(now time.Time) {
 	features := e.lightFeature
 	stream := e.stream
 	musicRunner := e.musicRunner
+	captureMode := e.captureMode
+	if captureMode == "" {
+		captureMode = CaptureVideo // default
+	}
 	e.mu.Unlock()
 
 	if stream == nil {
 		return
 	}
 
+	// Diagnostic: once per session, record what is driving the output.
+	// On Android this is the only way to know whether audio capture reached
+	// the engine or silently stalled upstream.
+	if !e.tickDiagLogged {
+		e.tickDiagLogged = true
+		e.mu.Lock()
+		mode := e.captureMode
+		hasGrid := e.grid != nil
+		hasRunner := e.musicRunner != nil
+		e.mu.Unlock()
+		if mode == "" {
+			mode = CaptureVideo
+		}
+		debuglog.Audiof("tick: mode=%s grid=%v preset=%v zones=%d", mode, hasGrid, hasRunner, len(zones))
+	}
+
 	// Two input paths share one output clock (DP-8): an active music preset
 	// replaces the grid as the color source (screen sync is "paused"; a
 	// blend mode is Phase 4). Zones are still what names the channels, so
 	// the per-channel processing below is unchanged either way.
+	//
+	// CaptureMode decides which source wins when both are available:
+	//   video       — grid only (backwards-compatible default)
+	//   audio       — music preset only; grid ignored
+	//   audiovideo  — music preset if active, otherwise grid
 	var raw map[uint8]pipeline.LinearColor
-	if musicRunner != nil {
-		raw = musicRunner.Step(now)
-	} else {
-		if len(zones) == 0 {
-			return
+	switch captureMode {
+	case CaptureAudio:
+		if musicRunner != nil {
+			raw = musicRunner.Step(now)
+		} else {
+			// Audio mode with no preset: send a low-flux neutral frame
+			// so the DTLS session does not time out while waiting for
+			// the first audio frames to arrive.
+			raw = e.neutralFrameLocked(zones)
 		}
-		raw = make(map[uint8]pipeline.LinearColor, len(zones))
-		for _, z := range zones {
-			r, g, b := pipeline.SampleZoneLinear(grid, mask, z)
-			raw[z.ChannelID] = pipeline.LinearColor{R: r, G: g, B: b}
+	case CaptureAudioVideo:
+		if musicRunner != nil {
+			raw = musicRunner.Step(now)
+		} else if grid != nil {
+			raw = e.sampleGridLocked(grid, mask, zones)
+		} else {
+			raw = e.neutralFrameLocked(zones)
+		}
+	default: // CaptureVideo or empty
+		if grid == nil {
+			raw = e.neutralFrameLocked(zones)
+		} else {
+			raw = e.sampleGridLocked(grid, mask, zones)
 		}
 	}
 
@@ -529,6 +614,36 @@ func (e *Engine) tick(now time.Time) {
 	e.mu.Unlock()
 }
 
+// sampleGridLocked samples every zone from the current grid. Extracted from
+// tick() so the three capture-mode branches share one implementation.
+func (e *Engine) sampleGridLocked(grid *pipeline.Grid, mask pipeline.LetterboxMask, zones []pipeline.Zone) map[uint8]pipeline.LinearColor {
+	if len(zones) == 0 || grid == nil {
+		return nil
+	}
+	raw := make(map[uint8]pipeline.LinearColor, len(zones))
+	for _, z := range zones {
+		r, g, b := pipeline.SampleZoneLinear(grid, mask, z)
+		raw[z.ChannelID] = pipeline.LinearColor{R: r, G: g, B: b}
+	}
+	return raw
+}
+
+// neutralFrameLocked returns a dim neutral frame for every zone — enough to
+// keep the DTLS session alive when no real source is driving the output
+// (e.g. audio mode before the first audio frames arrive). Brightness floor
+// of ~1% is below the human-noticeable threshold on most bulbs but satisfies
+// the bridge's keepalive requirement.
+func (e *Engine) neutralFrameLocked(zones []pipeline.Zone) map[uint8]pipeline.LinearColor {
+	if len(zones) == 0 {
+		return nil
+	}
+	raw := make(map[uint8]pipeline.LinearColor, len(zones))
+	for _, z := range zones {
+		raw[z.ChannelID] = pipeline.LinearColor{R: 0.005, G: 0.005, B: 0.005}
+	}
+	return raw
+}
+
 func (e *Engine) snapshotLocked(zones []pipeline.Zone, colors map[uint8][3]byte) Status {
 	e.mu.Lock()
 	defer e.mu.Unlock()
@@ -570,6 +685,7 @@ func (e *Engine) snapshotLocked(zones []pipeline.Zone, colors map[uint8][3]byte)
 		GridH:           gridH(e.grid),
 		Settings:        e.settings,
 		MusicPreset:     e.musicPreset,
+		CaptureMode:     string(e.captureMode),
 		Zones:           zs,
 	}
 }

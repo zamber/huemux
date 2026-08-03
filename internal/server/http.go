@@ -793,6 +793,18 @@ func (s *Server) PushAudioPCM(pcm []byte, sampleRate int) {
 	for _, f := range frames {
 		s.music.Update(f)
 	}
+	s.autoActivateMusic()
+	// Log at most once every 5 seconds, same throttle as logMusicStats.
+	s.mu.Lock()
+	skip := time.Since(s.lastFrameLog) < 5*time.Second
+	if !skip {
+		s.lastFrameLog = time.Now()
+	}
+	s.mu.Unlock()
+	if !skip && len(frames) > 0 {
+		debuglog.Audiof("pcm: %d bytes @ %d Hz → %d analysis frames, bass=%.3f",
+			len(pcm), sampleRate, len(frames), frames[0].FFT[0])
+	}
 }
 
 // removeConn forgets a disconnected connection: unregisters it as a UI
@@ -841,18 +853,50 @@ func (s *Server) handleAudioFrame(conn *Conn, payload []byte) {
 	s.mu.Unlock()
 	s.music.Update(f)
 
-	if debuglog.Enabled {
-		s.logMusicStats()
+	// Auto-activate the default music preset on the first audio frame
+	// when capture mode is audio or audiovideo. This is what turns audio
+	// capture from "frames arriving but going nowhere" into actual light
+	// output — the user should not have to manually select a preset on
+	// top of starting capture.
+	s.autoActivateMusic()
+
+	s.logMusicStats()
+}
+
+// autoActivateMusic activates the default preset (bass_pulse) on first
+// audio frame if the engine is in audio/audiovideo mode and no preset
+// is active. Idempotent — the preset is only set once per capture session.
+func (s *Server) autoActivateMusic() {
+	eng := s.engine()
+	if eng == nil {
+		return
+	}
+	mode := eng.CaptureMode()
+	if mode != engine.CaptureAudio && mode != engine.CaptureAudioVideo {
+		return
+	}
+	if eng.MusicPreset() != "" {
+		return // already active, user made an explicit choice
+	}
+	channels, positions := eng.MusicLayout()
+	if channels == nil {
+		// No area selected yet — harmless, the next audio frame will retry.
+		return
+	}
+	if err := eng.ActivateMusic("bass_pulse", channels, positions); err != nil {
+		log.Printf("huemux: auto-activate bass_pulse: %v", err)
+	} else {
+		debuglog.Audiof("auto-activated bass_pulse preset (mode=%s)", mode)
 	}
 }
 
-// logMusicStats logs a throttled (at most once/second) summary of incoming
-// audio frames when -debug is on — the same rationale as logFrameStats: the
-// one signal the server had zero visibility into was whether frames were
-// really arriving, or the capture path had silently stalled.
+// logMusicStats logs a throttled (at most once/5s) summary of incoming
+// audio frames to the in-memory ring buffer — always, regardless of -debug,
+// so a diagnostics report from a phone has evidence that audio frames were
+// (or were not) arriving.
 func (s *Server) logMusicStats() {
 	s.mu.Lock()
-	skip := time.Since(s.lastFrameLog) < time.Second
+	skip := time.Since(s.lastFrameLog) < 5*time.Second
 	if !skip {
 		s.lastFrameLog = time.Now()
 	}
@@ -860,8 +904,11 @@ func (s *Server) logMusicStats() {
 	if skip {
 		return
 	}
-	f, _, frames := s.music.Snapshot()
-	log.Printf("huemux debug: audio frames=%d bass=%.3f wave0=%.3f", frames, f.FFT[0], f.Wave[0])
+	f, active, frames := s.music.Snapshot()
+	if !active {
+		return
+	}
+	debuglog.Audiof("frames=%d bass=%.3f wave0=%.3f", frames, f.FFT[0], f.Wave[0])
 }
 
 // handleGridFrame accepts a binary grid frame only from whichever
@@ -1073,6 +1120,13 @@ func (s *Server) handleControlMessage(conn *Conn, payload []byte) {
 	}
 
 	switch msg.Type {
+	case "capture_mode":
+		// Route the output loop to video, audio, or audiovideo input.
+		// Reuses the Preset field for the mode string. Takes effect on
+		// the next tick; no restart needed.
+		mode := engine.CaptureMode(msg.Preset)
+		eng.SetCaptureMode(mode)
+		debuglog.Audiof("capture_mode set to %s", mode)
 	case "music_preset":
 		// Activate a built-in music-reactivity preset (or deactivate with
 		// ""). Needs the engine for the area's light/channel layout; the

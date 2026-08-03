@@ -6,6 +6,7 @@
 const els = {
   connDot: document.getElementById('conn-dot'),
   areaSelect: document.getElementById('area-select'),
+  captureMode: document.getElementById('capture-mode'),
   startBtn: document.getElementById('start-btn'),
   stopBtn: document.getElementById('stop-btn'),
   changeSourceBtn: document.getElementById('change-source-btn'),
@@ -237,13 +238,28 @@ els.startBtn.addEventListener('click', async () => {
   if (!areaId) return;
   els.areaWarning.hidden = true;
 
+  const mode = els.captureMode ? els.captureMode.value : 'video';
+  // Always send the capture mode to the server before starting capture,
+  // so the engine's output loop routes correctly from the first tick.
+  send({ type: 'capture_mode', preset: mode });
+
   // Capture first, select_area (which dials the real DTLS stream) only once
   // it succeeds. Reversing this order would mean the bridge starts
   // streaming black/keepalive frames to real lights for however long the
   // browser's share picker sits open, which is a needless real-world side
   // effect of a UI interaction that hasn't finished yet.
   try {
-    await startCapture();
+    if (mode === 'audio' || mode === 'audiovideo') {
+      // Audio mode: start music capture (mic or internal). If the native
+      // bridge is present (Android), the screen capture service already
+      // handles audio; otherwise this uses the browser's Web Audio path.
+      if (typeof HueMuxMusic !== 'undefined') {
+        await HueMuxMusic.startCapture();
+      }
+    }
+    if (mode === 'video' || mode === 'audiovideo') {
+      await startCapture();
+    }
   } catch (err) {
     els.areaWarning.textContent = `Capture failed: ${err.message || err}`;
     els.areaWarning.hidden = false;
@@ -272,6 +288,7 @@ els.stopBtn.addEventListener('click', () => stopSyncing());
 function stopSyncing(opts) {
   const silent = opts && opts.silent;
   stopCapture();
+  if (typeof HueMuxMusic !== 'undefined') HueMuxMusic.stop();
   resetPreview();
   // Skip the outbound stop when the server already knows — it told us.
   if (!silent) send({ type: 'stop' });
@@ -571,6 +588,9 @@ function stopCapture() {
 // on its own, or another client's stream_stopped preempted this one.
 function resetPreview() {
   previewCtx.clearRect(0, 0, els.preview.width, els.preview.height);
+  // Still draw zone overlays so the calibration view is never blank —
+  // black-on-black rectangles were the pre-stream state and looked broken.
+  drawZoneOverlays();
 }
 
 function drawPreviewFromGrid(gridW, gridH, rgba) {
@@ -584,14 +604,50 @@ function drawPreviewFromGrid(gridW, gridH, rgba) {
   drawZoneOverlays();
 }
 
+// Draw a 32-band frequency histogram in the preview canvas when audio
+// mode is active and FFT data is available. Replaces the blank video
+// preview with an honest "is there signal" visual.
+function drawAudioSpectrum(msg) {
+  if (!msg || !msg.music || !msg.music.fft) return;
+  const fft = msg.music.fft;
+  if (fft.length < 32) return;
+  const ctx = previewCtx;
+  const w = els.preview.width, h = els.preview.height;
+  const bw = Math.floor(w / 32);
+  // Semi-transparent background so zone overlays draw on top.
+  ctx.clearRect(0, 0, w, h);
+  ctx.fillStyle = 'rgba(0,0,0,0.85)';
+  ctx.fillRect(0, 0, w, h);
+  for (let b = 0; b < 32; b++) {
+    const v = fft[b];
+    if (v < 0.005) continue;
+    const barH = Math.max(2, v * h);
+    const x = b * bw;
+    // Warm gradient: bass=red, mids=yellow, highs=cyan.
+    const t = b / 31;
+    const r = Math.floor(255 * (t < 0.5 ? 1 : 2 - 2 * t));
+    const g = Math.floor(255 * (t < 0.5 ? 2 * t : 1));
+    const b_ = Math.floor(255 * (1 - t));
+    ctx.fillStyle = `rgb(${r},${g},${b_})`;
+    ctx.fillRect(x + 1, h - barH, bw - 2, barH);
+  }
+  drawZoneOverlays();
+}
+
 function drawZoneOverlays() {
   if (!latestStatus || !latestStatus.zones) return;
   const w = els.preview.width, h = els.preview.height;
   for (const z of latestStatus.zones) {
     const x = z.U0 * w, y = z.V0 * h, rw = (z.U1 - z.U0) * w, rh = (z.V1 - z.V0) * h;
-    previewCtx.fillStyle = `rgba(${z.R},${z.G},${z.B},0.55)`;
+    // If the zone color is black (no frames yet), use a visible neutral gray
+    // so the rectangles are not invisible on the black background.
+    const isBlack = z.R === 0 && z.G === 0 && z.B === 0;
+    const fill = isBlack
+      ? 'rgba(60,60,60,0.45)'
+      : `rgba(${z.R},${z.G},${z.B},0.55)`;
+    previewCtx.fillStyle = fill;
     previewCtx.fillRect(x, y, rw, rh);
-    previewCtx.strokeStyle = 'rgba(255,255,255,0.8)';
+    previewCtx.strokeStyle = isBlack ? 'rgba(255,255,255,0.6)' : 'rgba(255,255,255,0.8)';
     previewCtx.lineWidth = 1;
     previewCtx.strokeRect(x, y, rw, rh);
     previewCtx.fillStyle = '#fff';
@@ -644,6 +700,12 @@ function renderStatus(s) {
   }
   els.statusGrid.appendChild(swatches);
 
+  // In audio mode, draw the FFT spectrum in the preview canvas since there
+  // are no video frames to show. Zone overlays still render on top.
+  const mode = els.captureMode ? els.captureMode.value : 'video';
+  if (mode === 'audio' && s.music && s.music.fft) {
+    drawAudioSpectrum(s);
+  }
   if (!suppressSettingsEcho) applySettingsToControls(s.settings);
 }
 
@@ -721,6 +783,24 @@ document.querySelectorAll('[data-preset-reactivity]').forEach((btn) => {
     slider.dispatchEvent(new Event('input'));
   });
 });
+
+// Capture mode selector — tells the server which source to route to the
+// output loop. On Android this is a post-capture routing decision; the
+// single MediaProjection always captures both video and audio when able.
+if (els.captureMode) {
+  els.captureMode.addEventListener('change', () => {
+    send({ type: 'capture_mode', preset: els.captureMode.value });
+    updateMusicPanelVisibility();
+  });
+}
+
+function updateMusicPanelVisibility() {
+  var mode = els.captureMode ? els.captureMode.value : 'video';
+  var panel = document.getElementById('music-panel');
+  if (panel) {
+    panel.hidden = mode === 'video';
+  }
+}
 
 // --- device capture: resolution and recording -----------------------------
 //

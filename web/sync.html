@@ -48,6 +48,12 @@
   <section id="area-panel">
     <label for="area-select" data-i18n="sync.area">Entertainment zone</label>
     <select id="area-select"><option value="" data-i18n="sync.areaLoading">Loading areas…</option></select>
+    <label for="capture-mode" data-i18n="sync.captureMode">Capture</label>
+    <select id="capture-mode">
+      <option value="video" data-i18n="sync.captureModeVideo">Video</option>
+      <option value="audio" data-i18n="sync.captureModeAudio">Audio</option>
+      <option value="audiovideo" data-i18n="sync.captureModeAudioVideo">Audio+Video</option>
+    </select>
     <button id="start-btn" class="primary" disabled data-i18n="sync.start">Start sync</button>
     <button id="stop-btn" disabled data-i18n="sync.stop">Stop</button>
     <button id="change-source-btn" disabled data-i18n="sync.changeSource">Change source</button>

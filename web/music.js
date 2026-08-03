@@ -346,6 +346,13 @@
       renderPresetOptions();
       render();
     },
+    // startCapture begins audio capture using the currently selected source
+    // (mic or internal). Exposed so app.js can start music capture as part
+    // of the unified Start flow instead of requiring a separate button click.
+    startCapture() {
+      if (running) return Promise.resolve();
+      return startCapture();
+    },
     stop() { stopCapture(); },
     isRunning: () => running,
     // onStatus reconciles the preset control with the server's view: the

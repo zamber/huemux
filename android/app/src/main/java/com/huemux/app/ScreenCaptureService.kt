@@ -149,6 +149,10 @@ class ScreenCaptureService : Service() {
             pipeline?.post { startCapture() }
         } else {
             Mobile.logHost("audio: audio-only capture service up")
+            val err = startAudioRecording()
+            if (err != null) {
+                Mobile.logHost("audio: auto-start failed: $err")
+            }
         }
         return START_NOT_STICKY
     }
