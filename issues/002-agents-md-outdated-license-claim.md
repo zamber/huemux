@@ -35,7 +35,7 @@ $ head -3 LICENSE
 
 ## Why It Matters
 
-A contributor or packager reading AGENTS.md sees a false obstacle. The FOSS-first distribution plan (Obtainium, IzzyOnDroid, Flathub, F-Droid) depends on a clear license status. Contradictory documentation erodes trust in the project's self-knowledge.
+A contributor or packager reading AGENTS.md sees a false obstacle. The FOSS-first distribution plan (Obtainium, Flathub, F-Droid) depends on a clear license status. Contradictory documentation erodes trust in the project's self-knowledge.
 
 ## Suggested Fix
 

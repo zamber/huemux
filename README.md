@@ -64,6 +64,7 @@ actually being built right now.
 
 ### Android: install and stay updated with Obtainium
 
+Obtainium is the primary way to install HueMux on Android.
 [Obtainium](https://github.com/ImranR98/Obtainium) installs Android apps
 straight from their GitHub releases and checks for updates there, so no app
 store is involved.
@@ -204,7 +205,7 @@ huemux-desktop` after any new release.
 
 ### AppImage (Linux)
 
-The simplest way to get the desktop version on Linux: one executable file,
+The main way to install the desktop version on Linux: one executable file,
 no install step, no distro packages. The download URL never changes — it
 always serves the latest build.
 

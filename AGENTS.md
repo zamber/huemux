@@ -8,7 +8,7 @@ are in [plans/](plans/).
 
 The project is licensed under GPL-3.0-or-later (see [LICENSE](LICENSE)).
 
-Publishing is planned FOSS-first (Obtainium, IzzyOnDroid, Flathub, F-Droid),
+Publishing is planned FOSS-first (Obtainium, Flathub, F-Droid),
 none of which needs money or approval. PUBLISHING.md has the order.
 
 ## Commands

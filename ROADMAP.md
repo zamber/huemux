@@ -153,7 +153,7 @@ rectangles with live color updating. ✅
 - [x] Desktop Electron wrapper (`cmd/huemux-desktop`, astilectron)
 - [x] AppImage for Linux desktop
 - [x] Homebrew tap
-- [x] IzzyOnDroid / Obtainium distribution
+- [x] Obtainium distribution
 - [x] GPG-signed release artifacts
 
 **Exit test:** Tag `v0.0.2-alpha.N`, CI produces binaries + AAR + APK, all

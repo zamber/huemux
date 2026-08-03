@@ -36,14 +36,13 @@ reviewable commit or small series, and to leave `main` working.
 | U2 | i18n groundwork — 26 locales, picker in Settings, RTL | **done** |
 | U3 | Translations for 25 locales | **in progress** |
 | U4 | Screenshots + 512px icon for store listings | **not started** |
-| C2 | IzzyOnDroid | **prepared — needs screenshots, then submit** |
-| C3 | Scoop, Homebrew tap, AUR | **not started** |
-| C4 | Flathub | **not started** |
-| C5 | F-Droid main repo | **not started** |
-| C6 | Privacy policy + store declarations | **not started** |
-| C7 | Windows certificate, then winget | **blocked: needs a purchased certificate** |
-| C8 | macOS notarization, then Homebrew cask | **blocked: needs Apple Developer membership** |
-| C9 | Google Play | **not started** |
+| C2 | Scoop, Homebrew tap, AUR | **not started** |
+| C3 | Flathub | **not started** |
+| C4 | F-Droid main repo | **not started** |
+| C5 | Privacy policy + store declarations | **not started** |
+| C6 | Windows certificate, then winget | **blocked: needs a purchased certificate** |
+| C7 | macOS notarization, then Homebrew cask | **blocked: needs Apple Developer membership** |
+| C8 | Google Play | **not started** |
 
 ---
 
@@ -428,8 +427,8 @@ them means the slowest one blocks the rest.
 
 - **R1–R3 come first** and are shared by everything. Once they are done, any
   channel can be worked on without touching release plumbing again.
-- **C1–C9 are then parallel.** C1 is a soft prerequisite for the store
-  channels (they want an About screen and attribution), and C7/C8 are blocked
+- **C1–C8 are then parallel.** C1 is a soft prerequisite for the store
+  channels (they want an About screen and attribution), and C6/C7 are blocked
   on purchases rather than on effort. Nothing else has an ordering constraint.
 
 Full detail is in [PUBLISHING.md](../PUBLISHING.md).
@@ -591,58 +590,42 @@ at least one RTL and one CJK locale on a device.
 
 ## U4 — Screenshots and store icon
 
-Blocks C2. Screenshots must not show the bridge's LAN address; the 512px PNG
-should be rendered from the vector by `scripts/gen-icon.py` output rather than
-drawn separately.
+Blocks the store-listing channels (C3 Flathub, later C8 Play). Screenshots
+must not show the bridge's LAN address; the 512px PNG should be rendered from
+the vector by `scripts/gen-icon.py` output rather than drawn separately.
 
-## C2 — IzzyOnDroid — **prepared**
-
-Metadata is in `fastlane/` in both English and Polish, and the app now has a
-real launcher icon: it had been shipping `@android:drawable/ic_menu_compass`, a
-stock system drawable, which no store accepts and which is not stable API. The
-replacement is an adaptive vector — no density buckets, about a kilobyte, and
-it doubles as the Android 13+ themed icon.
-
-**Blocking submission:** screenshots and a 512x512 `icon.png`. The screenshots
-are deliberately not taken from the existing ones, which show the bridge's LAN
-address that this repo does not carry.
-
-**Then:** open an issue at gitlab.com/IzzyOnDroid/repo with the repo URL and
-the APK naming pattern; they track releases from there. See PUBLISHING.md
-§2A.2.
-
-## C3 — Scoop, Homebrew tap, AUR
+## C2 — Scoop, Homebrew tap, AUR
 
 No review, no accounts beyond a repo. Also the first proof the release
 artifacts are consumable by something other than a browser.
 
-## C4 — Flathub
+## C3 — Flathub
 
 Manifest, AppStream metainfo with the SPDX licence, and offline sources — Go
 modules vendored, Electron pre-fetched. The Electron half is the work.
 
-## C5 — F-Droid main repo
+## C4 — F-Droid main repo
 
 Built from source on their infrastructure and signed by them. The cost is a
 `gomobile bind` recipe that runs unattended with the NDK.
 
-## C6 — Privacy policy and store declarations
+## C5 — Privacy policy and store declarations
 
-Not needed by C2–C5. Required from C9, and cheap to do alongside C1.
+Not needed by C2–C4. Required from C8, and cheap to do alongside C1.
 
-## C7 — Windows certificate, then winget — **blocked**
+## C6 — Windows certificate, then winget — **blocked**
 
 Azure Trusted Signing is the only option that works cleanly from CI. Requires
 verifying a legal identity and paying. The workflow step is already in place.
 
-## C8 — macOS notarization, then Homebrew cask — **blocked**
+## C7 — macOS notarization, then Homebrew cask — **blocked**
 
 Apple Developer Program, Developer ID certificate, `notarytool`, stapling, and
 signing the embedded Electron framework as well as the app.
 
-## C9 — Google Play
+## C8 — Google Play
 
 Most gated. Account and identity verification, a closed test held for a
 continuous period before production unlocks, an App Bundle rather than an APK,
-Play App Signing, and C6's declarations. A separate Google account does not
+Play App Signing, and C5's declarations. A separate Google account does not
 reliably insulate a personal one — see PUBLISHING.md §3.1.

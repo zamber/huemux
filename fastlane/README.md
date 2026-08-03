@@ -1,8 +1,7 @@
 # Store listing metadata
 
-Fastlane-structured metadata, read by **IzzyOnDroid** and **F-Droid** to build
-the app's listing. Also the format Play's `supply` uses, so the same text can
-be reused later.
+Fastlane-structured metadata, read by **F-Droid** to build the app's listing.
+Also the format Play's `supply` uses, so the same text can be reused later.
 
 ```
 fastlane/metadata/android/<locale>/
@@ -33,7 +32,7 @@ screenshot; each file exactly `1.png`, `2.png`, `3.png`, `4.png`):
 Keep the bridge's LAN address and any other private detail out of every
 frame; the repo is public. Save the files into
 `fastlane/metadata/android/en-US/images/phoneScreenshots/` and the same
-into `.../pl/...` — then submit per PUBLISHING.md §2A.2.
+into `.../pl/...` — ready for a future store submission.
 
 Why not the existing `docs/screenshots/`: they were browser captures
 (desktop aspect) and their predecessors showed the bridge's LAN address;
@@ -68,6 +67,6 @@ Named by `versionCode`, which here is the commit count at the tag — see
 git rev-list --count <tag>
 ```
 
-Not required: IzzyOnDroid falls back to the GitHub release body, which
+Not required: F-Droid falls back to the GitHub release body, which
 `.github/release-notes/<tag>.md` already provides. Worth adding for a release
 that deserves more than "no functional changes".

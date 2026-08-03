@@ -28,7 +28,7 @@ so the order is also roughly the order to do them in.
 
 The project is licensed under **GPL-3.0-or-later** (see [LICENSE](LICENSE),
 committed 2026-08-02). This closes the single biggest legal gate: every
-FOSS channel (F-Droid, Flathub, IzzyOnDroid, Obtainium, AUR) can now
+FOSS channel (F-Droid, Flathub, Obtainium, AUR) can now
 redistribute the project without a licence exception.
 
 The recommendation below is preserved for the historical record — the
@@ -200,88 +200,45 @@ here: the FOSS Hue app selection is thin.
 
 The LICENSE gate is closed (GPL-3.0-or-later, 2026-08-02). All channels below are legally unblocked.
 
-### 2A.1 Obtainium — works today, zero effort
+### 2A.1 Obtainium — the main Android channel
 
 Obtainium installs Android apps straight from GitHub Releases and tracks
 updates from them. Nothing to submit and nothing to package: `release.yml`
-already attaches an APK to every tag, which is the entire requirement.
+already attaches a signed APK to every tag, which is the entire requirement.
 
-The only change worth making is dropping the debug-signed APK for a
-consistently signed one (PACKAGING.md), because Android refuses to upgrade
-across a signature change. Do that once and existing installs upgrade forever.
+This is the primary way to install HueMux on Android: a line in the README,
+no store submission, and it works with what CI already builds. See README.md,
+"Android: install and stay updated with Obtainium".
 
-**Add an "Install with Obtainium" line to the README today.** It is the
-cheapest distribution this project will ever get.
+Releases are signed with a stable key (PACKAGING.md), so existing installs
+upgrade forever across releases.
 
-### 2A.2 IzzyOnDroid — the low-friction F-Droid repo
-
-A well-known third-party repository that F-Droid clients can add, and by far
-the easiest route into the F-Droid ecosystem: **it takes the APK you already
-build**, rather than building from source on its own infrastructure.
-
-- No reproducible build required, which is what makes the main F-Droid repo
-  hard for a `gomobile` project.
-- Requires a FOSS licence, a public source repo, and no proprietary
-  dependencies — all true now.
-- Reads Fastlane metadata from the repo, which is in `fastlane/` (see
-  `fastlane/README.md`).
-
-**Ready (as of 2026-08-02):** licence, signed releases with a stable key,
-an incrementing `versionCode`, a real launcher icon, the 512x512
-`icon.png`, listing text in English and Polish, and screenshots in
-`fastlane/metadata/android/en-US/images/phoneScreenshots/` (taken by the
-user on-device; the earlier candidates showed the bridge's LAN address).
-
-**Submission location (updated 2026-08-02):** the old
-<https://gitlab.com/IzzyOnDroid/repo> is **archived**; app inclusion
-requests now go to the issue tracker at
-<https://codeberg.org/IzzyOnDroid/repodata/issues> — template "App
-Inclusion Request" (`app-inclusion-request.yaml`). Fields: source code
-URL, licence, categories, summary/description, CLI build instructions,
-and an AI-assistance declaration (the project is Claude-Code-built —
-disclose it, as the app's own tests and release history attest).
-
-**Reviewer checklist** (what they check against the repo):
-- `short_description.txt` under 80 chars — currently 73 ✓
-- sensible `full_description.txt`, properly proportioned listing ✓
-- releases tagged with names matching versionName or versionCode ✓
-- a developer-attached `.apk` on the most recent release, under 30 MB —
-  currently 15.7 MB ✓
-
-Their scanner also reports non-free trackers and libraries; HueMux has
-none, and it is worth keeping that true — an analytics SDK would be
-flagged publicly on the listing.
-
-Once accepted, users add the IzzyOnDroid repo in their F-Droid client and
-HueMux updates like any other app.
-
-### 2A.3 Flathub — the Linux desktop answer
+### 2A.2 Flathub — the Linux desktop answer
 
 The de-facto Linux app store, and FOSS-friendly by construction. See §2C.3 for
 the build detail; the effort is Electron's offline sources, not the policy.
 
-### 2A.4 F-Droid main repo
+### 2A.3 F-Droid main repo
 
 The flagship, and the one with the strongest guarantees: builds from source on
 their infrastructure, **signs the APK itself** (so there is no key to lose),
 and needs no account or fee.
 
 The cost is that their builders must run `gomobile bind`, which needs the NDK
-and a build recipe that works unattended. That is the real work, and it is why
-IzzyOnDroid comes first — it gets the app to F-Droid users while this is
-sorted out.
+and a build recipe that works unattended. That is the real work; until it is
+done, Obtainium is the route to F-Droid users.
 
-### 2A.5 AUR (Arch)
+### 2A.4 AUR (Arch)
 
 A `PKGBUILD` in the Arch User Repository. Community-maintained, no review, no
 account beyond an AUR login. Cheap, and Arch users are a meaningful share of
 the audience for a self-hosted LAN tool.
 
-### 2A.6 Accrescent
+### 2A.5 Accrescent
 
 A newer, security-focused Android store built around modern signing. Small
 audience today, low submission cost, and philosophically aligned. Worth doing
-after IzzyOnDroid, not before.
+after the main Android channel above, not before.
 
 ---
 
@@ -525,17 +482,16 @@ step 6 costs money or involves anyone's approval.
 1. **`LICENSE` — GPL-3.0-or-later** (§0.1). Blocks every FOSS channel below.
 2. **Sign the Android release consistently** (PACKAGING.md). Do it before
    anyone installs, because Android will not upgrade across a signature change.
-3. **Obtainium** (§2A.1) — a README line. Works with what CI already builds.
+3. **Obtainium** (§2A.1) — a README line. The primary Android channel.
 4. `THIRD_PARTY_LICENSES` + CI licence check (§1.1), and the About screen
    (§1.2). Required by the stores below and honest regardless.
-5. **IzzyOnDroid** (§2A.2) — first real Android store. Takes the existing APK.
-6. Scoop manifest and Homebrew tap (§2B.1, §2B.2), plus AUR (§2A.5). No
+5. Scoop manifest and Homebrew tap (§2B.1, §2B.2), plus AUR (§2A.4). No
    gatekeepers.
-7. **Flathub** (§2A.3, §2C.3) — the Linux desktop answer.
-8. **F-Droid main repo** (§2A.4) — the flagship, once `gomobile bind` builds
+6. **Flathub** (§2A.2, §2C.3) — the Linux desktop answer.
+7. **F-Droid main repo** (§2A.3) — the flagship, once `gomobile bind` builds
    unattended on their infrastructure.
-9. Split the release workflow and add the gated `release` environment (§4).
-10. Privacy policy (§1.3) — needed from here on, not before.
-11. Windows signing (§2C.4), then winget (§2C.1).
-12. macOS notarization (§2C.5), then a Homebrew cask (§2C.2).
-13. Google Play (§3) — last, most gated, and the only place §0.2 has teeth.
+8. Split the release workflow and add the gated `release` environment (§4).
+9. Privacy policy (§1.3) — needed from here on, not before.
+10. Windows signing (§2C.4), then winget (§2C.1).
+11. macOS notarization (§2C.5), then a Homebrew cask (§2C.2).
+12. Google Play (§3) — last, most gated, and the only place §0.2 has teeth.
