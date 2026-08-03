@@ -111,7 +111,7 @@ func (c *Client) doV2(ctx context.Context, method, path string, body any, out an
 	if err != nil {
 		return fmt.Errorf("%s %s: %w", method, path, err)
 	}
-	defer resp.Body.Close()
+	defer resp.Body.Close() //nolint:errcheck
 
 	raw, err := io.ReadAll(resp.Body)
 	if err != nil {
@@ -151,7 +151,7 @@ func BridgeConfig(ctx context.Context, bridgeIP string) (BridgeInfo, error) {
 	if err != nil {
 		return info, fmt.Errorf("contact bridge at %s: %w", bridgeIP, err)
 	}
-	defer resp.Body.Close()
+	defer resp.Body.Close() //nolint:errcheck
 	if err := json.NewDecoder(resp.Body).Decode(&info); err != nil {
 		return info, fmt.Errorf("decode bridge config: %w", err)
 	}
@@ -228,7 +228,7 @@ func Pair(ctx context.Context, bridgeIP, devicetype string, timeout time.Duratio
 		}
 		var results []pairResult
 		decErr := json.NewDecoder(resp.Body).Decode(&results)
-		resp.Body.Close()
+		resp.Body.Close() //nolint:errcheck
 		if decErr != nil {
 			return "", "", "", fmt.Errorf("decode pairing response: %w", decErr)
 		}

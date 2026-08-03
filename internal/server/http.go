@@ -565,7 +565,7 @@ func (s *Server) handleWS(w http.ResponseWriter, r *http.Request) {
 		log.Printf("huemux: websocket upgrade: %v", err)
 		return
 	}
-	defer conn.Close()
+	defer conn.Close() //nolint:errcheck
 
 	if eng := s.engine(); eng != nil {
 		eng.IncUIClient()

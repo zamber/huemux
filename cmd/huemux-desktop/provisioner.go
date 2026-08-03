@@ -266,7 +266,7 @@ func (p *patchingProvisioner) fetch(ctx context.Context, src, dst, unzipSrc, dir
 	if err := astilectron.Download(ctx, p.l, p.dl, src, dst); err != nil {
 		return fmt.Errorf("downloading %s: %w", src, err)
 	}
-	defer os.Remove(dst)
+	defer os.Remove(dst) //nolint:errcheck
 	if err := os.MkdirAll(dir, 0o755); err != nil {
 		return fmt.Errorf("mkdir %s: %w", dir, err)
 	}

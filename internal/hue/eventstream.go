@@ -89,7 +89,7 @@ func (c *Client) streamEventsOnce(ctx context.Context, out chan<- Event) error {
 	if err != nil {
 		return fmt.Errorf("connect: %w", err)
 	}
-	defer resp.Body.Close()
+	defer resp.Body.Close() //nolint:errcheck
 	if resp.StatusCode >= 400 {
 		return fmt.Errorf("bridge returned %s", resp.Status)
 	}

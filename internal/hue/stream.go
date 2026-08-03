@@ -23,12 +23,6 @@ const (
 	ColorSpaceXY  ColorSpace = 0x01
 )
 
-// headerLen is 9 ("HueStream") + 7 fixed bytes + 36 ASCII UUID bytes.
-const headerLen = 9 + 7 + 36
-
-// channelLen is 1 id byte + three big-endian uint16 components.
-const channelLen = 7
-
 // maxChannelsPerPacket is the documented per-packet channel ceiling.
 const maxChannelsPerPacket = 10
 
@@ -142,12 +136,12 @@ func Dial(ctx context.Context, cfg Config) (*Stream, error) {
 
 	select {
 	case <-hctx.Done():
-		udpConn.Close()
-		<-resCh // let the goroutine unblock before we return
+		udpConn.Close() //nolint:errcheck
+		<-resCh         // let the goroutine unblock before we return
 		return nil, fmt.Errorf("dtls handshake with %s: %w", addr, hctx.Err())
 	case r := <-resCh:
 		if r.err != nil {
-			udpConn.Close()
+			udpConn.Close() //nolint:errcheck
 			return nil, fmt.Errorf("dtls handshake with %s: %w", addr, r.err)
 		}
 		if cfg.OutputHz <= 0 {

@@ -28,7 +28,7 @@ func DiscoverMDNS(ctx context.Context, listenFor time.Duration) ([]string, error
 	if err != nil {
 		return nil, fmt.Errorf("open mdns socket: %w", err)
 	}
-	defer conn.Close()
+	defer conn.Close() //nolint:errcheck
 
 	query := buildPTRQuery(hueServiceName)
 	if _, err := conn.WriteToUDP(query, mdnsAddr); err != nil {
@@ -41,10 +41,7 @@ func DiscoverMDNS(ctx context.Context, listenFor time.Duration) ([]string, error
 	seen := map[string]bool{}
 	var ips []string
 	buf := make([]byte, 8192)
-	for {
-		if ctx.Err() != nil {
-			break
-		}
+	for ctx.Err() == nil {
 		n, _, err := conn.ReadFromUDP(buf)
 		if err != nil {
 			break // timeout or closed; either way we're done listening
@@ -78,7 +75,7 @@ func DiscoverCloud(ctx context.Context) ([]string, error) {
 	if err != nil {
 		return nil, fmt.Errorf("cloud discovery: %w", err)
 	}
-	defer resp.Body.Close()
+	defer resp.Body.Close() //nolint:errcheck
 
 	var bridges []cloudBridge
 	if err := json.NewDecoder(resp.Body).Decode(&bridges); err != nil {

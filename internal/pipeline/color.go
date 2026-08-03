@@ -1,3 +1,5 @@
+// Package pipeline transforms raw grid data into per-light-channel color values
+// through a chain of sampling, smoothing, gamut mapping, and encoding steps.
 package pipeline
 
 import (

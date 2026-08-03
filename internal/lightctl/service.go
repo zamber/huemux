@@ -215,7 +215,7 @@ func (s *Service) ListScenes(ctx context.Context) ([]Scene, error) {
 	return out, nil
 }
 
-// SetLightOn, SetLightBrightness and SetLightColorXY control one light.
+// SetLightOn controls power state for one light.
 func (s *Service) SetLightOn(ctx context.Context, rid string, on bool) error {
 	return s.client.SetOn(ctx, rid, on)
 }

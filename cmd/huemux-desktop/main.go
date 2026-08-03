@@ -181,7 +181,7 @@ func main() {
 		if srv.Addr != defaultAddr {
 			probe := "http://" + defaultAddr + "/api/about"
 			if resp, err := httpGet(probe); err == nil {
-				resp.Body.Close()
+				resp.Body.Close() //nolint:errcheck
 				fmt.Println("huemux-desktop: already running at http://" + defaultAddr)
 				os.Exit(0)
 			}
