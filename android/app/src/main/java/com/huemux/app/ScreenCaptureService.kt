@@ -71,12 +71,6 @@ class ScreenCaptureService : Service() {
     @Volatile
     private var audioRunning = false
 
-    /** True when this service instance exists only to hold the projection
-     *  for audio capture. Read by MainActivity to decide whether stopping
-     *  the audio should also stop the service. */
-    @Volatile
-    var audioOnly = false
-
     override fun onBind(intent: Intent?): IBinder? = null
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
@@ -137,21 +131,19 @@ class ScreenCaptureService : Service() {
         }
 
         instance = this
-        // Audio-only mode (music reactivity's internal source): the service
-        // exists to hold the projection for AudioPlaybackCapture; there is
-        // no VirtualDisplay and no colour pipeline to feed.
-        val audioOnly = intent?.getBooleanExtra(EXTRA_AUDIO_ONLY, false) ?: false
-        this.audioOnly = audioOnly
-        if (!audioOnly) {
-            val t = HandlerThread("huemux-capture").also { it.start() }
-            pipelineThread = t
-            pipeline = Handler(t.looper)
-            pipeline?.post { startCapture() }
-        } else {
-            Mobile.logHost("audio: audio-only capture service up")
-            val err = startAudioRecording()
-            if (err != null) {
-                Mobile.logHost("audio: auto-start failed: $err")
+        // The same projection that mirrors the screen also records playback
+        // audio (AudioPlaybackCapture). One consent, both streams. Always
+        // start video capture; also auto-start audio when the device
+        // supports it (API 29+). startAudioRecording() is @Synchronized
+        // and a no-op when already running.
+        val t = HandlerThread("huemux-capture").also { it.start() }
+        pipelineThread = t
+        pipeline = Handler(t.looper)
+        pipeline?.post { startCapture() }
+        if (Build.VERSION.SDK_INT >= 29) {
+            val audioErr = startAudioRecording()
+            if (audioErr != null) {
+                Mobile.logHost("audio: auto-start failed: $audioErr")
             }
         }
         return START_NOT_STICKY
@@ -220,9 +212,24 @@ class ScreenCaptureService : Service() {
 
     private fun audioLoop(record: AudioRecord) {
         val buf = ByteArray(AUDIO_CHUNK_BYTES)
+        var errorCount = 0
         while (audioRunning) {
             val n = record.read(buf, 0, buf.size, AudioRecord.READ_BLOCKING)
-            if (n <= 0) continue
+            if (n <= 0) {
+                errorCount++
+                if (errorCount == 1 || errorCount % 100 == 0) {
+                    Mobile.logHost("audio: read error $n (count=$errorCount)")
+                }
+                // Avoid a busy-spin on persistent errors.
+                if (n == AudioRecord.ERROR_INVALID_OPERATION ||
+                    n == AudioRecord.ERROR_DEAD_OBJECT) {
+                    Mobile.logHost("audio: fatal read error $n, stopping")
+                    break
+                }
+                Thread.sleep(10)
+                continue
+            }
+            errorCount = 0
             try {
                 // gomobile keeps the Go acronym casing: PushAudioPCM binds
                 // as pushAudioPCM, not pushAudioPcm (the CI Kotlin compile
@@ -681,7 +688,6 @@ class ScreenCaptureService : Service() {
         const val ACTION_RECONFIGURE = "com.huemux.app.RECONFIGURE_CAPTURE"
         const val EXTRA_RESULT_CODE = "resultCode"
         const val EXTRA_RESULT_DATA = "resultData"
-        const val EXTRA_AUDIO_ONLY = "audioOnly"
         const val AUDIO_SAMPLE_RATE = 44100
         const val AUDIO_CHUNK_BYTES = 8192
         private const val CHANNEL_ID = "huemux-capture"
@@ -728,11 +734,10 @@ class ScreenCaptureService : Service() {
         @Volatile
         var capturedH: Int = 0
 
-        fun startForegroundService(ctx: Context, resultCode: Int, data: Intent, audioOnly: Boolean = false) {
+        fun startForegroundService(ctx: Context, resultCode: Int, data: Intent) {
             val i = Intent(ctx, ScreenCaptureService::class.java)
                 .putExtra(EXTRA_RESULT_CODE, resultCode)
                 .putExtra(EXTRA_RESULT_DATA, data)
-                .putExtra(EXTRA_AUDIO_ONLY, audioOnly)
             ctx.startForegroundService(i)
         }
 

@@ -66,6 +66,11 @@ type Server struct {
 	uiConns      map[*Conn]struct{}
 	lastFrameLog time.Time // throttles logFrameStats to at most once/second
 
+	// musicOffExplicit is true when the user explicitly set the music
+	// preset to "" (Off). When set, autoActivateMusic() stays quiet so
+	// the user's choice is not silently overridden on the next PCM chunk.
+	musicOffExplicit bool
+
 	// music holds the latest audio analysis frame. Immutable pointer after
 	// construction, so it needs no lock of its own on top of State's.
 	music *music.State
@@ -878,6 +883,12 @@ func (s *Server) autoActivateMusic() {
 	if eng.MusicPreset() != "" {
 		return // already active, user made an explicit choice
 	}
+	s.mu.Lock()
+	off := s.musicOffExplicit
+	s.mu.Unlock()
+	if off {
+		return
+	}
 	channels, positions := eng.MusicLayout()
 	if channels == nil {
 		// No area selected yet — harmless, the next audio frame will retry.
@@ -1063,6 +1074,7 @@ func (s *Server) handleControlMessage(conn *Conn, payload []byte) {
 		// rule as the grid stream's "stop".
 		s.mu.Lock()
 		s.musicSource = nil
+		s.musicOffExplicit = false // next capture session may auto-activate
 		s.mu.Unlock()
 		s.music.Clear()
 		return
@@ -1133,6 +1145,13 @@ func (s *Server) handleControlMessage(conn *Conn, payload []byte) {
 		// audio frames are already flowing through SetMusicFrameSource.
 		// An unknown slug or an unselected area fails loudly in the log
 		// rather than leaving the UI guessing.
+		//
+		// An explicit "" (Off) sets musicOffExplicit so the next PCM
+		// chunk does not silently re-activate bass_pulse. Choosing a
+		// named preset clears the flag.
+		s.mu.Lock()
+		s.musicOffExplicit = msg.Preset == ""
+		s.mu.Unlock()
 		channels, positions := eng.MusicLayout()
 		if err := eng.ActivateMusic(msg.Preset, channels, positions); err != nil {
 			log.Printf("huemux: music_preset %q: %v", msg.Preset, err)

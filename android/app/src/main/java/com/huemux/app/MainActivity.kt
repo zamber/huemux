@@ -279,11 +279,6 @@ class MainActivity : AppCompatActivity() {
 
     private var pendingCaptureCallback: String? = null
 
-    // True while the in-flight consent dialog is for the music module's
-    // internal-audio source rather than screen sync; decides whether the
-    // resulting projection starts the service in audio-only mode.
-    private var pendingAudioOnly = false
-
     // The WebView's mic request parked while the OS runtime dialog is up;
     // granted or denied once the user answers (see onPermissionRequest).
     private var pendingMicRequest: PermissionRequest? = null
@@ -308,39 +303,23 @@ class MainActivity : AppCompatActivity() {
     ) { result ->
         val cb = pendingCaptureCallback
         pendingCaptureCallback = null
-        val audioOnly = pendingAudioOnly
-        pendingAudioOnly = false
         if (result.resultCode == RESULT_OK && result.data != null) {
-            ScreenCaptureService.startForegroundService(this, result.resultCode, result.data!!, audioOnly)
-            // The audio itself starts asynchronously inside the service; the
-            // page learns it is live from the status push's music frame count.
-            // Both resolvers fire: the callback id tells each registry
-            // whether it is theirs, and the other no-ops.
+            ScreenCaptureService.startForegroundService(this, result.resultCode, result.data!!)
+            // Audio starts asynchronously inside the service alongside the
+            // video pipeline; the page learns it is live from the status
+            // push's music frame count.
             resolveCapture(cb, true, "")
-            resolveAudio(cb, true, "")
         } else {
             // Dismissing the system dialog is a normal outcome, not an error
             // worth logging as one — but the page must hear about it or its
             // Start button stays disabled forever.
             resolveCapture(cb, false, "capture permission denied")
-            resolveAudio(cb, false, "capture permission denied")
         }
     }
 
     private fun resolveCapture(cbId: String?, ok: Boolean, err: String) {
         if (cbId == null) return
         val js = "window.__huemuxCaptureResult && window.__huemuxCaptureResult(" +
-            "'" + cbId + "', " + ok + ", " + org.json.JSONObject.quote(err) + ")"
-        runOnUiThread { webView.evaluateJavascript(js, null) }
-    }
-
-    // The music module's own consent handshake (web/music.js registers its
-    // waiters under window.__huemuxAudioResult). Separate from
-    // __huemuxCaptureResult because that registry belongs to app.js's screen
-    // capture and knows nothing of the audio flow's ids.
-    private fun resolveAudio(cbId: String?, ok: Boolean, err: String) {
-        if (cbId == null) return
-        val js = "window.__huemuxAudioResult && window.__huemuxAudioResult(" +
             "'" + cbId + "', " + ok + ", " + org.json.JSONObject.quote(err) + ")"
         runOnUiThread { webView.evaluateJavascript(js, null) }
     }
@@ -378,41 +357,6 @@ class MainActivity : AppCompatActivity() {
                 } catch (e: Exception) {
                     Log.w(TAG, "stopSync failed", e)
                 }
-            }
-        }
-
-        /**
-         * Starts internal-audio capture for the music module: AudioRecord on
-         * the screen-capture projection, PCM pushed straight into Go. Reuses
-         * a running screen capture's projection; otherwise the same consent
-         * dialog screen sync uses (the OS treats screen + audio as one
-         * "record the screen" permission, which is what the user expects).
-         * Resolution arrives through window.__huemuxCaptureResult.
-         */
-        @JavascriptInterface
-        fun startAudioCapture(callbackId: String) {
-            runOnUiThread {
-                val svc = ScreenCaptureService.instance
-                if (svc != null) {
-                    val err = svc.startAudioRecording()
-                    resolveAudio(callbackId, err == null, err ?: "")
-                    return@runOnUiThread
-                }
-                pendingCaptureCallback = callbackId
-                pendingAudioOnly = true
-                val mgr = getSystemService(MEDIA_PROJECTION_SERVICE) as MediaProjectionManager
-                projectionLauncher.launch(mgr.createScreenCaptureIntent())
-            }
-        }
-
-        @JavascriptInterface
-        fun stopAudioCapture() {
-            runOnUiThread {
-                val svc = ScreenCaptureService.instance ?: return@runOnUiThread
-                svc.stopAudioRecording()
-                // An audio-only service has nothing left to do once the
-                // audio stops; a screen-capturing one keeps going.
-                if (svc.audioOnly) ScreenCaptureService.stop(this@MainActivity)
             }
         }
 

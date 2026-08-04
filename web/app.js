@@ -248,17 +248,27 @@ els.startBtn.addEventListener('click', async () => {
   // streaming black/keepalive frames to real lights for however long the
   // browser's share picker sits open, which is a needless real-world side
   // effect of a UI interaction that hasn't finished yet.
+  //
+  // On Android, internal audio is recorded by the same MediaProjection as
+  // the screen — one consent dialog, both streams. Asking the music module
+  // to capture separately would open a second dialog and a second projection,
+  // which the OS forbids from coexisting. The native startCapture handles
+  // both; the music module adopts the native stream from the status push.
+  var wantAudio = mode === 'audio' || mode === 'audiovideo';
+  var wantVideo = mode === 'video' || mode === 'audiovideo';
+  var srcSel = document.getElementById('music-source');
+  var nativeInternal = wantAudio && srcSel && srcSel.value === 'internal' && nativeCaptureAvailable();
   try {
-    if (mode === 'audio' || mode === 'audiovideo') {
-      // Audio mode: start music capture (mic or internal). If the native
-      // bridge is present (Android), the screen capture service already
-      // handles audio; otherwise this uses the browser's Web Audio path.
-      if (typeof HueMuxMusic !== 'undefined') {
+    if (nativeInternal) {
+      // One native call captures both video and internal audio.
+      await startCapture();
+    } else {
+      if (wantAudio && typeof HueMuxMusic !== 'undefined') {
         await HueMuxMusic.startCapture();
       }
-    }
-    if (mode === 'video' || mode === 'audiovideo') {
-      await startCapture();
+      if (wantVideo) {
+        await startCapture();
+      }
     }
   } catch (err) {
     els.areaWarning.textContent = `Capture failed: ${err.message || err}`;
@@ -380,6 +390,12 @@ async function startNativeCapture() {
   const areaId = els.areaSelect.value;
   if (!areaId) throw new Error('no entertainment area selected');
 
+  // On Android, internal audio rides the same MediaProjection as the screen.
+  // Pass withAudio=true so the service starts AudioPlaybackCapture alongside
+  // the VirtualDisplay — one consent dialog, both streams.
+  const mode = els.captureMode ? els.captureMode.value : 'video';
+  const withAudio = (mode === 'audio' || mode === 'audiovideo');
+
   nativeCapture = true;
   document.documentElement.setAttribute('data-native-capture', '');
 
@@ -396,7 +412,7 @@ async function startNativeCapture() {
         delete captureWaiters[id];
         ok ? resolve() : reject(new Error(err || 'capture was not permitted'));
       };
-      window.HueMuxNative.startCapture(areaId, id);
+      window.HueMuxNative.startCapture(areaId, id, withAudio);
     });
   } catch (e) {
     nativeCapture = false;
@@ -425,6 +441,10 @@ function stopNativeCapture() {
 }
 
 let nativeCapture = false;
+
+function nativeCaptureAvailable() {
+  return !!(window.HueMuxNative && typeof window.HueMuxNative.startCapture === 'function');
+}
 
 async function startCapture() {
   const capW = Number(getControl('capture_width') || 320);
@@ -606,7 +626,8 @@ function drawPreviewFromGrid(gridW, gridH, rgba) {
 
 // Draw a 32-band frequency histogram in the preview canvas when audio
 // mode is active and FFT data is available. Replaces the blank video
-// preview with an honest "is there signal" visual.
+// preview with an honest "is there signal" visual. All bars in ink:
+// contrast carries meaning, colour does not (AGENTS.md UX rules).
 function drawAudioSpectrum(msg) {
   if (!msg || !msg.music || !msg.music.fft) return;
   const fft = msg.music.fft;
@@ -623,12 +644,7 @@ function drawAudioSpectrum(msg) {
     if (v < 0.005) continue;
     const barH = Math.max(2, v * h);
     const x = b * bw;
-    // Warm gradient: bass=red, mids=yellow, highs=cyan.
-    const t = b / 31;
-    const r = Math.floor(255 * (t < 0.5 ? 1 : 2 - 2 * t));
-    const g = Math.floor(255 * (t < 0.5 ? 2 * t : 1));
-    const b_ = Math.floor(255 * (1 - t));
-    ctx.fillStyle = `rgb(${r},${g},${b_})`;
+    ctx.fillStyle = 'var(--ink)';
     ctx.fillRect(x + 1, h - barH, bw - 2, barH);
   }
   drawZoneOverlays();
@@ -796,10 +812,11 @@ if (els.captureMode) {
 
 function updateMusicPanelVisibility() {
   var mode = els.captureMode ? els.captureMode.value : 'video';
-  var panel = document.getElementById('music-panel');
-  if (panel) {
-    panel.hidden = mode === 'video';
-  }
+  var opts = document.getElementById('music-options');
+  var spec = document.getElementById('music-spectrum');
+  var want = mode !== 'video';
+  if (opts) opts.hidden = !want;
+  if (spec) spec.hidden = !want;
 }
 
 // --- device capture: resolution and recording -----------------------------

@@ -18,7 +18,6 @@
   const WAVE_DIV = FFT_SIZE / WAVE_SAMPLES; // 8 samples averaged per output
 
   const musicEls = {
-    toggleBtn: document.getElementById('music-toggle'),
     status: document.getElementById('music-status'),
     spectrum: document.getElementById('music-spectrum'),
     preset: document.getElementById('music-preset'),
@@ -51,19 +50,9 @@
   // are drawn from that instead of a local analyser.
   let nativeAudio = false;
   let statusFft = null;
-  const audioWaiters = {};
-
   function nativeAudioAvailable() {
-    return !!(window.HueMuxNative && typeof window.HueMuxNative.startAudioCapture === 'function');
+    return !!(window.HueMuxNative && typeof window.HueMuxNative.startCapture === 'function');
   }
-
-  // Resolvers keyed by request id, called from Kotlin. Same handshake shape
-  // as app.js's screen-capture waiters, deliberately a separate registry
-  // and entry point (window.__huemuxAudioResult).
-  window.__huemuxAudioResult = function (id, ok, err) {
-    const fn = audioWaiters[id];
-    if (fn) fn(ok, err);
-  };
 
   // i18n's init() fetches the locale file asynchronously, so the very first
   // render of this module can land before the strings exist and t() returns
@@ -131,43 +120,10 @@
     }
   }
 
-  // startNativeAudioCapture asks Kotlin for internal-audio capture. The
-  // consent dialog is the same MediaProjection one screen sync uses — the
-  // OS treats screen and audio as one "record the screen" permission — and
-  // resolution arrives through __huemuxAudioResult (see the waiter registry
-  // above). The actual analysis happens in Go; the page just watches the
-  // status push.
-  function startNativeAudioCapture() {
-    return new Promise((resolve, reject) => {
-      const id = 'a' + Date.now() + Math.random().toString(36).slice(2, 8);
-      audioWaiters[id] = (ok, err) => {
-        delete audioWaiters[id];
-        ok ? resolve() : reject(new Error(err || 'audio capture was not permitted'));
-      };
-      window.HueMuxNative.startAudioCapture(id);
-    });
-  }
-
-  function stopNativeAudioCapture() {
-    try {
-      if (window.HueMuxNative && window.HueMuxNative.stopAudioCapture) {
-        window.HueMuxNative.stopAudioCapture();
-      }
-    } catch (e) { /* the service may already be gone */ }
-  }
-
+  // Browser-only: Web Audio API capture. On Android, internal audio is
+  // captured by the native projection alongside the screen; the music
+  // module adopts it from the status push (see onStatus).
   async function startCapture() {
-    if (musicEls.source.value === 'internal' && nativeAudioAvailable()) {
-      await startNativeAudioCapture();
-      nativeAudio = true;
-      running = true;
-      frameCount = 0;
-      statusFft = null;
-      musicEls.spectrum.hidden = false;
-      requestAnimationFrame(drawPreview);
-      render();
-      return;
-    }
     const track = await acquireAudioTrack(musicEls.source.value);
     stream = new MediaStream([track]);
 
@@ -204,11 +160,8 @@
     // reporting stale analysis as live. The page's WS stays open, so the
     // disconnect path never fires.
     if (control) control({ type: 'music_stop' });
-    if (nativeAudio) {
-      stopNativeAudioCapture();
-      nativeAudio = false;
-      statusFft = null;
-    }
+    nativeAudio = false;
+    statusFft = null;
     if (tickTimer) { clearInterval(tickTimer); tickTimer = null; }
     if (previewRAF) { cancelAnimationFrame(previewRAF); previewRAF = null; }
     if (audioCtx) { audioCtx.close().catch(() => {}); audioCtx = null; }
@@ -292,8 +245,6 @@
   }
 
   function render() {
-    musicEls.toggleBtn.textContent = t(running ? 'music.stop' : 'music.start');
-    musicEls.toggleBtn.classList.toggle('recording', running);
     // The source is fixed for the duration of a capture: swapping the
     // input under a live analyser would need a teardown/rebuild dance for
     // no benefit — stop and restart instead.
@@ -305,18 +256,6 @@
 
   musicEls.preset.addEventListener('change', () => {
     if (control) control({ type: 'music_preset', preset: musicEls.preset.value });
-  });
-
-  musicEls.toggleBtn.addEventListener('click', async () => {
-    if (running) { stopCapture(); return; }
-    try {
-      await startCapture();
-    } catch (err) {
-      // The permission denial and the missing-device case both land here;
-      // err.name tells them apart on the status line.
-      console.error('music capture:', err);
-      musicEls.status.textContent = t('music.error') + ` (${err.name})`;
-    }
   });
 
   document.addEventListener('huemux:langchange', () => {
@@ -365,9 +304,20 @@
       musicEls.preset.disabled = !msg.paired;
       const slug = msg.snapshot ? msg.snapshot.MusicPreset : '';
       if (musicEls.preset.value !== (slug || '')) musicEls.preset.value = slug || '';
-      if (nativeAudio) {
-        if (msg.music && msg.music.fft) statusFft = msg.music.fft;
-        if (msg.music) frameCount = msg.music.frames;
+      // Native internal audio: adopt the stream when frames are flowing and
+      // we are not already capturing (covers fresh start, WebView reload
+      // mid-capture, and a mid-session mode switch to an audio mode).
+      if (nativeAudioAvailable() && !running && msg.music && msg.music.active) {
+        nativeAudio = true;
+        running = true;
+        frameCount = msg.music.frames;
+        statusFft = msg.music.fft;
+        musicEls.spectrum.hidden = false;
+        requestAnimationFrame(drawPreview);
+      }
+      if (nativeAudio && msg.music) {
+        statusFft = msg.music.fft;
+        frameCount = msg.music.frames;
         render();
       }
     },
@@ -375,7 +325,7 @@
     // recording from the system UI, or Android reclaims it). The page has
     // to stop claiming to capture — same story as screen sync's handler.
     onCaptureEnded() {
-      if (!nativeAudio) return;
+      if (!running) return;
       stopCapture();
     },
   };

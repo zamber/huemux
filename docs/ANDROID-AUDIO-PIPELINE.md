@@ -118,128 +118,79 @@ In audio mode, the preview canvas draws a 32-band FFT histogram.
 a configurable BPM and bass frequency. Used by `music_pipeline_test.go` to
 verify the full analysis→preset→output chain end-to-end with zero hardware.
 
-## Kotlin changes needed (can't compile on this host)
+## Fixes applied (2026-08-04)
 
-These changes are specified here for the Android CI build. No Android SDK or
-NDK is available on this host (see `AGENTS.md`).
+### Fix 1: Always capture both video and audio from one projection ✅
 
-### 1. `ScreenCaptureService.kt` — Remove `audioOnly` mode
+`ScreenCaptureService.onStartCommand` no longer has an `audioOnly` branch.
+The service always creates the VirtualDisplay for video AND auto-starts
+`AudioPlaybackCapture` when API >= 29. One consent, both streams.
 
-The service should always capture both video and audio when possible:
+### Fix 2: Log audio read errors ✅
 
-```kotlin
-// In onStartCommand, after creating VirtualDisplay for video:
-if (!audioOnly) {
-    val t = HandlerThread("huemux-capture").also { it.start() }
-    pipelineThread = t
-    pipeline = Handler(t.looper)
-    pipeline?.post { startCapture() }
-    // ALSO start audio capture on the same projection.
-    // startAudioRecording() is a no-op if already running.
-    val audioErr = startAudioRecording()
-    if (audioErr != null) {
-        Mobile.logHost("audio: auto-start failed: $audioErr")
-    }
-} else {
-    // Keep audio-only for now, but it MUST call Mobile.startSync first.
-    // See MainActivity changes below.
-    Mobile.logHost("audio: audio-only capture service up")
-    val err = startAudioRecording()
-    if (err != null) {
-        Mobile.logHost("audio: auto-start failed: $err")
-    }
-}
+`ScreenCaptureService.audioLoop` now logs read errors (first and every
+100th), breaks on `ERROR_INVALID_OPERATION`/`ERROR_DEAD_OBJECT`, and
+sleeps 10ms on transient errors to avoid a busy-spin.
+
+### Superseded: separate `startAudioCapture` bridge method
+
+Fixes 3 and 4 from the original spec (give `startAudioCapture` an `areaId`,
+pass `areaId` from `music.js`) are **superseded by removal**. The audio-only
+service mode, the `startAudioCapture`/`stopAudioCapture` bridge methods, and
+the `__huemuxAudioResult` callback registry are all gone. The unified UI has
+one Start button that triggers one native `startCapture` call, which creates
+one projection that captures both screen and audio.
+
+The `HueMuxMusic` JS module adopts the native audio stream from the status
+push (`msg.music.active` → auto-adopt). No separate bridge call, no second
+consent dialog, no orphaned DTLS-less projection.
+
+### Additional: "Off" preset sticks ✅
+
+`internal/server/http.go`: `musicOffExplicit` flag. Choosing Off from the
+preset dropdown sets the flag; `autoActivateMusic()` respects it.
+`music_stop` clears the flag so the next capture session may auto-activate.
+
+## Updated architecture (post-fix)
+
+```
+Kotlin                              Go server                          Bridge
+──────                              ─────────                          ──────
+MediaProjection ──→ VirtualDisplay   mobile.PushFrame() → engine.SetFrame() ✅
+       │
+       └────→ AudioRecord            mobile.PushAudioPCM() → Analyzer → music.State ✅
+                (PCM 44100 Hz)            ↓
+                                     musicRunner.Step() → tick() → DTLS ✅
+                                         ↑
+                                     autoActivateMusic() activates bass_pulse
+                                     on first audio frame (unless Off explicit)
 ```
 
-### 2. `ScreenCaptureService.kt` — Log audio read errors
+One consent dialog, one projection, one foreground service. Both streams
+flow from the same session.
 
-```kotlin
-private fun audioLoop(record: AudioRecord) {
-    val buf = ByteArray(AUDIO_CHUNK_BYTES)
-    var errorCount = 0
-    while (audioRunning) {
-        val n = record.read(buf, 0, buf.size, AudioRecord.READ_BLOCKING)
-        if (n <= 0) {
-            errorCount++
-            if (errorCount == 1 || errorCount % 100 == 0) {
-                Mobile.logHost("audio: read error $n (count=$errorCount)")
-            }
-            // Avoid a busy-spin on persistent errors.
-            if (n == AudioRecord.ERROR_INVALID_OPERATION ||
-                n == AudioRecord.ERROR_DEAD_OBJECT) {
-                Mobile.logHost("audio: fatal read error $n, stopping")
-                break
-            }
-            Thread.sleep(10)
-            continue
-        }
-        errorCount = 0
-        try {
-            Mobile.pushAudioPCM(buf.copyOf(n), AUDIO_SAMPLE_RATE.toLong())
-        } catch (e: Exception) {
-            Log.w(TAG, "pushAudioPcm failed", e)
-        }
-    }
-}
-```
+## Android 16 research (2026-08-04)
 
-### 3. `MainActivity.kt` — `startAudioCapture` requires `areaId`
+No new Android 14–16 API unifies screen + audio capture into a single call.
+`MediaProjection` + `AudioPlaybackCapture` + `AudioRecord` remains the only
+way to get live PCM audio alongside screen frames. Android 16's
+`ScreenRecordingController` can produce system-muxed recordings but does not
+deliver live frames — it cannot replace the `ImageReader` → `PushFrame` path
+the colour pipeline depends on.
 
-```kotlin
-@JavascriptInterface
-fun startAudioCapture(areaId: String, callbackId: String) {
-    runOnUiThread {
-        val svc = ScreenCaptureService.instance
-        if (svc != null) {
-            // Screen capture already running — attach audio to its projection.
-            val err = svc.startAudioRecording()
-            resolveAudio(callbackId, err == null, err ?: "")
-            return@runOnUiThread
-        }
-        // No service running: need a fresh MediaProjection AND a DTLS stream.
-        try {
-            Mobile.startSync(areaId)
-        } catch (e: Exception) {
-            Log.e(TAG, "startSync for audio failed", e)
-            resolveAudio(callbackId, false, e.message ?: "could not select area")
-            return@runOnUiThread
-        }
-        pendingCaptureCallback = callbackId
-        pendingAudioOnly = true
-        val mgr = getSystemService(MEDIA_PROJECTION_SERVICE) as MediaProjectionManager
-        projectionLauncher.launch(mgr.createScreenCaptureIntent())
-    }
-}
-```
+## Silent-audio checklist
 
-### 4. `web/music.js` — Pass `areaId` to native audio capture
+Audio capture reports "recording" but the spectrum stays flat? These are
+the three known causes, ordered by likelihood:
 
-```javascript
-function startNativeAudioCapture() {
-    return new Promise((resolve, reject) => {
-      const id = 'a' + Date.now() + Math.random().toString(36).slice(2, 8);
-      const areaId = document.getElementById('area-select').value;
-      if (!areaId) {
-        reject(new Error('no entertainment area selected'));
-        return;
-      }
-      audioWaiters[id] = (ok, err) => {
-        delete audioWaiters[id];
-        ok ? resolve() : reject(new Error(err || 'audio capture was not permitted'));
-      };
-      window.HueMuxNative.startAudioCapture(areaId, id);
-    });
-}
-```
-
-## Verification after Kotlin changes
-
-1. Start Huemux on Android, pair with bridge
-2. Select area, set mode to "Audio"
-3. Press Start → MediaProjection consent dialog appears
-4. After consent: check diagnostics report for "audio: internal capture started"
-5. Verify spectrum appears in preview canvas
-6. Verify lights respond to device audio playback (play music on the phone)
-7. Switch mode to "Video" → lights follow screen content instead
-8. Switch mode to "Audio+Video" → lights follow music preset while screen
-   recording also runs
+1. **Uncapturable app.** Apps can opt out via
+   `AudioManager.setAllowedCapturePolicy`. Netflix, Spotify, and banking
+   apps typically do. Play audio from a source that allows capture (YouTube,
+   a local media player, the device's own ringtone).
+2. **WebView 147 regression** (April 2026). A bug in Android System WebView
+   v147 caused `AudioPlaybackCapture` to return silence. Fixed in WebView
+   148+. Check the device's WebView version; if on 147, update or install
+   WebView Beta.
+3. **Bluetooth audio routing.** Bluetooth headphones (A2DP) route audio
+   directly to the headset, bypassing the system mixer. The recorder hears
+   nothing. Disconnect Bluetooth and play through the device speaker.

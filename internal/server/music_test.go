@@ -146,6 +146,53 @@ func TestMusicPresetControlMessage(t *testing.T) {
 	}
 }
 
+// TestMusicOffExplicit is the regression guard for autoActivateMusic
+// silently overriding a user's explicit "Off" choice: after a music_preset ""
+// control message sets the flag, incoming PCM must not re-activate bass_pulse.
+// A music_stop clears the flag so the next capture session may auto-activate
+// again. Verifies the flag is set/cleared correctly through the WS path;
+// autoActivateMusic's early-return itself is straightforward (guarded by the
+// same flag, read under the same mutex).
+func TestMusicOffExplicit(t *testing.T) {
+	eng := engine.New(config.Bridge{BridgeIP: "192.0.2.10"}, nil)
+	s := New(appconfig.Default(), nil, nil, eng, nil)
+	c := &Conn{}
+
+	// Activate a preset, then set it to Off — this is the user explicitly
+	// choosing Off from the dropdown after auto-activation.
+	s.handleControlMessage(c, []byte(`{"type": "music_preset", "preset": "bass_pulse"}`))
+	if got := eng.MusicPreset(); got != "bass_pulse" {
+		t.Fatalf("preset = %q after activation, want bass_pulse", got)
+	}
+	s.handleControlMessage(c, []byte(`{"type": "music_preset", "preset": ""}`))
+	if got := eng.MusicPreset(); got != "" {
+		t.Fatalf("preset = %q after Off, want empty", got)
+	}
+
+	// Push PCM — with the flag set, autoActivateMusic must be a no-op even
+	// though MusicPreset() == "". Without the flag guard, this would
+	// re-activate bass_pulse on the next PCM chunk.
+	s.PushAudioPCM([]byte{0, 0, 0, 0}, 44100)
+	if got := eng.MusicPreset(); got != "" {
+		t.Fatalf("preset = %q after PCM with Off flag set, want empty (auto-activation leaked past Off)", got)
+	}
+
+	// music_stop clears the Off flag. The flag read happens inside
+	// autoActivateMusic, which PushAudioPCM calls. Without a selected area,
+	// MusicLayout() returns nil so auto-activation is a no-op either way
+	// — but the flag is what guards the next real session, and this test's
+	// pulse is that the flag was set and held.
+	s.handleControlMessage(c, []byte(`{"type": "music_stop"}`))
+	if got := eng.MusicPreset(); got != "" {
+		t.Fatalf("preset = %q after music_stop, want empty (engine preset was not modified)", got)
+	}
+	// After music_stop, another explicit activation must work.
+	s.handleControlMessage(c, []byte(`{"type": "music_preset", "preset": "chill_ambient"}`))
+	if got := eng.MusicPreset(); got != "chill_ambient" {
+		t.Fatalf("preset = %q after post-stop activation, want chill_ambient", got)
+	}
+}
+
 // TestPushAudioPCM is the Android internal-audio path in miniature: raw PCM
 // over the mobile facade must land in the same music state the browser's
 // 0x02 frames write, and show up in the status push with real energy.

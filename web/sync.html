@@ -54,6 +54,17 @@
       <option value="audio" data-i18n="sync.captureModeAudio">Audio</option>
       <option value="audiovideo" data-i18n="sync.captureModeAudioVideo">Audio+Video</option>
     </select>
+    <div id="music-options" hidden>
+      <label for="music-source" data-i18n="music.source">Source</label>
+      <select id="music-source">
+        <option value="mic" data-i18n="music.sourceMic">Microphone</option>
+        <option value="internal" data-i18n="music.sourceInternal">Internal audio</option>
+      </select>
+      <label for="music-preset" data-i18n="music.preset">Preset</label>
+      <select id="music-preset" disabled></select>
+      <span id="music-status" class="hint"></span>
+    </div>
+    <canvas id="music-spectrum" width="600" height="90" hidden></canvas>
     <button id="start-btn" class="primary" disabled data-i18n="sync.start">Start sync</button>
     <button id="stop-btn" disabled data-i18n="sync.stop">Stop</button>
     <button id="change-source-btn" disabled data-i18n="sync.changeSource">Change source</button>
@@ -260,33 +271,6 @@
         <p class="hint" data-i18n="sync.disableEmsHint">A DTLS handshake security extension (RFC 7627) — leave unchecked. Only disable it if the handshake to your bridge fails; some older bridge firmware doesn't support it.</p>
       </div>
     </details>
-  </section>
-
-  <!-- Music reactivity (Phase 1): the audio-source half of the multiplexer.
-       Mic or internal-audio capture streams analysis frames to the engine
-       over the same WS. Inside #app, like everything else: the pairing
-       screen exists to pair, and a half-working music panel on it reads as
-       broken rather than as a preview. -->
-  <section id="music-panel">
-    <h2 data-i18n="music.heading">Music reactivity</h2>
-    <div class="record-row">
-      <button type="button" id="music-toggle" data-i18n="music.start">Start mic capture</button>
-      <span id="music-status" class="hint"></span>
-    </div>
-    <div class="record-row">
-      <label for="music-source" data-i18n="music.source">Source</label>
-      <select id="music-source">
-        <option value="mic" data-i18n="music.sourceMic">Microphone</option>
-        <option value="internal" data-i18n="music.sourceInternal">Internal audio</option>
-      </select>
-      <label for="music-preset" data-i18n="music.preset">Preset</label>
-      <select id="music-preset" disabled></select>
-    </div>
-    <p class="hint" data-i18n="music.hint">
-      Streams audio analysis to the engine. A preset turns that analysis
-      into light output.
-    </p>
-    <canvas id="music-spectrum" width="600" height="90" hidden></canvas>
   </section>
   </div>
 </main>
