@@ -20,7 +20,6 @@ import android.os.Build
 import android.os.Handler
 import android.os.HandlerThread
 import android.os.IBinder
-import android.util.Log
 import com.huemux.mobile.Mobile
 import java.nio.ByteBuffer
 
@@ -109,7 +108,7 @@ class ScreenCaptureService : Service() {
             intent?.getParcelableExtra(EXTRA_RESULT_DATA)
         }
         if (data == null) {
-            Log.e(TAG, "no projection consent data; stopping")
+            HueLog.e(TAG, "no projection consent data; stopping")
             stopSelf()
             return START_NOT_STICKY
         }
@@ -123,7 +122,7 @@ class ScreenCaptureService : Service() {
                     // Without telling the page, its Stop button stays enabled,
                     // the Start button stays disabled and the UI claims to be
                     // streaming long after the frames have stopped.
-                    Log.i(TAG, "projection stopped by the system")
+                    HueLog.i(TAG, "projection stopped by the system")
                     onCaptureEnded?.invoke()
                     stopSelf()
                 }
@@ -186,7 +185,7 @@ class ScreenCaptureService : Service() {
             Mobile.logHost("audio: internal capture started (${AUDIO_SAMPLE_RATE} Hz)")
             return null
         } catch (e: Exception) {
-            Log.e(TAG, "audio capture start failed", e)
+            HueLog.e(TAG, "audio capture start failed", e)
             Mobile.logHost("audio: start failed: ${e.message}")
             return e.message ?: e.toString()
         }
@@ -202,7 +201,7 @@ class ScreenCaptureService : Service() {
             try {
                 it.stop()
             } catch (e: Exception) {
-                Log.w(TAG, "audio record stop", e)
+                HueLog.w(TAG, "audio record stop", e)
             }
             it.release()
         }
@@ -237,7 +236,7 @@ class ScreenCaptureService : Service() {
                 Mobile.pushAudioPCM(buf.copyOf(n), AUDIO_SAMPLE_RATE.toLong())
             } catch (e: Exception) {
                 // The server may be mid-restart; the next chunk succeeds.
-                Log.w(TAG, "pushAudioPcm failed", e)
+                HueLog.w(TAG, "pushAudioPcm failed", e)
             }
         }
     }
@@ -354,7 +353,7 @@ class ScreenCaptureService : Service() {
         capturedW = w
         capturedH = h
         captureFrameCount = 0
-        Log.i(TAG, "display ${dispW}x$dispH scale=$scale -> capture ${w}x$h")
+        HueLog.i(TAG, "display ${dispW}x$dispH scale=$scale -> capture ${w}x$h")
         Mobile.logHost("capture: display ${dispW}x$dispH scale=$scale -> ${w}x$h")
 
         reader = ImageReader.newInstance(w, h, PixelFormat.RGBA_8888, 2).apply {
@@ -363,7 +362,7 @@ class ScreenCaptureService : Service() {
                 try {
                     pushImage(image)
                 } catch (e: Exception) {
-                    Log.w(TAG, "frame dropped", e)
+                    HueLog.w(TAG, "frame dropped", e)
                 } finally {
                     // Not optional: an unclosed Image exhausts the reader's
                     // buffers within a couple of frames and capture silently
@@ -575,7 +574,7 @@ class ScreenCaptureService : Service() {
         try {
             if (frameRecorder?.isRecording == true) frameRecorder?.stop()
         } catch (e: Exception) {
-            Log.w(TAG, "recorder stop during shutdown", e)
+            HueLog.w(TAG, "recorder stop during shutdown", e)
         }
         frameRecorder = null
 
@@ -602,7 +601,7 @@ class ScreenCaptureService : Service() {
         projection = null
         if (instance === this) instance = null
         Mobile.logHost("capture: stopped")
-        Log.i(TAG, "capture stopped")
+        HueLog.i(TAG, "capture stopped")
         super.onDestroy()
     }
 

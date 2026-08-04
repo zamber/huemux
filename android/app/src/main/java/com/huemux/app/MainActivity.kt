@@ -11,7 +11,6 @@ import android.net.wifi.WifiManager
 import android.os.Build
 import android.provider.MediaStore
 import android.os.Bundle
-import android.util.Log
 import android.view.ViewGroup
 import android.webkit.JavascriptInterface
 import android.webkit.PermissionRequest
@@ -114,7 +113,7 @@ class MainActivity : AppCompatActivity() {
                 try {
                     startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url)))
                 } catch (e: Exception) {
-                    Log.e(TAG, "could not open download: $url", e)
+                    HueLog.e(TAG, "could not open download: $url", e)
                 }
             }
 
@@ -187,7 +186,7 @@ class MainActivity : AppCompatActivity() {
             try {
                 Mobile.stopSync()
             } catch (e: Exception) {
-                Log.w(TAG, "stopSync after capture ended", e)
+                HueLog.w(TAG, "stopSync after capture ended", e)
             }
             runOnUiThread {
                 webView.evaluateJavascript(
@@ -206,6 +205,10 @@ class MainActivity : AppCompatActivity() {
             prefs().getFloat(PREF_SCALE, ScreenCaptureService.captureScale).coerceIn(0.05f, 1.0f)
 
         acquireMulticastLock()
+        // A crash is the one failure mode with no trace in the Go diagnostics
+        // ring — the process dies with it. Install the handler before anything
+        // else can throw, so the report taken on the next launch names it.
+        CrashCatcher.install(filesDir)
         startServer()
         publishHostInfo()
     }
@@ -220,13 +223,13 @@ class MainActivity : AppCompatActivity() {
             // literal string "android".
             Mobile.setVersion(BuildConfig.VERSION_NAME)
             val url = Mobile.start(filesDir.absolutePath)
-            Log.i(TAG, "huemux server started at $url")
+            HueLog.i(TAG, "huemux server started at $url")
             appHost = Uri.parse(url).host
             webView.loadUrl(url)
         } catch (e: Exception) {
             // A dead server means a blank WebView and no clue why, so say so
             // on screen rather than leaving a white rectangle.
-            Log.e(TAG, "failed to start huemux", e)
+            HueLog.e(TAG, "failed to start huemux", e)
             setContentView(
                 TextView(this).apply {
                     text = getString(R.string.start_failed, e.message ?: e.toString())
@@ -250,7 +253,7 @@ class MainActivity : AppCompatActivity() {
                 acquire()
             }
         } catch (e: Exception) {
-            Log.w(TAG, "could not acquire multicast lock; discovery may fail", e)
+            HueLog.w(TAG, "could not acquire multicast lock; discovery may fail", e)
         }
     }
 
@@ -338,7 +341,7 @@ class MainActivity : AppCompatActivity() {
                     // Selecting the area is what opens the DTLS stream. If that
                     // fails there is nothing to capture *for*, so do not put a
                     // consent dialog in front of the user first.
-                    Log.e(TAG, "startSync failed", e)
+                    HueLog.e(TAG, "startSync failed", e)
                     resolveCapture(callbackId, false, e.message ?: "could not select area")
                     return@runOnUiThread
                 }
@@ -355,7 +358,7 @@ class MainActivity : AppCompatActivity() {
                 try {
                     Mobile.stopSync()
                 } catch (e: Exception) {
-                    Log.w(TAG, "stopSync failed", e)
+                    HueLog.w(TAG, "stopSync failed", e)
                 }
             }
         }
@@ -447,7 +450,7 @@ class MainActivity : AppCompatActivity() {
                 lastSavedUri = where.second
                 result(true, "", where.first)
             } catch (e: Exception) {
-                Log.e(TAG, "saving $name", e)
+                HueLog.e(TAG, "saving $name", e)
                 Mobile.logHost("save: $name failed: ${e.message}")
                 result(false, e.message ?: e.toString())
             }
@@ -475,7 +478,7 @@ class MainActivity : AppCompatActivity() {
                 }
                 result(true, "")
             } catch (e: Exception) {
-                Log.e(TAG, "sharing", e)
+                HueLog.e(TAG, "sharing", e)
                 result(false, e.message ?: e.toString())
             }
         }
@@ -556,6 +559,12 @@ class MainActivity : AppCompatActivity() {
             val sb = StringBuilder()
             sb.append("android sdk           ${Build.VERSION.SDK_INT}\n")
             sb.append("device                ${Build.MANUFACTURER} ${Build.MODEL}\n")
+            // The most recent crash survives across restarts in a file, so a
+            // report taken after a crash still names it even though the Go
+            // ring (and the process) died with the crash.
+            CrashCatcher.latest().takeIf { it.isNotEmpty() }?.let {
+                sb.append("last crash            $it\n")
+            }
             sb.append("mic permission        ${
                 if (checkSelfPermission(Manifest.permission.RECORD_AUDIO) ==
                     PackageManager.PERMISSION_GRANTED
@@ -577,7 +586,7 @@ class MainActivity : AppCompatActivity() {
             }
             Mobile.setHostInfo(sb.toString())
         } catch (e: Exception) {
-            Log.w(TAG, "publishing host info", e)
+            HueLog.w(TAG, "publishing host info", e)
         }
     }
 

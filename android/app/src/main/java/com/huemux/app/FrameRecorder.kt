@@ -11,7 +11,6 @@ import android.os.Build
 import android.os.Environment
 import android.os.ParcelFileDescriptor
 import android.provider.MediaStore
-import android.util.Log
 import com.huemux.mobile.Mobile
 import java.io.File
 import java.nio.ByteBuffer
@@ -133,7 +132,7 @@ class FrameRecorder(private val ctx: Context) {
             openOutput()
         } catch (e: Exception) {
             Mobile.logHost("record: output file failed: ${e.message}")
-            Log.e(TAG, "output file", e)
+            HueLog.e(TAG, "output file", e)
             cleanup()
             return "could not create the video file: " + (e.message ?: e.toString())
         }
@@ -145,7 +144,7 @@ class FrameRecorder(private val ctx: Context) {
             codec = c
         } catch (e: Exception) {
             Mobile.logHost("record: encoder configure failed ${encW}x$encH fmt=$colorFormat: ${e.message}")
-            Log.e(TAG, "encoder configure", e)
+            HueLog.e(TAG, "encoder configure", e)
             cleanup()
             return "this device would not encode ${encW}x$encH: " + (e.message ?: e.toString())
         }
@@ -159,7 +158,7 @@ class FrameRecorder(private val ctx: Context) {
             }
         } catch (e: Exception) {
             Mobile.logHost("record: muxer failed: ${e.message}")
-            Log.e(TAG, "muxer", e)
+            HueLog.e(TAG, "muxer", e)
             cleanup()
             return "could not start the video writer: " + (e.message ?: e.toString())
         }
@@ -227,7 +226,7 @@ class FrameRecorder(private val ctx: Context) {
             if (lastError.isEmpty()) {
                 lastError = e.message ?: e.toString()
                 Mobile.logHost("record: frame failed: $lastError")
-                Log.w(TAG, "frame encode", e)
+                HueLog.w(TAG, "frame encode", e)
             }
         }
     }
@@ -250,7 +249,7 @@ class FrameRecorder(private val ctx: Context) {
                 drain(true)
             }
         } catch (e: Exception) {
-            Log.w(TAG, "draining encoder", e)
+            HueLog.w(TAG, "draining encoder", e)
         }
 
         if (framesOut == 0) {
@@ -262,25 +261,25 @@ class FrameRecorder(private val ctx: Context) {
         try {
             codec?.stop()
         } catch (e: Exception) {
-            Log.w(TAG, "codec stop", e)
+            HueLog.w(TAG, "codec stop", e)
         }
         try {
             codec?.release()
         } catch (e: Exception) {
-            Log.w(TAG, "codec release", e)
+            HueLog.w(TAG, "codec release", e)
         }
         codec = null
 
         try {
             if (muxerStarted) muxer?.stop()
         } catch (e: Exception) {
-            Log.w(TAG, "muxer stop", e)
+            HueLog.w(TAG, "muxer stop", e)
             if (err == null) err = "the video file could not be finalised"
         }
         try {
             muxer?.release()
         } catch (e: Exception) {
-            Log.w(TAG, "muxer release", e)
+            HueLog.w(TAG, "muxer release", e)
         }
         muxer = null
         muxerStarted = false
@@ -430,7 +429,7 @@ class FrameRecorder(private val ctx: Context) {
             Mobile.logHost("record: encoder offers only ${available.joinToString(",")}")
         } catch (e: Exception) {
             Mobile.logHost("record: could not query encoder: ${e.message}")
-            Log.e(TAG, "query encoder", e)
+            HueLog.e(TAG, "query encoder", e)
         }
         return 0
     }
@@ -467,7 +466,7 @@ class FrameRecorder(private val ctx: Context) {
         try {
             pfd?.close()
         } catch (e: Exception) {
-            Log.w(TAG, "closing descriptor", e)
+            HueLog.w(TAG, "closing descriptor", e)
         }
         pfd = null
 
@@ -485,7 +484,7 @@ class FrameRecorder(private val ctx: Context) {
                     ctx.contentResolver.delete(u, null, null)
                 }
             } catch (e: Exception) {
-                Log.w(TAG, "publishing entry", e)
+                HueLog.w(TAG, "publishing entry", e)
             }
         } else if (!ok) {
             file?.delete()
@@ -498,13 +497,13 @@ class FrameRecorder(private val ctx: Context) {
         try {
             codec?.release()
         } catch (e: Exception) {
-            Log.w(TAG, "cleanup codec", e)
+            HueLog.w(TAG, "cleanup codec", e)
         }
         codec = null
         try {
             muxer?.release()
         } catch (e: Exception) {
-            Log.w(TAG, "cleanup muxer", e)
+            HueLog.w(TAG, "cleanup muxer", e)
         }
         muxer = null
         muxerStarted = false
@@ -512,7 +511,9 @@ class FrameRecorder(private val ctx: Context) {
         isRecording = false
     }
 
-    private companion object {
+    // Not private so the unit tests can pin the bitrate clamp without a
+    // device; the constants exposed by widening are inert (no state).
+    companion object {
         const val TAG = "HueMuxFrameRec"
         const val MIME = "video/avc"
         const val FRAME_RATE = 30

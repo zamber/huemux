@@ -391,11 +391,10 @@ async function startNativeCapture() {
   if (!areaId) throw new Error('no entertainment area selected');
 
   // On Android, internal audio rides the same MediaProjection as the screen.
-  // Pass withAudio=true so the service starts AudioPlaybackCapture alongside
-  // the VirtualDisplay — one consent dialog, both streams.
-  const mode = els.captureMode ? els.captureMode.value : 'video';
-  const withAudio = (mode === 'audio' || mode === 'audiovideo');
-
+  // One consent dialog yields both streams; the service always starts
+  // AudioPlaybackCapture alongside the VirtualDisplay, so there is no flag to
+  // pass here. (Adding one would also break the bridge: JavascriptInterface
+  // methods are matched by argument count, and startCapture takes two.)
   nativeCapture = true;
   document.documentElement.setAttribute('data-native-capture', '');
 
@@ -412,7 +411,7 @@ async function startNativeCapture() {
         delete captureWaiters[id];
         ok ? resolve() : reject(new Error(err || 'capture was not permitted'));
       };
-      window.HueMuxNative.startCapture(areaId, id, withAudio);
+      window.HueMuxNative.startCapture(areaId, id);
     });
   } catch (e) {
     nativeCapture = false;

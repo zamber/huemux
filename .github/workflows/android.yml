@@ -20,6 +20,7 @@ on:
       - 'mobile/**'
       - 'internal/**'
       - 'web/**'
+      - 'android/**'
       - 'go.mod'
       - 'go.sum'
       - '.github/workflows/android.yml'
@@ -27,6 +28,8 @@ on:
     paths:
       - 'mobile/**'
       - 'internal/**'
+      - 'web/**'
+      - 'android/**'
       - 'go.mod'
       - 'go.sum'
   workflow_dispatch:
@@ -159,8 +162,83 @@ jobs:
       - name: Report APK size
         run: ls -lh android/app/build/outputs/apk/debug/*.apk
 
+      # The AAR is already staged in app/libs by the step above, so the Kotlin
+      # unit tests here compile against the exact artifact that ships in the
+      # APK. These are the same tests the kotlin-tests job runs on every push;
+      # this is the slow main-only re-run so the release artifact is guarded.
+      - name: Run Kotlin unit tests
+        working-directory: android
+        run: ./gradlew --no-daemon testDebugUnitTest
+
       - uses: actions/upload-artifact@v7
         with:
           name: huemux-apk-debug
           path: android/app/build/outputs/apk/debug/*.apk
           if-no-files-found: error
+
+  # The fast Kotlin gate. Runs on every push/PR that touches the app or web
+  # code. It needs the AAR (the Kotlin compiles against it), so unlike the
+  # `verify` job it does need the full gomobile + NDK setup — but it stops
+  # short of assembling an APK, keeping it well under the aar job's cost.
+  #
+  # This is where the class of bug that shipped in alpha.36 gets caught:
+  # the "no method startCapture" failure was a JS/Kotlin bridge mismatch that
+  # no amount of Go-side testing could see. NativeBridgeApiTest pins the
+  # JavascriptInterface surface against every call site in web/.
+  kotlin-tests:
+    runs-on: ubuntu-latest
+    needs: verify
+    steps:
+      - uses: actions/checkout@v7
+
+      # Same toolchain reasoning as the aar job: gomobile needs Go >= 1.25 and
+      # this module declares 1.24, so the job takes 'stable' rather than the
+      # go-version-file. The verify job keeps testing against go.mod.
+      - uses: actions/setup-go@v7
+        with:
+          go-version: 'stable'
+
+      - name: Install gomobile
+        run: |
+          go install golang.org/x/mobile/cmd/gomobile@latest
+          go install golang.org/x/mobile/cmd/gobind@latest
+          echo "$(go env GOPATH)/bin" >> "$GITHUB_PATH"
+
+      - name: Initialise gomobile against the runner's NDK
+        run: gomobile init
+
+      # See the matching step in the aar job for why this is CI-only.
+      - name: Add the gomobile tool dependency (CI-only, not committed)
+        run: go get -tool golang.org/x/mobile/cmd/gobind
+
+      # The Kotlin source compiles against this. Not an artifact of the job:
+      # it is consumed in-place by Gradle, exactly as the aar job stages it.
+      - name: Build AAR for the tests to compile against
+        run: |
+          mkdir -p android/app/libs
+          gomobile bind -target=android/arm64 \
+            -androidapi 26 \
+            -javapkg com.huemux \
+            -o android/app/libs/huemux.aar \
+            ./mobile
+
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Run Kotlin unit tests
+        working-directory: android
+        run: |
+          # No wrapper jar is committed; pin the Gradle version rather than
+          # taking whatever the runner ships today.
+          gradle wrapper --gradle-version 8.11.1
+          ./gradlew --no-daemon testDebugUnitTest
+
+      - name: Upload test reports on failure
+        if: failure()
+        uses: actions/upload-artifact@v7
+        with:
+          name: kotlin-test-reports
+          path: android/app/build/reports/tests/**
+          if-no-files-found: warn

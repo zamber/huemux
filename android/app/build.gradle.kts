@@ -83,6 +83,15 @@ android {
             useLegacyPackaging = false
         }
     }
+
+    testOptions {
+        unitTests {
+            // HueLog routes through android.util.Log, which the unit-test stub
+            // otherwise throws on. Returning defaults lets the tests exercise
+            // the routing logic without a device or Robolectric.
+            isReturnDefaultValues = true
+        }
+    }
 }
 
 dependencies {
@@ -96,4 +105,9 @@ dependencies {
     // something to rely on for an API the code calls by name.
     implementation("androidx.core:core-ktx:1.15.0")
     implementation("androidx.activity:activity-ktx:1.9.3")
+
+    // Kotlin unit tests (android/app/src/test). Run in CI via
+    // testDebugUnitTest; isReturnDefaultValues above keeps the Android stubs
+    // quiet so pure-logic tests need no device and no Robolectric.
+    testImplementation("junit:junit:4.13.2")
 }
