@@ -112,7 +112,17 @@
     "recordSaved": "Tallennettu: {name}",
     "recordingHint": "Tallentaa synkronoinnin aikana Movies/HueMux-kansioon. Se koodaa kuvia, joita synkronointi jo kaappaa, joten tallennus on tarkalleen yhtä terävä kuin yllä asetettu kaappausresoluutio — nosta liukua ennen tallennusta, jos video on muille näytettäväksi, ja laske sitä jälkeen.",
     "captureScaleLocked": "Lukittu tallennuksen aikana — video koodataan aloituskoon kanssa.",
-    "recordShare": "Jaa"
+    "recordShare": "Jaa",
+    "debug": "Debug",
+    "debugHz": "Debug data rate",
+    "debugHzHint": "How often the histogram and capture readouts update. Higher is smoother but uses more network and CPU.",
+    "debugPreview": "Stream echo to this device",
+    "debugPreviewHint": "Sends a downscaled copy of the video grid to every connected UI. It powers the preview and histogram; it burns CPU and network, so leave it off unless you need it.",
+    "audioGain": "Audio gain",
+    "audioGainHint": "Boosts the captured audio before analysis. Raise it if the histogram barely moves; 2 is the default.",
+    "audioFloor": "Audio floor",
+    "audioFloorHint": "Silences bands below this level. Use it to hide a constant hum or hiss.",
+    "debugFps": "Debug data: {fps} fps in"
   },
   "lights": {
     "filterAll": "Kaikki",

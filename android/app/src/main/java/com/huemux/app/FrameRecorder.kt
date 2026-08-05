@@ -168,7 +168,7 @@ class FrameRecorder(private val ctx: Context) {
         framesIn = 0
         framesOut = 0
         isRecording = true
-        Mobile.logHost("record: started ${encW}x$encH fmt=$colorFormat -> $name")
+        Mobile.logStream("record: started ${encW}x$encH fmt=$colorFormat -> $name")
         return null
     }
 
@@ -285,7 +285,7 @@ class FrameRecorder(private val ctx: Context) {
         muxerStarted = false
         trackIndex = -1
 
-        Mobile.logHost("record: stopped in=$framesIn out=$framesOut err=${err ?: "none"}")
+        Mobile.logStream("record: stopped in=$framesIn out=$framesOut err=${err ?: "none"}")
         val savedUri = uri
         val savedFile = file
         publishOutput(err == null)

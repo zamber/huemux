@@ -112,7 +112,17 @@
     "recordSaved": "{name} को सहेजा गया",
     "recordingHint": "सिंक चलने के समय रिकॉर्ड करता है, Movies/HueMux को। यह उन फ्रेम को एनकोड करता है जो सिंक पहले से ही कैप्चर कर रहा है, इसलिए एक रिकॉर्डिंग ऊपर सेट किए गए कैप्चर रिज़ॉल्यूशन जितनी तेज़ है — यदि वीडियो किसी और को देखने के लिए है तो रिकॉर्ड करने से पहले इस स्लाइडर को ऊपर उठाएं, और बाद में इसे नीचे करें।",
     "captureScaleLocked": "रिकॉर्डिंग के दौरान लॉक किया गया — वीडियो को उस आकार में एनकोड किया गया है जिससे यह शुरू हुआ था।",
-    "recordShare": "शेयर करें"
+    "recordShare": "शेयर करें",
+    "debug": "Debug",
+    "debugHz": "Debug data rate",
+    "debugHzHint": "How often the histogram and capture readouts update. Higher is smoother but uses more network and CPU.",
+    "debugPreview": "Stream echo to this device",
+    "debugPreviewHint": "Sends a downscaled copy of the video grid to every connected UI. It powers the preview and histogram; it burns CPU and network, so leave it off unless you need it.",
+    "audioGain": "Audio gain",
+    "audioGainHint": "Boosts the captured audio before analysis. Raise it if the histogram barely moves; 2 is the default.",
+    "audioFloor": "Audio floor",
+    "audioFloorHint": "Silences bands below this level. Use it to hide a constant hum or hiss.",
+    "debugFps": "Debug data: {fps} fps in"
   },
   "lights": {
     "filterAll": "सभी",

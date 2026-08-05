@@ -43,8 +43,8 @@ func TestAudioFrameSourceAndStatus(t *testing.T) {
 	if msg.Music == nil || !msg.Music.Active || msg.Music.Frames != 1 {
 		t.Fatalf("status after first frame: %+v", msg.Music)
 	}
-	if msg.Music.FFT[0] != 0.9 {
-		t.Fatalf("bass band = %v, want 0.9", msg.Music.FFT[0])
+	if msg.Music.FFT[0] != 1.0 {
+		t.Fatalf("bass band = %v, want 1.0 (0.9 clamped by the default audio gain)", msg.Music.FFT[0])
 	}
 
 	// A second connection's frames are dropped while c1 owns the source.
@@ -52,7 +52,7 @@ func TestAudioFrameSourceAndStatus(t *testing.T) {
 	other[31] = 1.0
 	s.handleAudioFrame(c2, audioPayload(t, other))
 	msg = s.statusMessage(nil)
-	if msg.Music.FFT[0] != 0.9 || msg.Music.Frames != 1 {
+	if msg.Music.FFT[0] != 1.0 || msg.Music.Frames != 1 {
 		t.Fatalf("second source's frame leaked in: %+v", msg.Music)
 	}
 

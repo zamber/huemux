@@ -47,6 +47,12 @@ type AreaSettings struct {
 	OutputHz      int    `json:"output_hz"`
 	ColorSpace    string `json:"color_space"` // rgb | xy
 	DisableEMS    bool   `json:"disable_ems"`
+
+	// Debug
+	DebugHz      int     `json:"debug_hz"`      // debug-data push rate (fps/capture/histogram)
+	DebugPreview bool    `json:"debug_preview"` // stream echo to connected UIs (resource burn)
+	AudioGain    float64 `json:"audio_gain"`    // FFT band boost for the analysis frame
+	AudioFloor   float64 `json:"audio_floor"`   // FFT bands below this are silenced
 }
 
 // DefaultAreaSettings returns the roadmap's stated defaults for a freshly
@@ -72,7 +78,7 @@ func DefaultAreaSettings(configurationType string) AreaSettings {
 		Reactivity:          45,
 		Brightness:          100,
 		Saturation:          130,
-		BlackCutoff:         0.02,
+		BlackCutoff:         0,
 		ChannelBrightness:   map[uint8]float64{},
 		SceneCutSensitivity: 0.35,
 		CaptureWidth:        320,
@@ -81,6 +87,10 @@ func DefaultAreaSettings(configurationType string) AreaSettings {
 		OutputHz:            20,
 		ColorSpace:          "rgb",
 		DisableEMS:          false,
+		DebugHz:             10,
+		DebugPreview:        false,
+		AudioGain:           2.0,
+		AudioFloor:          0,
 	}
 }
 
@@ -91,6 +101,15 @@ func DefaultAreaSettings(configurationType string) AreaSettings {
 func (s AreaSettings) Validate() AreaSettings {
 	if s.OutputHz < 1 || s.OutputHz > 25 {
 		s.OutputHz = 20
+	}
+	if s.DebugHz < 1 || s.DebugHz > 30 {
+		s.DebugHz = 10
+	}
+	if s.AudioGain < 0.5 || s.AudioGain > 5 {
+		s.AudioGain = 2.0
+	}
+	if s.AudioFloor < 0 || s.AudioFloor > 0.1 {
+		s.AudioFloor = 0
 	}
 	return s
 }
@@ -143,15 +162,36 @@ func (s *Store) Get(areaID, configurationType string) AreaSettings {
 // defaults a fresh area gets — an on-disk schema evolving out from under a
 // still-valid file is exactly the kind of thing that fails silently.
 func backfillDefaults(v AreaSettings, configurationType string) AreaSettings {
-	if v.AxisHorizontal != "" {
-		return v // has axis fields already; assume the rest of the record is current too
-	}
 	d := DefaultAreaSettings(configurationType)
-	v.AxisHorizontal = d.AxisHorizontal
-	v.AxisVertical = d.AxisVertical
-	v.AxisDepth = d.AxisDepth
-	v.InvertVertical = d.InvertVertical
-	v.DepthSizeGain = d.DepthSizeGain
+	// Axis fields: only filled for records saved before they existed (the
+	// legacy pre-mapping schema). A record that already carries axis choices
+	// keeps them — a user's inverted axes are not something to overwrite.
+	if v.AxisHorizontal == "" {
+		v.AxisHorizontal = d.AxisHorizontal
+		v.AxisVertical = d.AxisVertical
+		v.AxisDepth = d.AxisDepth
+		v.InvertVertical = d.InvertVertical
+		v.DepthSizeGain = d.DepthSizeGain
+	}
+	// BlackCutoff's old default was 0.02; the new default is 0. A saved 0.02
+	// is the pre-migration default, not a deliberate choice, so move it to 0.
+	// Anything else the user actually set survives.
+	if v.BlackCutoff == 0.02 {
+		v.BlackCutoff = 0
+	}
+	// Debug fields added after the early return above existed: a zero here
+	// means the record predates them, not that the user chose zero (both
+	// DebugHz and AudioGain clamp to a non-zero default in Validate, so a
+	// genuine user choice of zero is indistinguishable from missing — the
+	// non-zero defaults are the safe fill). AudioFloor == 0 and
+	// DebugPreview == false are already the defaults, so zero-filling them is
+	// idempotent and needs no sentinel.
+	if v.DebugHz == 0 {
+		v.DebugHz = d.DebugHz
+	}
+	if v.AudioGain == 0 {
+		v.AudioGain = d.AudioGain
+	}
 	return v
 }
 

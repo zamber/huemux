@@ -60,11 +60,21 @@ type Server struct {
 	lnMu sync.Mutex
 	ln   net.Listener
 
-	mu           sync.Mutex
-	frameSource  *Conn
-	musicSource  *Conn // connection owning audio capture (music reactivity)
-	uiConns      map[*Conn]struct{}
-	lastFrameLog time.Time // throttles logFrameStats to at most once/second
+	mu            sync.Mutex
+	frameSource   *Conn
+	musicSource   *Conn // connection owning audio capture (music reactivity)
+	uiConns       map[*Conn]struct{}
+	lastFrameLog  time.Time // throttles logFrameStats to at most once/second
+	lastStreamLog time.Time // throttles stream-telemetry summaries to at most once/5s
+	lastPreviewAt time.Time // throttles the grid echo to at most 10 fps
+
+	// Stream counters feed the debug push and the diagnostics report. All
+	// guarded by mu like the rest of the connection state.
+	framesAccepted uint64 // grids handed to the engine
+	framesDropped  uint64 // grids from a non-source connection
+	pcmChunks      uint64 // PCM buffers fed to the analyzer
+	pcmBytes       uint64 // PCM bytes fed to the analyzer
+	audioFrames    uint64 // analysis frames written to the music state
 
 	// musicOffExplicit is true when the user explicitly set the music
 	// preset to "" (Off). When set, autoActivateMusic() stays quiet so
@@ -755,10 +765,13 @@ func (s *Server) handleWS(w http.ResponseWriter, r *http.Request) {
 	s.mu.Unlock()
 
 	statusDone := make(chan struct{})
+	debugDone := make(chan struct{})
 	go s.pushStatusLoop(conn, statusDone)
+	go s.pushDebugLoop(conn, debugDone)
 
 	defer func() {
 		close(statusDone)
+		close(debugDone)
 		s.removeConn(conn)
 	}()
 
@@ -795,21 +808,43 @@ func (s *Server) PushAudioPCM(pcm []byte, sampleRate int) {
 	s.audioMu.Lock()
 	frames := s.audioAna.Feed(pcm, sampleRate)
 	s.audioMu.Unlock()
+
+	gain, floor := s.audioGainFloor()
+	s.mu.Lock()
+	s.pcmChunks++
+	s.pcmBytes += uint64(len(pcm))
+	s.audioFrames += uint64(len(frames))
+	s.mu.Unlock()
 	for _, f := range frames {
-		s.music.Update(f)
+		s.music.Update(music.ApplyGainFloor(f, gain, floor))
 	}
 	s.autoActivateMusic()
-	// Log at most once every 5 seconds, same throttle as logMusicStats.
+	// Stream-telemetry summary, at most once every 5 seconds. Lives in the
+	// stream ring, never the app-event ring — a busy capture must not bury
+	// one-off events in the diagnostics report.
 	s.mu.Lock()
-	skip := time.Since(s.lastFrameLog) < 5*time.Second
+	skip := time.Since(s.lastStreamLog) < 5*time.Second
 	if !skip {
-		s.lastFrameLog = time.Now()
+		s.lastStreamLog = time.Now()
 	}
 	s.mu.Unlock()
 	if !skip && len(frames) > 0 {
-		debuglog.Audiof("pcm: %d bytes @ %d Hz → %d analysis frames, bass=%.3f",
+		debuglog.Streamf("pcm: %d bytes @ %d Hz → %d analysis frames, bass=%.3f",
 			len(pcm), sampleRate, len(frames), frames[0].FFT[0])
 	}
+}
+
+// audioGainFloor returns the audio-pickup settings to apply to the analysis
+// frame, preferring the engine's per-area settings and falling back to the UI
+// defaults when no engine exists — music-only capture and pre-pairing capture
+// have no area to draw settings from, and the histogram must still benefit.
+func (s *Server) audioGainFloor() (gain, floor float64) {
+	eng := s.engine()
+	if eng == nil {
+		return 2.0, 0
+	}
+	_, _, gain, floor = eng.DebugSettings()
+	return gain, floor
 }
 
 // removeConn forgets a disconnected connection: unregisters it as a UI
@@ -856,7 +891,8 @@ func (s *Server) handleAudioFrame(conn *Conn, payload []byte) {
 	}
 	s.musicSource = conn
 	s.mu.Unlock()
-	s.music.Update(f)
+	gain, floor := s.audioGainFloor()
+	s.music.Update(music.ApplyGainFloor(f, gain, floor))
 
 	// Auto-activate the default music preset on the first audio frame
 	// when capture mode is audio or audiovideo. This is what turns audio
@@ -902,14 +938,16 @@ func (s *Server) autoActivateMusic() {
 }
 
 // logMusicStats logs a throttled (at most once/5s) summary of incoming
-// audio frames to the in-memory ring buffer — always, regardless of -debug,
-// so a diagnostics report from a phone has evidence that audio frames were
-// (or were not) arriving.
+// audio frames to the stream ring — always, regardless of -debug, so a
+// diagnostics report from a phone has evidence that audio frames were (or
+// were not) arriving. Stream telemetry, so it shares lastStreamLog with the
+// PCM summary and writes to the stream ring, keeping the app-event ring
+// readable.
 func (s *Server) logMusicStats() {
 	s.mu.Lock()
-	skip := time.Since(s.lastFrameLog) < 5*time.Second
+	skip := time.Since(s.lastStreamLog) < 5*time.Second
 	if !skip {
-		s.lastFrameLog = time.Now()
+		s.lastStreamLog = time.Now()
 	}
 	s.mu.Unlock()
 	if skip {
@@ -919,7 +957,7 @@ func (s *Server) logMusicStats() {
 	if !active {
 		return
 	}
-	debuglog.Audiof("frames=%d bass=%.3f wave0=%.3f", frames, f.FFT[0], f.Wave[0])
+	debuglog.Streamf("frames=%d bass=%.3f wave0=%.3f", frames, f.FFT[0], f.Wave[0])
 }
 
 // handleGridFrame accepts a binary grid frame only from whichever
@@ -935,6 +973,9 @@ func (s *Server) handleGridFrame(conn *Conn, payload []byte) {
 
 	s.mu.Lock()
 	isSource := s.frameSource == conn
+	if !isSource {
+		s.framesDropped++
+	}
 	s.mu.Unlock()
 	if !isSource {
 		return
@@ -948,16 +989,53 @@ func (s *Server) handleGridFrame(conn *Conn, payload []byte) {
 	if len(payload) < want {
 		return
 	}
-	const maxGridPixels = 640 * 360 // ~230k pixels
-	if w < 0 || h < 0 || w*h > maxGridPixels {
-		return
-	}
-	grid := &pipeline.Grid{W: w, H: h, Pix: append([]byte(nil), payload[3:want]...)}
-	eng.SetFrame(grid)
+	grid := s.acceptGrid(w, h, payload[3:want])
 
-	if debuglog.Enabled {
+	if grid != nil && debuglog.Enabled {
 		s.logFrameStats(conn, grid)
 	}
+}
+
+// acceptGrid validates, copies and forwards one RGB grid to the engine and
+// the debug echo. Shared by the browser frame path (handleGridFrame) and the
+// Android path (PushFrame) so both reach the same stream counters and the
+// preview echo — previously Android frames called eng.SetFrame directly and
+// never touched any of this.
+func (s *Server) acceptGrid(w, h int, pix []byte) *pipeline.Grid {
+	const maxGridPixels = 640 * 360 // ~230k pixels
+	if w < 0 || h < 0 || w*h > maxGridPixels {
+		return nil
+	}
+	eng := s.engine()
+	if eng == nil {
+		return nil
+	}
+	grid := &pipeline.Grid{W: w, H: h, Pix: append([]byte(nil), pix...)}
+	s.mu.Lock()
+	s.framesAccepted++
+	s.mu.Unlock()
+	eng.SetFrame(grid)
+	s.maybeBroadcastPreview(grid)
+	return grid
+}
+
+// PushFrame hands one captured RGB frame (w*h*3 tightly packed bytes) to the
+// colour pipeline, routing it through the same acceptance path as a browser
+// grid frame so Android frames reach the stream counters and the debug echo.
+// Exported for the mobile facade. The caller still checks the engine exists;
+// this re-validates defensively.
+func (s *Server) PushFrame(w, h int, rgb []byte) error {
+	if w <= 0 || h <= 0 {
+		return fmt.Errorf("huemux: bad frame size %dx%d", w, h)
+	}
+	if want := w * h * 3; len(rgb) != want {
+		return fmt.Errorf("huemux: frame is %d bytes, want %d for %dx%d RGB", len(rgb), want, w, h)
+	}
+	if s.engine() == nil {
+		return errors.New("huemux: screen sync is disabled by the current profile")
+	}
+	s.acceptGrid(w, h, rgb)
+	return nil
 }
 
 // logFrameStats logs a throttled (at most once/second) average-color summary
@@ -1332,6 +1410,96 @@ func (s *Server) pushStatusLoop(conn *Conn, done chan struct{}) {
 			return
 		case <-t.C:
 			send()
+		}
+	}
+}
+
+// debugWire is the lightweight debug push the histogram and capture readouts
+// are driven from. Unlike the 1 Hz status push it is emitted up to debug_hz
+// times per second, so a histogram that needs fast updates to "bump high" is
+// not stuck at once a second.
+type debugWire struct {
+	Type     string           `json:"type"`
+	FPSIn    float64          `json:"fps_in"`
+	Frames   uint64           `json:"frames"`
+	CaptureW int              `json:"capture_w"`
+	CaptureH int              `json:"capture_h"`
+	GridW    int              `json:"grid_w"`
+	GridH    int              `json:"grid_h"`
+	Music    *musicStatusWire `json:"music,omitempty"`
+}
+
+// debugMessage assembles one debug push. The music block is included only
+// while a source is active, mirroring the status push.
+func (s *Server) debugMessage(eng *engine.Engine) debugWire {
+	cw, ch, gw, gh := eng.CaptureStats()
+	s.mu.Lock()
+	frames := s.framesAccepted
+	s.mu.Unlock()
+	w := debugWire{
+		Type:     "debug",
+		FPSIn:    eng.InboundFPS(),
+		Frames:   frames,
+		CaptureW: cw,
+		CaptureH: ch,
+		GridW:    gw,
+		GridH:    gh,
+	}
+	if f, active, frameCount := s.music.Snapshot(); active {
+		w.Music = &musicStatusWire{
+			Active: true,
+			Frames: frameCount,
+			FFT:    append([]float32(nil), f.FFT[:]...),
+			Wave:   append([]float32(nil), f.Wave[:]...),
+		}
+	}
+	return w
+}
+
+// debugInterval returns how often the debug push should fire for a given
+// debug_hz setting. Clamped to the same range Validate enforces, so a
+// settings record that never passed Validate cannot feed a division by zero.
+func debugInterval(hz int) time.Duration {
+	if hz < 1 {
+		hz = 10
+	}
+	if hz > 30 {
+		hz = 30
+	}
+	return time.Second / time.Duration(hz)
+}
+
+// pushDebugLoop drives the debug push. It ticks at a fixed 33 ms cadence and
+// sends a message only when the elapsed time since the last send reaches
+// 1000/debug_hz — so raising debug_hz takes effect within one tick with no
+// ticker rebuild, and the goroutine is identical regardless of the setting.
+// Skipped entirely while no engine exists: the capture statistics it would
+// carry are engine state.
+func (s *Server) pushDebugLoop(conn *Conn, done chan struct{}) {
+	t := time.NewTicker(33 * time.Millisecond)
+	defer t.Stop()
+	var last time.Time // zero: the first tick always sends
+	for {
+		select {
+		case <-done:
+			return
+		case <-t.C:
+			eng := s.engine()
+			if eng == nil {
+				continue
+			}
+			hz, _, _, _ := eng.DebugSettings()
+			if time.Since(last) < debugInterval(hz) {
+				continue
+			}
+			last = time.Now()
+			raw, err := json.Marshal(s.debugMessage(eng))
+			if err != nil {
+				continue
+			}
+			if err := conn.WriteMessage(opText, raw); err != nil {
+				return
+			}
 		}
 	}
 }

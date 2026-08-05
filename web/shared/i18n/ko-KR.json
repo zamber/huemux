@@ -112,7 +112,17 @@
     "recordSaved": "{name}에 저장됨",
     "recordingHint": "동기화 실행 중 Movies/HueMux에 녹화합니다. 동기화가 이미 캡처하는 프레임을 인코딩하므로, 녹화는 위의 캡처 해상도와 정확히 같은 수준으로 선명합니다 — 다른 사람이 보는 영상이라면 녹화 전에 슬라이더를 높였다가 나중에 낮추세요.",
     "captureScaleLocked": "녹화 중에는 잠금됨 — 영상은 시작할 때의 크기로 인코딩됩니다.",
-    "recordShare": "공유"
+    "recordShare": "공유",
+    "debug": "Debug",
+    "debugHz": "Debug data rate",
+    "debugHzHint": "How often the histogram and capture readouts update. Higher is smoother but uses more network and CPU.",
+    "debugPreview": "Stream echo to this device",
+    "debugPreviewHint": "Sends a downscaled copy of the video grid to every connected UI. It powers the preview and histogram; it burns CPU and network, so leave it off unless you need it.",
+    "audioGain": "Audio gain",
+    "audioGainHint": "Boosts the captured audio before analysis. Raise it if the histogram barely moves; 2 is the default.",
+    "audioFloor": "Audio floor",
+    "audioFloorHint": "Silences bands below this level. Use it to hide a constant hum or hiss.",
+    "debugFps": "Debug data: {fps} fps in"
   },
   "lights": {
     "filterAll": "모두",

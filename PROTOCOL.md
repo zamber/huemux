@@ -123,6 +123,26 @@ audio into one analysis stream. Unlike grid frames, audio capture needs
 neither a paired bridge nor a selected area — the analysis side of the music
 engine is entirely Go-side (see `docs/MUSIC-REACTIVITY.md`).
 
+### Frames: service → browser (binary)
+
+Broadcast, not addressed: every connected UI receives them, the same set.
+
+```
+byte 0    0x03           message type: grid echo (debug preview)
+byte 1    width          downscaled, longest edge ≤ 180
+byte 2    height         downscaled, longest edge ≤ 180
+byte 3+   width×height×3 RGB, row major, top-left origin
+```
+
+Sent at most 10 times per second, only while the `debug_preview` setting is on
+(see §2 Debug push). The grid is downscaled nearest-neighbour, preserving
+aspect ratio, so at 640×360 the echo is 180×101. This is what drives the
+Android WebView's capture preview and luminance histogram — gomobile has no
+Go→Kotlin callbacks, so the echo travels over the same WebSocket any desktop
+tab uses, and the WebView is just a plain UI connection rather than the frame
+source. Desktop browser capture gets the same echo; that redundancy is
+deliberate.
+
 ### Control: browser → service (JSON text)
 
 ```json
@@ -131,6 +151,22 @@ engine is entirely Go-side (see `docs/MUSIC-REACTIVITY.md`).
 {"type": "settings", "settings": { ... }}
 {"type": "identify", "light_rid": "<light resource id>"}
 ```
+
+`settings` carries the per-area `AreaSettings` (persisted in settings.json).
+Beyond the sampling/output fields the UI exposes, four debug and audio-pickup
+keys matter to the features in this document:
+
+| Key | Type | Range / default | Effect |
+|---|---|---|---|
+| `debug_hz` | int | 1–30, default 10 | Rate of the `{"type":"debug"}` push |
+| `debug_preview` | bool | default false | Broadcast the 0x03 grid echo to every connected UI |
+| `audio_gain` | float | 0.5–5, default 2.0 | Boost applied to each FFT band before analysis |
+| `audio_floor` | float | 0–0.1, default 0 | Bands below this magnitude are silenced |
+
+`debug_hz` and `debug_preview` bound resource burn (a higher push rate and the
+echo are both network/CPU costs the user opted into); `audio_gain` and
+`audio_floor` shape what the analysis hears, applied to the real analysis frame
+— reactivity included — not just the display.
 
 `identify` blinks a physical light and is what makes click-to-blink work in the
 calibration view.
@@ -190,6 +226,21 @@ analysis primitives can see exactly what the engine received:
 time-domain signal. The block is absent while no audio source is connected.
 The browser already has its own copy of this data — the arrays exist to prove
 the pipe and to feed analysis, not to power the preview.
+
+The 1 Hz status push is too slow to drive a histogram that needs to "bump
+high", so a second push carries the same analysis faster:
+
+```json
+{"type": "debug", "fps_in": 12.3, "frames": 1234, "capture_w": 1920, "capture_h": 1080,
+ "grid_w": 640, "grid_h": 360, "music": { "active": true, "frames": 87, "fft": [...], "wave": [...] }}
+```
+
+Sent up to `debug_hz` times per second (default 10, clamped to 1–30; the
+actual cadence is `1000/debug_hz`). `fps_in`, `capture_w/h` and `grid_w/h`
+come from cheap engine scalar accessors — never a zone snapshot. `music` is
+the same block the status push carries, present only while an audio source is
+active. The push is skipped entirely while no engine exists, because every
+field it carries is engine state.
 
 The frame source is claimed explicitly by `select_area` (`claimFrameSource`),
 not by whichever connection happens to send a grid frame first — starting

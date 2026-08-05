@@ -111,6 +111,25 @@ func (s *Server) handleDiagnostics(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
+	// Stream telemetry lives on the server regardless of engine state: the
+	// PCM/audio counters feed the analyser even in music-only mode, and a
+	// "capture ran but no frame ever reached the engine" report is exactly
+	// the case these numbers are there to expose.
+	b.WriteString("\nstream stats\n------------\n")
+	s.mu.Lock()
+	line("frames accepted", s.framesAccepted)
+	line("frames dropped", s.framesDropped)
+	line("pcm chunks", s.pcmChunks)
+	line("pcm bytes", s.pcmBytes)
+	line("audio frames", s.audioFrames)
+	s.mu.Unlock()
+	if eng := s.Engine(); eng != nil {
+		hz, _, _, _ := eng.DebugSettings()
+		line("debug hz", hz)
+	} else {
+		line("debug hz", "n/a (no engine)")
+	}
+
 	// Whatever the host application knows and this process cannot see. On
 	// Android that is the capture and recording state, which lives entirely in
 	// Kotlin: a failed recording used to leave no trace anywhere in this
@@ -127,6 +146,22 @@ func (s *Server) handleDiagnostics(w http.ResponseWriter, r *http.Request) {
 		b.WriteString("(nothing logged yet)\n")
 	} else {
 		for _, l := range lines {
+			b.WriteString(l)
+			b.WriteByte('\n')
+		}
+	}
+
+	// Per-stream telemetry is kept in its own ring precisely so it does not
+	// bury the app events above; the report mirrors that separation. Without
+	// it, a diagnostics dump of a "the histogram barely moves" report would
+	// show the whole capture history but no evidence of what the analyser
+	// actually received.
+	b.WriteString("\nstream log\n----------\n")
+	slines := debuglog.StreamRecent()
+	if len(slines) == 0 {
+		b.WriteString("(nothing logged yet)\n")
+	} else {
+		for _, l := range slines {
 			b.WriteString(l)
 			b.WriteByte('\n')
 		}

@@ -217,12 +217,12 @@ class ScreenCaptureService : Service() {
             if (n <= 0) {
                 errorCount++
                 if (errorCount == 1 || errorCount % 100 == 0) {
-                    Mobile.logHost("audio: read error $n (count=$errorCount)")
+                    Mobile.logStream("audio: read error $n (count=$errorCount)")
                 }
                 // Avoid a busy-spin on persistent errors.
                 if (n == AudioRecord.ERROR_INVALID_OPERATION ||
                     n == AudioRecord.ERROR_DEAD_OBJECT) {
-                    Mobile.logHost("audio: fatal read error $n, stopping")
+                    Mobile.logStream("audio: fatal read error $n, stopping")
                     break
                 }
                 Thread.sleep(10)
@@ -281,7 +281,7 @@ class ScreenCaptureService : Service() {
         if (projection == null) return "screen capture is not running"
         if (frameRecorder?.isRecording == true) return "already recording"
         if (capturedW <= 0 || capturedH <= 0) return "screen capture is not running"
-        Mobile.logHost("record: start requested capture=${capturedW}x$capturedH")
+        Mobile.logStream("record: start requested capture=${capturedW}x$capturedH")
         val rec = frameRecorder ?: FrameRecorder(applicationContext).also { frameRecorder = it }
         return rec.start(capturedW, capturedH)
     }
@@ -531,7 +531,7 @@ class ScreenCaptureService : Service() {
         // log there is no evidence anywhere of what the colour engine was
         // actually fed — which is the number this whole split exists to change.
         if (sw != pipelineW || sh != pipelineH) {
-            Mobile.logHost("capture: colour pipeline ${sw}x$sh (step=$step, from ${w}x$h)")
+            Mobile.logStream("capture: colour pipeline ${sw}x$sh (step=$step, from ${w}x$h)")
         }
         pipelineW = sw
         pipelineH = sh

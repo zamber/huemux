@@ -251,3 +251,64 @@ func Infof(format string, args ...any) {
 	msg := fmt.Sprintf(format, args...)
 	appendLine(time.Now().Format("2006/01/02 15:04:05.000000") + " " + msg)
 }
+
+// --- stream log ring -------------------------------------------------------
+//
+// The app-event ring above is for single events — auto-activated presets,
+// capture-mode changes, host-side state transitions. Per-stream telemetry
+// (every PCM chunk, every music-stats summary) would swamp those one-off
+// lines and bury the events someone is looking for. So stream summaries live
+// in their own ring, same mechanics, smaller cap. The diagnostics report
+// prints both sections separately.
+
+const streamRingCapacity = 400
+
+var streamRing = struct {
+	mu    sync.Mutex
+	lines []string
+	next  int
+	full  bool
+}{lines: make([]string, streamRingCapacity)}
+
+func appendStreamLine(s string) {
+	if len(s) > 2000 {
+		s = s[:2000] + "…(truncated)"
+	}
+	streamRing.mu.Lock()
+	streamRing.lines[streamRing.next] = s
+	streamRing.next = (streamRing.next + 1) % streamRingCapacity
+	if streamRing.next == 0 {
+		streamRing.full = true
+	}
+	streamRing.mu.Unlock()
+}
+
+// Streamf records a stream-telemetry line in the stream ring. Expected to be
+// throttled by the caller (per-frame summaries, not per-frame chatter).
+func Streamf(format string, args ...any) {
+	msg := fmt.Sprintf(format, args...)
+	appendStreamLine(time.Now().Format("2006/01/02 15:04:05.000000") + " stream/ " + msg)
+}
+
+// StreamNote records one host-side stream event in the stream ring, for the
+// same reason Note exists on the app ring: on Android the capture and audio
+// pipelines live in Kotlin, and their failures have to get into the same
+// report the Go side produces.
+func StreamNote(line string) {
+	appendStreamLine(time.Now().Format("2006/01/02 15:04:05.000000") + " stream/ " + line)
+}
+
+// StreamRecent returns the buffered stream lines, oldest first.
+func StreamRecent() []string {
+	streamRing.mu.Lock()
+	defer streamRing.mu.Unlock()
+	if !streamRing.full {
+		out := make([]string, streamRing.next)
+		copy(out, streamRing.lines[:streamRing.next])
+		return out
+	}
+	out := make([]string, 0, streamRingCapacity)
+	out = append(out, streamRing.lines[streamRing.next:]...)
+	out = append(out, streamRing.lines[:streamRing.next]...)
+	return out
+}

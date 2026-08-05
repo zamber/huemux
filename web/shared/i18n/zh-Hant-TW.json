@@ -112,7 +112,17 @@
     "recordSaved": "已儲存至 {name}",
     "recordingHint": "在同步執行期間錄製至 Movies/HueMux。它會編碼同步已在擷取的幀，因此錄製的清晰度與上方設定的擷取解析度完全相同 — 如果錄製影片供他人觀看，請先提高該滑桿，之後再降低。",
     "captureScaleLocked": "錄製期間已鎖定 — 影片以啟動時的大小編碼。",
-    "recordShare": "分享"
+    "recordShare": "分享",
+    "debug": "Debug",
+    "debugHz": "Debug data rate",
+    "debugHzHint": "How often the histogram and capture readouts update. Higher is smoother but uses more network and CPU.",
+    "debugPreview": "Stream echo to this device",
+    "debugPreviewHint": "Sends a downscaled copy of the video grid to every connected UI. It powers the preview and histogram; it burns CPU and network, so leave it off unless you need it.",
+    "audioGain": "Audio gain",
+    "audioGainHint": "Boosts the captured audio before analysis. Raise it if the histogram barely moves; 2 is the default.",
+    "audioFloor": "Audio floor",
+    "audioFloorHint": "Silences bands below this level. Use it to hide a constant hum or hiss.",
+    "debugFps": "Debug data: {fps} fps in"
   },
   "lights": {
     "filterAll": "全部",

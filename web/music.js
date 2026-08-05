@@ -50,6 +50,10 @@
   // are drawn from that instead of a local analyser.
   let nativeAudio = false;
   let statusFft = null;
+  // Peak-hold for the native-audio strip, mirroring app.js's fftPeaks: the
+  // debug push may arrive at debug_hz, and a bar that snaps back to its live
+  // value each draw reads as the signal dying between pushes.
+  let statusPeaks = new Array(FFT_BANDS).fill(0);
   function nativeAudioAvailable() {
     return !!(window.HueMuxNative && typeof window.HueMuxNative.startCapture === 'function');
   }
@@ -162,6 +166,7 @@
     if (control) control({ type: 'music_stop' });
     nativeAudio = false;
     statusFft = null;
+    statusPeaks.fill(0);
     if (tickTimer) { clearInterval(tickTimer); tickTimer = null; }
     if (previewRAF) { cancelAnimationFrame(previewRAF); previewRAF = null; }
     if (audioCtx) { audioCtx.close().catch(() => {}); audioCtx = null; }
@@ -217,7 +222,8 @@
     const bw = w / FFT_BANDS;
     if (statusFft && statusFft.length === FFT_BANDS) {
       for (let b = 0; b < FFT_BANDS; b++) {
-        const v = statusFft[b];
+        statusPeaks[b] = Math.max(statusFft[b], statusPeaks[b] * 0.92);
+        const v = statusPeaks[b];
         if (v > 0.02) ctx.fillRect(b * bw + 1, h - v * h, bw - 2, Math.max(1, v * h));
       }
     } else if (analyser) {
@@ -320,6 +326,19 @@
         frameCount = msg.music.frames;
         render();
       }
+    },
+    // onDebug feeds the native-audio preview from the server's debug push,
+    // which runs at debug_hz (up to 30 Hz) instead of the 1 Hz status push —
+    // that faster cadence is what makes the strip "bump high" on the native
+    // path (with the peak-hold in drawPreview holding each bump). No-op for
+    // browser capture, whose local analyser already drives the strip at
+    // frame rate.
+    onDebug(msg) {
+      if (!msg || !msg.music) return;
+      if (!nativeAudio) return;
+      statusFft = msg.music.fft;
+      frameCount = msg.music.frames;
+      render();
     },
     // onCaptureEnded fires when the OS ends the projection (user stops the
     // recording from the system UI, or Android reclaims it). The page has

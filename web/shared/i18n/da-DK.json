@@ -112,7 +112,17 @@
     "recordSaved": "Gemt til {name}",
     "recordingHint": "Optager mens synkronisering kører, til Movies/HueMux. Det koder de billeder, som synkronisering allerede henter, så en optagelse er nøjagtigt lige så skarp som optagelsesopløsningen ovenfor — hæv denne skyder før optagelse, hvis videoen er til andre at se, og sænk den bagefter.",
     "captureScaleLocked": "Låst under optagelse — videoen bliver kodet i den størrelse, den startede med.",
-    "recordShare": "Del"
+    "recordShare": "Del",
+    "debug": "Debug",
+    "debugHz": "Debug data rate",
+    "debugHzHint": "How often the histogram and capture readouts update. Higher is smoother but uses more network and CPU.",
+    "debugPreview": "Stream echo to this device",
+    "debugPreviewHint": "Sends a downscaled copy of the video grid to every connected UI. It powers the preview and histogram; it burns CPU and network, so leave it off unless you need it.",
+    "audioGain": "Audio gain",
+    "audioGainHint": "Boosts the captured audio before analysis. Raise it if the histogram barely moves; 2 is the default.",
+    "audioFloor": "Audio floor",
+    "audioFloorHint": "Silences bands below this level. Use it to hide a constant hum or hiss.",
+    "debugFps": "Debug data: {fps} fps in"
   },
   "lights": {
     "filterAll": "Alle",

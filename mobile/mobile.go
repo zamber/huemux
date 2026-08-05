@@ -42,7 +42,6 @@ import (
 	"github.com/zamber/huemux/internal/debuglog"
 	"github.com/zamber/huemux/internal/engine"
 	"github.com/zamber/huemux/internal/lightctl"
-	"github.com/zamber/huemux/internal/pipeline"
 	"github.com/zamber/huemux/internal/server"
 )
 
@@ -257,29 +256,23 @@ func StopSync() {
 // produces, minus its 3-byte header, since Kotlin calls straight into Go here
 // and there is no wire to frame.
 //
-// Cheap by design: MediaProjection delivers frames continuously and this is
-// called from that hot path, so it validates, copies, and returns. The copy is
-// not optional — the caller owns the backing array and will reuse it for the
-// next frame, while the pipeline holds onto what it is given.
+// Routed through the server (not eng.SetFrame directly) so Android frames
+// reach the same stream counters and debug echo the browser path uses — see
+// Server.PushFrame. Cheap by design: MediaProjection delivers frames
+// continuously and this is called from that hot path, so it validates and
+// returns. The copy happens once, inside the server, because the caller owns
+// the backing array and will reuse it for the next frame.
 func PushFrame(w, h int, rgb []byte) error {
 	mu.Lock()
-	eng := (*engine.Engine)(nil)
-	if srv != nil {
-		eng = srv.Engine()
-	}
+	s := srv
 	mu.Unlock()
-
-	if eng == nil {
+	if s == nil {
 		return ErrNotStarted
 	}
-	if w <= 0 || h <= 0 {
-		return fmt.Errorf("huemux: bad frame size %dx%d", w, h)
+	if s.Engine() == nil {
+		return ErrNotStarted
 	}
-	if want := w * h * 3; len(rgb) != want {
-		return fmt.Errorf("huemux: frame is %d bytes, want %d for %dx%d RGB", len(rgb), want, w, h)
-	}
-	eng.SetFrame(&pipeline.Grid{W: w, H: h, Pix: append([]byte(nil), rgb...)})
-	return nil
+	return s.PushFrame(w, h, rgb)
 }
 
 // PushAudioPCM feeds raw PCM captured by the host (Android internal audio,
@@ -333,6 +326,15 @@ func SetHostInfo(text string) {
 // hundred lines and this shares it with everything else.
 func LogHost(line string) {
 	debuglog.Note("huemux/host: " + line)
+}
+
+// LogStream records one stream-telemetry line in the stream log ring, the
+// diagnostics report's "stream log" section. Same role as LogHost but on the
+// separate channel: capture-pipeline and audio-stream chatter from Kotlin
+// must not swamp the app-event ring, so the Kotlin capture service reports
+// its stream lifecycle here.
+func LogStream(line string) {
+	debuglog.StreamNote(line)
 }
 
 // SetVersion tells the Go side what version the host application is, for the

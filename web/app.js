@@ -32,12 +32,20 @@ previewCtx.imageSmoothingEnabled = false;
 const gridCanvas = new OffscreenCanvas(64, 36);
 const gridCtx = gridCanvas.getContext('2d');
 
+// The server's binary echo frame type (PROTOCOL.md §2): a downscaled copy of
+// the grid the engine is analysing, broadcast when the debug-preview setting
+// is on. Must match previewTypeByte in internal/server/grid_broadcast.go.
+const previewTypeByte = 0x03;
+
 let ws = null;
 let wsReady = false;
 let worker = null;
 let stream = null;
 let videoEl = null; // used only by the <video>+rVFC fallback
 let latestStatus = null;
+// The latest {"type":"debug"} push — drives the capture readouts and the
+// audio histogram at up to debug_hz instead of the 1 Hz status cadence.
+let latestDebug = null;
 let suppressSettingsEcho = false;
 // True from the moment capture succeeds until Stop (or the share ending on
 // its own). loadAreas() re-runs on every WS reconnect — including the
@@ -67,6 +75,11 @@ function connect() {
   ws.onmessage = (ev) => {
     if (typeof ev.data === 'string') {
       handleControlMessage(JSON.parse(ev.data));
+    } else if (ev.data instanceof ArrayBuffer) {
+      // Binary frames from the server: the 0x03 grid echo the debug-preview
+      // feature broadcasts. The outbound 0x01/0x02 frames are the opposite
+      // direction and never arrive here.
+      handleBinaryMessage(ev.data);
     }
   };
 }
@@ -100,6 +113,22 @@ function handleControlMessage(msg) {
     // set(), not load(): the push is fresher than load()'s cached fetch,
     // and the header re-renders tabs and the logout button from this.
     if (typeof HueMuxFeatures !== 'undefined') HueMuxFeatures.set(msg);
+    return;
+  }
+  if (msg.type === 'debug') {
+    // The debug push (up to debug_hz, see PROTOCOL.md): drives the capture
+    // readouts and the audio histogram faster than the 1 Hz status push.
+    // It is not a full status — no zones, no pairing — so it deliberately
+    // falls through to nothing else here.
+    latestDebug = msg;
+    const mode = els.captureMode ? els.captureMode.value : 'video';
+    if (mode === 'audio') drawAudioSpectrum(msg);
+    const fpsEl = document.getElementById('debug-fps');
+    if (fpsEl) {
+      fpsEl.hidden = false;
+      fpsEl.textContent = HueMuxI18n.t('sync.debugFps', { fps: msg.fps_in.toFixed(1) });
+    }
+    if (typeof HueMuxMusic !== 'undefined' && HueMuxMusic.onDebug) HueMuxMusic.onDebug(msg);
     return;
   }
   if (msg.type !== 'status') return;
@@ -580,6 +609,32 @@ function onWorkerMessage(e) {
   }
 }
 
+// Server-originated binary frames. There is exactly one today — the 0x03 grid
+// echo from the debug-preview feature — dispatched on the first byte so future
+// types (a 0x04 audio echo, say) slot in without touching this body.
+function handleBinaryMessage(buf) {
+  const u8 = new Uint8Array(buf);
+  if (u8.length < 3) return;
+  if (u8[0] === previewTypeByte) {
+    const w = u8[1], h = u8[2];
+    if (w < 1 || h < 1 || u8.length < 3 + w * h * 3) return;
+    handleGridEcho(w, h, u8.subarray(3));
+  }
+}
+
+// Draw the server's downscaled grid echo. Unlike the local capture path this
+// has no source stream of its own — the echo *is* the picture, so it goes
+// straight through the same preview renderer the local path uses (which is
+// what keeps the zone overlays drawing on top).
+function handleGridEcho(w, h, rgb) {
+  const rgba = new Uint8ClampedArray(w * h * 4);
+  for (let i = 0, o = 0; o < rgba.length; i += 3, o += 4) {
+    rgba[o] = rgb[i]; rgba[o + 1] = rgb[i + 1]; rgba[o + 2] = rgb[i + 2]; rgba[o + 3] = 255;
+  }
+  drawPreviewFromGrid(w, h, rgba);
+  drawLuminanceHistogram(rgb);
+}
+
 function stopCapture() {
   // Native capture holds an Android foreground service and a MediaProjection
   // session; leaving those running would keep the screen-capture notification
@@ -623,6 +678,13 @@ function drawPreviewFromGrid(gridW, gridH, rgba) {
   drawZoneOverlays();
 }
 
+// Peak-hold for the FFT strip: a drum hit decays across a few pushes rather
+// than vanishing between them. Without it a bar that resets to its live value
+// each draw reads as the signal dying — the exact "levels are low" complaint
+// this whole feature exists to fix. Decay per draw, so the same 0.92 factor
+// works at the 1 Hz status cadence and the 30 Hz debug cadence alike.
+const fftPeaks = new Array(32).fill(0);
+
 // Draw a 32-band frequency histogram in the preview canvas when audio
 // mode is active and FFT data is available. Replaces the blank video
 // preview with an honest "is there signal" visual. All bars in ink:
@@ -639,7 +701,8 @@ function drawAudioSpectrum(msg) {
   ctx.fillStyle = 'rgba(0,0,0,0.85)';
   ctx.fillRect(0, 0, w, h);
   for (let b = 0; b < 32; b++) {
-    const v = fft[b];
+    fftPeaks[b] = Math.max(fft[b], fftPeaks[b] * 0.92);
+    const v = fftPeaks[b];
     if (v < 0.005) continue;
     const barH = Math.max(2, v * h);
     const x = b * bw;
@@ -647,6 +710,34 @@ function drawAudioSpectrum(msg) {
     ctx.fillRect(x + 1, h - barH, bw - 2, barH);
   }
   drawZoneOverlays();
+}
+
+// A 32-bin luminance histogram of the grid echo, drawn as a strip across the
+// bottom of the preview canvas. Same bar vocabulary as the audio spectrum:
+// height is proportional, ink-only. It answers "is the captured picture too
+// dark / blown out / stuck on black" at a glance, which is the whole reason
+// the echo exists on Android (where the WebView has no local capture preview).
+function drawLuminanceHistogram(rgb) {
+  const ctx = previewCtx;
+  const w = els.preview.width, h = els.preview.height;
+  const stripH = Math.max(24, Math.floor(h * 0.18));
+  const bins = new Array(32).fill(0);
+  for (let i = 0; i < rgb.length; i += 3) {
+    // Rec.709 luma — green dominates human brightness perception.
+    const y = 0.2126 * rgb[i] + 0.7152 * rgb[i + 1] + 0.0722 * rgb[i + 2];
+    bins[Math.min(31, (y * 32 / 256) | 0)]++;
+  }
+  let max = 0;
+  for (const n of bins) if (n > max) max = n;
+  if (max === 0) return;
+  ctx.fillStyle = 'rgba(0,0,0,0.85)';
+  ctx.fillRect(0, h - stripH, w, stripH);
+  ctx.fillStyle = 'var(--ink)';
+  const bw = w / 32;
+  for (let b = 0; b < 32; b++) {
+    const barH = Math.max(1, (bins[b] / max) * (stripH - 4));
+    ctx.fillRect(b * bw + 1, h - barH - 2, bw - 2, barH);
+  }
 }
 
 function drawZoneOverlays() {
@@ -735,6 +826,7 @@ const settingKeys = {
   black_cutoff: 'float', scene_cut_sensitivity: 'float',
   capture_width: 'int', capture_height: 'int', capture_fps: 'int',
   output_hz: 'int', color_space: 'string', disable_ems: 'bool',
+  debug_hz: 'int', debug_preview: 'bool', audio_gain: 'float', audio_floor: 'float',
 };
 
 function getControl(key) {
@@ -806,6 +898,9 @@ if (els.captureMode) {
   els.captureMode.addEventListener('change', () => {
     send({ type: 'capture_mode', preset: els.captureMode.value });
     updateMusicPanelVisibility();
+    // Leaving audio mode stops the spectrum draws; a stale peak would be
+    // drawn again on re-entry after an arbitrary silence.
+    if (els.captureMode.value !== 'audio') fftPeaks.fill(0);
   });
 }
 

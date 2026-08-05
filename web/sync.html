@@ -88,6 +88,10 @@
 
   <section id="status-panel">
     <div class="status-grid" id="status-grid"></div>
+    <!-- Hidden until the first debug push (it only fires once an engine
+         exists); showing a 0 fps placeholder before that would read as
+         "the capture is dead" when nothing has started. -->
+    <p class="hint" id="debug-fps" hidden></p>
   </section>
 
   <section id="controls-panel">
@@ -269,6 +273,40 @@
       <div class="control checkbox">
         <label><input type="checkbox" data-setting="disable_ems" data-type="bool"> <span data-i18n="sync.disableEms">Disable extended master secret</span></label>
         <p class="hint" data-i18n="sync.disableEmsHint">A DTLS handshake security extension (RFC 7627) — leave unchecked. Only disable it if the handshake to your bridge fails; some older bridge firmware doesn't support it.</p>
+      </div>
+
+      <h3 data-i18n="sync.debug">Debug</h3>
+
+      <div class="control">
+        <label>
+          <span data-i18n="sync.debugHz">Debug data rate</span>
+          (<span data-readout="debug-hz"></span> Hz)
+        </label>
+        <input type="range" min="1" max="30" step="1" data-setting="debug_hz" data-type="int" data-readout-target="debug-hz">
+        <p class="hint" data-i18n="sync.debugHzHint">How often the histogram and capture readouts update. Higher is smoother but uses more network and CPU.</p>
+      </div>
+
+      <div class="control checkbox">
+        <label><input type="checkbox" data-setting="debug_preview" data-type="bool"> <span data-i18n="sync.debugPreview">Stream echo to this device</span></label>
+        <p class="hint" data-i18n="sync.debugPreviewHint">Sends a downscaled copy of the video grid to every connected UI. It powers the preview and histogram; it burns CPU and network, so leave it off unless you need it.</p>
+      </div>
+
+      <div class="control">
+        <label>
+          <span data-i18n="sync.audioGain">Audio gain</span>
+          (<span data-readout="audio-gain"></span>&times;)
+        </label>
+        <input type="range" min="0.5" max="5" step="0.1" data-setting="audio_gain" data-type="float" data-readout-target="audio-gain">
+        <p class="hint" data-i18n="sync.audioGainHint">Boosts the captured audio before analysis. Raise it if the histogram barely moves; 2 is the default.</p>
+      </div>
+
+      <div class="control">
+        <label>
+          <span data-i18n="sync.audioFloor">Audio floor</span>
+          (<span data-readout="audio-floor"></span>)
+        </label>
+        <input type="range" min="0" max="0.1" step="0.005" data-setting="audio_floor" data-type="float" data-readout-target="audio-floor">
+        <p class="hint" data-i18n="sync.audioFloorHint">Silences bands below this level. Use it to hide a constant hum or hiss.</p>
       </div>
     </details>
   </section>

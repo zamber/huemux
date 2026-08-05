@@ -356,6 +356,47 @@ func (e *Engine) CaptureMode() CaptureMode {
 	return e.captureMode
 }
 
+// DebugSettings returns the scalar debug/audio-pickup settings the server's
+// fast debug push and the grid echo need. Cheap enough for a 10-30 Hz loop —
+// unlike Snapshot, which copies every zone. Values are clamped defensively so
+// a settings record that has not passed Validate (e.g. an area selected
+// before any settings control message) cannot feed a division-by-zero debug
+// rate or an out-of-range gain.
+func (e *Engine) DebugSettings() (hz int, preview bool, gain, floor float64) {
+	e.mu.Lock()
+	defer e.mu.Unlock()
+	s := e.settings
+	hz = s.DebugHz
+	if hz < 1 || hz > 30 {
+		hz = 10
+	}
+	gain = s.AudioGain
+	if gain < 0.5 || gain > 5 {
+		gain = 2.0
+	}
+	floor = s.AudioFloor
+	if floor < 0 || floor > 0.1 {
+		floor = 0
+	}
+	return hz, s.DebugPreview, gain, floor
+}
+
+// CaptureStats returns the current capture and grid dimensions without the
+// zone-copy cost of Snapshot. gw/gh are 0 until the first grid arrives.
+func (e *Engine) CaptureStats() (cw, ch, gw, gh int) {
+	e.mu.Lock()
+	defer e.mu.Unlock()
+	return e.captureW, e.captureH, gridW(e.grid), gridH(e.grid)
+}
+
+// InboundFPS returns the measured capture frame rate, recomputed by SetFrame
+// once a second.
+func (e *Engine) InboundFPS() float64 {
+	e.mu.Lock()
+	defer e.mu.Unlock()
+	return e.inboundFPS
+}
+
 // ActivateMusic starts driving the output loop from the named built-in
 // preset; pass "" to hand control back to screen sync. channels maps light
 // RIDs to area channel ids, positions their room coordinates — both derived

@@ -112,7 +112,17 @@
     "recordSaved": "Saved to {name}",
     "recordingHint": "Records while sync runs, to Movies/HueMux. It encodes the frames sync is already capturing, so a recording is exactly as sharp as the capture resolution set above — raise that slider before recording if the video is for someone else to watch, and lower it afterwards.",
     "captureScaleLocked": "Locked while recording — the video is encoded at the size it started with.",
-    "recordShare": "Share"
+    "recordShare": "Share",
+    "debug": "Debug",
+    "debugHz": "Debug data rate",
+    "debugHzHint": "How often the histogram and capture readouts update. Higher is smoother but uses more network and CPU.",
+    "debugPreview": "Stream echo to this device",
+    "debugPreviewHint": "Sends a downscaled copy of the video grid to every connected UI. It powers the preview and histogram; it burns CPU and network, so leave it off unless you need it.",
+    "audioGain": "Audio gain",
+    "audioGainHint": "Boosts the captured audio before analysis. Raise it if the histogram barely moves; 2 is the default.",
+    "audioFloor": "Audio floor",
+    "audioFloorHint": "Silences bands below this level. Use it to hide a constant hum or hiss.",
+    "debugFps": "Debug data: {fps} fps in"
   },
   "lights": {
     "filterAll": "All",
