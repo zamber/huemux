@@ -23,7 +23,8 @@
   if (location.search.indexOf('standalone') !== -1) return;
 
   var tab = location.pathname.indexOf('lights') !== -1 ? 'lights'
-    : (location.pathname.indexOf('settings') !== -1 ? 'settings' : 'sync');
+    : (location.pathname.indexOf('settings') !== -1 ? 'settings'
+    : (location.pathname.indexOf('node-editor') !== -1 ? 'presets' : 'sync'));
   // replace(), not assign(): the standalone URL must not become a history
   // entry, or Back from the shell returns to the page we just redirected away
   // from and bounces straight back here.

@@ -21,8 +21,9 @@ type configWire struct {
 	// Features the UI should offer. Derived server-side so the rule for what
 	// a profile means lives in exactly one place — appconfig — rather than
 	// being re-implemented in JavaScript and drifting from it.
-	Lights bool `json:"lights"`
-	Sync   bool `json:"sync"`
+	Lights  bool `json:"lights"`
+	Sync    bool `json:"sync"`
+	Presets bool `json:"presets"`
 
 	Listen struct {
 		Host string `json:"host"`
@@ -73,6 +74,7 @@ func (s *Server) writeConfig(w http.ResponseWriter, r *http.Request) {
 	out.Profile = string(cfg.Profile)
 	out.Lights = cfg.ShowsLightsTab()
 	out.Sync = cfg.ShowsSyncTab()
+	out.Presets = cfg.ShowsPresetsTab()
 	out.Listen.Host = displayHost(cfg.Listen.Host)
 	out.Listen.Port = listenPort(s.Addr)
 	out.Auth.Mode = string(cfg.Auth.Mode)

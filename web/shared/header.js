@@ -127,6 +127,10 @@ class HueMuxHeader extends HTMLElement {
       html += '<a href="/sync.html" data-tab="sync" data-i18n="nav.sync"' +
         (active === 'sync' ? ' class="active"' : '') + '>Sync</a>';
     }
+    if (f.presets) {
+      html += '<a href="/node-editor.html" data-tab="presets" data-i18n="nav.presets"' +
+        (active === 'presets' ? ' class="active"' : '') + '>Presets</a>';
+    }
     // Every tab that exists gets a link, including when there is only one.
     //
     // A single feature tab used to render no link at all, on the reasoning
@@ -195,6 +199,7 @@ if (window.self !== window.top) {
     '/lights.html': 'lights',
     '/sync.html': 'sync',
     '/settings.html': 'settings',
+    '/node-editor.html': 'presets',
   };
   document.addEventListener('click', (e) => {
     const a = e.target.closest('a[href]');

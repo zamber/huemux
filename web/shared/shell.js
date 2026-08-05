@@ -11,16 +11,16 @@ window.HueMuxShell = (() => {
   // than from a fixed pair — otherwise switchTab would target a null element
   // and the shell would land on a frame that was never created.
   const frames = {};
-  for (const tab of ['sync', 'lights', 'settings']) {
+  for (const tab of ['sync', 'lights', 'settings', 'presets']) {
     const el = document.getElementById('frame-' + tab);
     if (el) frames[tab] = el;
   }
 
   // Whichever frame exists, preferring sync to match the historical default.
-  let active = frames.sync ? 'sync' : (frames.lights ? 'lights' : (frames.settings ? 'settings' : null));
+  let active = frames.sync ? 'sync' : (frames.lights ? 'lights' : (frames.settings ? 'settings' : (frames.presets ? 'presets' : null)));
 
-  const NAV_KEY = { lights: 'nav.lights', sync: 'nav.sync', settings: 'nav.settings' };
-  const PATH = { lights: '/lights.html', sync: '/sync.html', settings: '/settings.html' };
+  const NAV_KEY = { lights: 'nav.lights', sync: 'nav.sync', settings: 'nav.settings', presets: 'nav.presets' };
+  const PATH = { lights: '/lights.html', sync: '/sync.html', settings: '/settings.html', presets: '/node-editor.html' };
 
   function titleFor(tab) {
     return 'HueMux — ' + HueMuxI18n.t(NAV_KEY[tab] || NAV_KEY.sync);
@@ -58,6 +58,7 @@ window.HueMuxShell = (() => {
     const from = location.hash ? location.hash.slice(1) : location.pathname;
     if (from.indexOf('lights') !== -1) return 'lights';
     if (from.indexOf('settings') !== -1) return 'settings';
+    if (from.indexOf('presets') !== -1 || from.indexOf('node-editor') !== -1) return 'presets';
     return 'sync';
   }
 

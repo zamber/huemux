@@ -146,6 +146,12 @@ func (c Config) ShowsSyncTab() bool {
 	return c.Profile == ProfileFull || c.Profile == ProfileSync
 }
 
+// ShowsPresetsTab reports whether the preset browser / node editor tab
+// should be offered. It needs the music engine, same gate as sync.
+func (c Config) ShowsPresetsTab() bool {
+	return c.Profile == ProfileFull || c.Profile == ProfileSync
+}
+
 // LoopbackOnly reports whether the configured listen host is unreachable from
 // other machines. Callers use this to decide whether the deployment needs an
 // auth story at all.

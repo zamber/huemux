@@ -17,7 +17,7 @@ window.HueMuxFeatures = (() => {
   // flashing an empty header — and if /api/config is unreachable the sensible
   // failure is a complete UI, not a crippled one.
   let features = {
-    lights: true, sync: true, profile: 'full', loaded: false,
+    lights: true, sync: true, presets: true, profile: 'full', loaded: false,
     auth: { mode: 'none', has_token: false },
   };
   let pending = null;
@@ -49,6 +49,7 @@ window.HueMuxFeatures = (() => {
         features = {
           lights: cfg.lights !== false,
           sync: cfg.sync !== false,
+          presets: cfg.presets !== false,
           profile: cfg.profile || 'full',
           editable: !!cfg.editable,
           auth: cfg.auth || { mode: 'none', has_token: false },
@@ -75,6 +76,7 @@ window.HueMuxFeatures = (() => {
     features = {
       lights: cfg.lights !== false,
       sync: cfg.sync !== false,
+      presets: cfg.presets !== false,
       profile: cfg.profile || features.profile,
       editable: !!cfg.editable,
       auth: cfg.auth || features.auth,
