@@ -2,7 +2,6 @@ package com.huemux.app
 
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
-import org.junit.Assert.fail
 import org.junit.Test
 import java.io.File
 
@@ -41,7 +40,10 @@ class NativeBridgeApiTest {
             if (File(d, "web/app.js").isFile && File(d, kotlinMain).isFile) return d
             dir = d.parentFile
         }
-        fail("could not locate the repo root from ${System.getProperty("user.dir")}")
+        // org.junit.Assert.fail returns void, so Kotlin cannot see it as the
+        // terminating statement of a File-returning function ("missing return
+        // statement"); throw the same AssertionError fail() throws internally.
+        throw AssertionError("could not locate the repo root from ${System.getProperty("user.dir")}")
     }
 
     /** Maps every @JavascriptInterface method name to its parameter count. */
@@ -59,6 +61,8 @@ class NativeBridgeApiTest {
 
     /**
      * Counts top-level arguments in a call whose `(` sits at [openIdx] in [s].
+     * Starts just after the `(` — counting the `(` itself as a nested paren
+     * would put every real comma inside it and read `f(a, b)` as one argument.
      * Understands nested parentheses and quoted strings, so
      * `setCaptureScale(Number(els.captureScale.value) / 100)` counts as one
      * argument and `saveTextFile(name, text)` as two.
@@ -68,7 +72,7 @@ class NativeBridgeApiTest {
         var args = 1
         var hasAny = false
         var inStr: Char? = null
-        var i = openIdx
+        var i = openIdx + 1
         while (i < s.length) {
             val c = s[i]
             if (inStr != null) {
