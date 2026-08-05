@@ -19,7 +19,7 @@ func (s *Server) handlePresets(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(s.presets.List())
+	_ = json.NewEncoder(w).Encode(s.presets.List())
 }
 
 func (s *Server) handlePresetCatalog(w http.ResponseWriter, r *http.Request) {
@@ -28,7 +28,7 @@ func (s *Server) handlePresetCatalog(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(preset.CatalogMeta())
+	_ = json.NewEncoder(w).Encode(preset.CatalogMeta())
 }
 
 func (s *Server) handlePresetSlug(w http.ResponseWriter, r *http.Request) {
@@ -61,7 +61,7 @@ func (s *Server) handlePresetGet(w http.ResponseWriter, r *http.Request, slug st
 	}
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
-	w.Write(raw)
+	_, _ = w.Write(raw)
 }
 
 func (s *Server) handlePresetPut(w http.ResponseWriter, r *http.Request, slug string) {

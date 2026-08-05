@@ -147,7 +147,8 @@ func TestStrobeFlashComposesOverBrightness(t *testing.T) {
 		current.FFT[i] = 0.5
 	}
 	now := time.Unix(1_700_000_000, 0).Add(45 * 40 * time.Millisecond)
-	out := r.Step(now)
+	var out map[uint8]pipeline.LinearColor
+	out = r.Step(now) // tick to trigger beat detection
 
 	// On the beat, strobe envelope = 1; the flash color #FF6600 (linear
 	// space) × brightness. The reactivity_effect output node smooths the

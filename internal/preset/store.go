@@ -106,7 +106,7 @@ func (s *Store) Put(slug string, doc []byte) error {
 		return fmt.Errorf("write preset %q: %w", slug, err)
 	}
 	if err := os.Rename(tmp, path); err != nil {
-		os.Remove(tmp)
+		_ = os.Remove(tmp)
 		return fmt.Errorf("atomic save preset %q: %w", slug, err)
 	}
 	return nil

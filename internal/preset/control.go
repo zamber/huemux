@@ -225,7 +225,7 @@ type compressor struct {
 		AttackMS  float64 `json:"attack_ms"`
 		ReleaseMS float64 `json:"release_ms"`
 	}
-	env float64
+	// reserved for stateful envelope follower (future)
 }
 
 func (c *compressor) Type() string { return "compressor" }
