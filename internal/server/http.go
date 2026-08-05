@@ -28,6 +28,7 @@ import (
 	"github.com/zamber/huemux/internal/lightctl"
 	"github.com/zamber/huemux/internal/music"
 	"github.com/zamber/huemux/internal/pipeline"
+	"github.com/zamber/huemux/internal/preset"
 )
 
 // Server is the loopback HTTP server. It binds 127.0.0.1 only — never
@@ -40,6 +41,7 @@ type Server struct {
 	cfg       appconfig.Config
 	store     *config.Store
 	favorites *config.FavoritesStore
+	presets   *preset.Store
 	mux       *http.ServeMux
 
 	// p holds both paired-bridge services (screen-sync engine and light
@@ -122,6 +124,9 @@ func New(cfg appconfig.Config, store *config.Store, favorites *config.FavoritesS
 		authLimit: newAuthLimiter(),
 		music:     music.New(),
 		audioAna:  &music.Analyzer{},
+	}
+	if dir, err := config.Dir(); err == nil {
+		s.presets, _ = preset.NewStore(dir + "/presets")
 	}
 	if eng != nil || lights != nil {
 		s.setPaired(eng, lights)
@@ -337,6 +342,9 @@ func (s *Server) setPaired(eng *engine.Engine, lights *lightctl.Service) {
 			f, ok, _ := s.music.Snapshot()
 			return f, ok
 		})
+		if s.presets != nil {
+			eng.SetPresetLoader(s.presets.Load)
+		}
 	}
 
 	// Gated on the Lights tab existing, not merely on lights being non-nil.
@@ -456,6 +464,9 @@ func (s *Server) routes() {
 	s.mux.HandleFunc("/api/config", s.guard(s.handleConfig))
 	s.mux.HandleFunc("/api/diagnostics", s.guard(s.handleDiagnostics))
 	s.mux.HandleFunc("/ws", s.guard(s.handleWS))
+	s.mux.HandleFunc("/api/presets", s.guard(s.handlePresets))
+	s.mux.HandleFunc("/api/presets/catalog", s.guard(s.handlePresetCatalog))
+	s.mux.HandleFunc("/api/presets/{slug}", s.guard(s.handlePresetSlug))
 }
 
 // ListenAndServe binds the configured address and starts serving.
@@ -1419,14 +1430,15 @@ func (s *Server) pushStatusLoop(conn *Conn, done chan struct{}) {
 // times per second, so a histogram that needs fast updates to "bump high" is
 // not stuck at once a second.
 type debugWire struct {
-	Type     string           `json:"type"`
-	FPSIn    float64          `json:"fps_in"`
-	Frames   uint64           `json:"frames"`
-	CaptureW int              `json:"capture_w"`
-	CaptureH int              `json:"capture_h"`
-	GridW    int              `json:"grid_w"`
-	GridH    int              `json:"grid_h"`
-	Music    *musicStatusWire `json:"music,omitempty"`
+	Type     string                `json:"type"`
+	FPSIn    float64               `json:"fps_in"`
+	Frames   uint64                `json:"frames"`
+	CaptureW int                   `json:"capture_w"`
+	CaptureH int                   `json:"capture_h"`
+	GridW    int                   `json:"grid_w"`
+	GridH    int                   `json:"grid_h"`
+	Music    *musicStatusWire      `json:"music,omitempty"`
+	Nodes    []preset.NodeSnapshot `json:"nodes,omitempty"`
 }
 
 // debugMessage assembles one debug push. The music block is included only
@@ -1452,6 +1464,9 @@ func (s *Server) debugMessage(eng *engine.Engine) debugWire {
 			FFT:    append([]float32(nil), f.FFT[:]...),
 			Wave:   append([]float32(nil), f.Wave[:]...),
 		}
+	}
+	if eng.MusicPreset() != "" {
+		w.Nodes = eng.NodeSnapshots()
 	}
 	return w
 }

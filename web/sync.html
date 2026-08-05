@@ -37,6 +37,11 @@
 <link rel="stylesheet" href="/shared/scrollbars.css">
 <link rel="stylesheet" href="/shared/pairing.css">
 <link rel="stylesheet" href="/style.css">
+<style>
+  @media (min-width: 768px) { #node-editor-link { display: inline-block !important; } }
+  #node-editor-link { margin-left: 8px; padding: 4px 10px; border: 2px solid var(--border); border-radius: 4px; font-size: 13px; color: var(--ink-dim); text-decoration: none; }
+  #node-editor-link:hover { border-color: var(--accent); color: var(--accent); }
+</style>
 </head>
 <body>
 <huemux-header active="sync"></huemux-header>
@@ -68,6 +73,7 @@
     <button id="start-btn" class="primary" disabled data-i18n="sync.start">Start sync</button>
     <button id="stop-btn" disabled data-i18n="sync.stop">Stop</button>
     <button id="change-source-btn" disabled data-i18n="sync.changeSource">Change source</button>
+    <a href="/node-editor.html" id="node-editor-link" class="node-editor-link" style="display:none">Node Editor</a>
     <span id="conn-dot" class="dot" title="connection to HueMux"></span>
     <p id="area-warning" class="warning" hidden></p>
   </section>

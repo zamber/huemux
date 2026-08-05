@@ -76,9 +76,9 @@ func DefaultAreaSettings(configurationType string) AreaSettings {
 		InvertVertical:      true, // see pipeline.DefaultZoneOpts: z is physical-up, screen-V is image-down
 		InvertDepth:         false,
 		DepthSizeGain:       0.3,
-		Reactivity:          45,
-		Brightness:          100,
-		Saturation:          130,
+		Reactivity:          100, // pass-through: artistic smoothing moved into preset graph
+		Brightness:          100, // pass-through
+		Saturation:          100, // pass-through
 		BlackCutoff:         0,
 		ChannelBrightness:   map[uint8]float64{},
 		SceneCutSensitivity: 0.35,

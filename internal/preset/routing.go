@@ -52,6 +52,14 @@ type allLights struct{}
 func (a *allLights) Type() string               { return "all_lights" }
 func (a *allLights) Init(json.RawMessage) error { return nil }
 func (a *allLights) Process(env *Env)           { applyToLights(env, env.AllLights) }
+func (a *allLights) Meta() PrimitiveMeta {
+	return PrimitiveMeta{
+		Type: "all_lights", Category: CategoryRouting,
+		Label: "All Lights", Description: "Selects every light in the current entertainment area.",
+		Inputs:  []Port{{Name: "in", Kind: PortScalar}, {Name: "r", Kind: PortScalar}, {Name: "g", Kind: PortScalar}, {Name: "b", Kind: PortScalar}},
+		Outputs: []Port{{Name: "out", Kind: PortScalar}},
+	}
+}
 
 // lightGroup selects the configured lights. An empty light_ids list selects
 // every light — shipped presets cannot know a bridge's RIDs, and "the same
@@ -61,6 +69,16 @@ type lightGroup struct {
 }
 
 func (l *lightGroup) Type() string { return "light_group" }
+
+func (l *lightGroup) Meta() PrimitiveMeta {
+	return PrimitiveMeta{
+		Type: "light_group", Category: CategoryRouting,
+		Label: "Light Group", Description: "Selects specific lights by ID. Empty list selects all lights.",
+		Inputs:  []Port{{Name: "in", Kind: PortScalar}, {Name: "r", Kind: PortScalar}, {Name: "g", Kind: PortScalar}, {Name: "b", Kind: PortScalar}},
+		Outputs: []Port{{Name: "out", Kind: PortScalar}},
+		Params:  []ParamSpec{{Name: "light_ids", Label: "Light IDs", Type: "light_ids", Default: []string{}, Description: "List of light resource IDs to select. Empty = all lights."}},
+	}
+}
 
 func (l *lightGroup) Init(raw json.RawMessage) error {
 	p := struct {
@@ -102,6 +120,20 @@ type thresholdGate struct {
 }
 
 func (t *thresholdGate) Type() string { return "threshold_gate" }
+
+func (t *thresholdGate) Meta() PrimitiveMeta {
+	return PrimitiveMeta{
+		Type: "threshold_gate", Category: CategoryRouting,
+		Label: "Threshold Gate", Description: "Passes value through while inside [min, max]; outputs 0 outside. Has hysteresis to prevent flutter.",
+		Inputs:  []Port{{Name: "value", Kind: PortScalar}},
+		Outputs: []Port{{Name: "out", Kind: PortScalar}},
+		Params: []ParamSpec{
+			{Name: "min", Label: "Min", Type: "number", Default: 0.0, Step: 0.01, Description: "Lower threshold."},
+			{Name: "max", Label: "Max", Type: "number", Default: 1.0, Step: 0.01, Description: "Upper threshold."},
+			{Name: "hysteresis", Label: "Hysteresis", Type: "number", Default: 0.0, Step: 0.01, Description: "Hysteresis band outside window."},
+		},
+	}
+}
 
 func (t *thresholdGate) Init(raw json.RawMessage) error {
 	t.params.Min = 0

@@ -22,6 +22,15 @@ type micCapture struct{}
 func (m *micCapture) Type() string               { return "mic_capture" }
 func (m *micCapture) Init(json.RawMessage) error { return nil }
 func (m *micCapture) Process(*Env)               {}
+func (m *micCapture) Meta() PrimitiveMeta {
+	return PrimitiveMeta{
+		Type: "mic_capture", Category: CategorySource,
+		Label:       "Microphone",
+		Description: "Audio source from microphone or system audio capture. The runner injects the FFT frame into every node.",
+		Outputs:     []Port{{Name: "out", Kind: PortTrigger}},
+		Params:      nil,
+	}
+}
 
 // beatParams and beatState --------------------------------------------------
 
@@ -56,6 +65,25 @@ type beatDetector struct {
 }
 
 func (b *beatDetector) Type() string { return "beat_detector" }
+
+func (b *beatDetector) Meta() PrimitiveMeta {
+	minT, maxT := 1.1, 2.0
+	minI, maxI := 100.0, 600.0
+	return PrimitiveMeta{
+		Type: "beat_detector", Category: CategoryAnalysis,
+		Label:       "Beat Detector",
+		Description: "Energy-onset beat detection. Outputs beat trigger, confidence, and BPM.",
+		Outputs: []Port{
+			{Name: "beat", Kind: PortTrigger},
+			{Name: "confidence", Kind: PortScalar},
+			{Name: "bpm", Kind: PortScalar},
+		},
+		Params: []ParamSpec{
+			{Name: "threshold", Label: "Threshold", Type: "number", Default: 1.3, Min: &minT, Max: &maxT, Step: 0.05, Description: "Energy multiplier above variance to trigger beat."},
+			{Name: "min_interval_ms", Label: "Min Interval (ms)", Type: "number", Default: 200.0, Min: &minI, Max: &maxI, Step: 10, Description: "Minimum time between beats."},
+		},
+	}
+}
 
 func (b *beatDetector) Init(raw json.RawMessage) error {
 	b.params = beatParams{Threshold: 1.3, MinIntervalMS: 200}
@@ -190,6 +218,24 @@ type freqBands struct {
 }
 
 func (f *freqBands) Type() string { return "freq_bands" }
+
+func (f *freqBands) Meta() PrimitiveMeta {
+	return PrimitiveMeta{
+		Type: "freq_bands", Category: CategoryAnalysis,
+		Label:       "Frequency Bands",
+		Description: "Splits 32 FFT bands into bass, mid, treble, and RMS scalars.",
+		Outputs: []Port{
+			{Name: "bass", Kind: PortScalar},
+			{Name: "mid", Kind: PortScalar},
+			{Name: "treble", Kind: PortScalar},
+			{Name: "rms", Kind: PortScalar},
+		},
+		Params: []ParamSpec{
+			{Name: "bass_cutoff", Label: "Bass Cutoff (Hz)", Type: "number", Default: 200.0, Step: 10, Description: "Frequency boundary between bass and mid."},
+			{Name: "treble_cutoff", Label: "Treble Cutoff (Hz)", Type: "number", Default: 4000.0, Step: 10, Description: "Frequency boundary between mid and treble."},
+		},
+	}
+}
 
 func (f *freqBands) Init(raw json.RawMessage) error {
 	p := freqBandParams{BassCutoff: 200, TrebleCutoff: 4000}

@@ -124,6 +124,16 @@ type Engine struct {
 	// on capture_mode control messages. Guarded by mu.
 	captureMode CaptureMode
 
+	// presetLoader, when set, resolves preset slugs (user files first,
+	// builtins as fallback). When nil, ActivateMusic falls back to
+	// preset.Builtin. Guarded by mu.
+	presetLoader func(string) (*preset.Preset, error)
+
+	// videoColorFn supplies per-light grid-sampled colors for the
+	// entertainment_area primitive. Set by the engine when both a
+	// runner and a grid source are active. Guarded by mu.
+	videoColorFn func() (map[string]pipeline.LinearColor, bool)
+
 	// tickDiagLogged is set after the first tick diagnostic is emitted,
 	// so the "no source active" warning fires once per session rather
 	// than on every tick.
@@ -397,10 +407,9 @@ func (e *Engine) InboundFPS() float64 {
 	return e.inboundFPS
 }
 
-// ActivateMusic starts driving the output loop from the named built-in
-// preset; pass "" to hand control back to screen sync. channels maps light
-// RIDs to area channel ids, positions their room coordinates — both derived
-// from the current area's zone layout by the caller.
+// ActivateMusic starts driving the output loop from the named preset; pass ""
+// to hand control back to screen sync. Resolves user presets through the
+// loader when set, falling back to builtins.
 func (e *Engine) ActivateMusic(slug string, channels map[string]uint8, positions map[string]preset.Pos3) error {
 	e.mu.Lock()
 	defer e.mu.Unlock()
@@ -409,13 +418,48 @@ func (e *Engine) ActivateMusic(slug string, channels map[string]uint8, positions
 		e.musicPreset = ""
 		return nil
 	}
-	p, err := preset.Builtin(slug)
+	var p *preset.Preset
+	var err error
+	if e.presetLoader != nil {
+		p, err = e.presetLoader(slug)
+	} else {
+		p, err = preset.Builtin(slug)
+	}
 	if err != nil {
 		return err
 	}
 	e.musicRunner = preset.NewRunner(p, channels, positions, e.musicFrame)
+	if e.videoColorFn != nil {
+		e.musicRunner.SetVideoFrameFn(e.videoColorFn)
+	}
 	e.musicPreset = slug
 	return nil
+}
+
+// SetPresetLoader sets the function used to resolve preset slugs.
+func (e *Engine) SetPresetLoader(fn func(string) (*preset.Preset, error)) {
+	e.mu.Lock()
+	defer e.mu.Unlock()
+	e.presetLoader = fn
+}
+
+// SetVideoColorFn sets the function that supplies per-light grid colors to
+// the active music runner's entertainment_area primitive.
+func (e *Engine) SetVideoColorFn(fn func() (map[string]pipeline.LinearColor, bool)) {
+	e.mu.Lock()
+	defer e.mu.Unlock()
+	e.videoColorFn = fn
+}
+
+// NodeSnapshots returns per-node state from the most recent runner tick.
+func (e *Engine) NodeSnapshots() []preset.NodeSnapshot {
+	e.mu.Lock()
+	r := e.musicRunner
+	e.mu.Unlock()
+	if r == nil {
+		return nil
+	}
+	return r.NodeSnapshots()
 }
 
 // MusicPreset returns the active music preset slug, or "" while screen sync
@@ -578,43 +622,42 @@ func (e *Engine) tick(now time.Time) {
 		debuglog.Audiof("tick: mode=%s grid=%v preset=%v zones=%d", mode, hasGrid, hasRunner, len(zones))
 	}
 
-	// Two input paths share one output clock (DP-8): an active music preset
-	// replaces the grid as the color source (screen sync is "paused"; a
-	// blend mode is Phase 4). Zones are still what names the channels, so
-	// the per-channel processing below is unchanged either way.
-	//
-	// CaptureMode decides which source wins when both are available:
-	//   video       — grid only (backwards-compatible default)
-	//   audio       — music preset only; grid ignored
-	//   audiovideo  — music preset if active, otherwise grid
+	// When a music preset is active it IS the raw source — the runner
+	// produces per-channel colors directly. Capture mode still gates
+	// whether audio/video frames arrive, but the runner always wins.
+	// Without a preset the existing capture-mode routing applies.
 	var raw map[uint8]pipeline.LinearColor
-	switch captureMode {
-	case CaptureAudio:
-		if musicRunner != nil {
-			raw = musicRunner.Step(now)
-		} else {
-			// Audio mode with no preset: send a low-flux neutral frame
-			// so the DTLS session does not time out while waiting for
-			// the first audio frames to arrive.
+	if musicRunner != nil {
+		raw = musicRunner.Step(now)
+	} else {
+		switch captureMode {
+		case CaptureAudio:
 			raw = e.neutralFrameLocked(zones)
-		}
-	case CaptureAudioVideo:
-		if musicRunner != nil {
-			raw = musicRunner.Step(now)
-		} else if grid != nil && settings.VideoSync {
-			raw = e.sampleGridLocked(grid, mask, zones)
-		} else {
-			raw = e.neutralFrameLocked(zones)
-		}
-	default: // CaptureVideo or empty
-		if grid == nil || !settings.VideoSync {
-			raw = e.neutralFrameLocked(zones)
-		} else {
-			raw = e.sampleGridLocked(grid, mask, zones)
+		case CaptureAudioVideo:
+			if grid != nil && settings.VideoSync {
+				raw = e.sampleGridLocked(grid, mask, zones)
+			} else {
+				raw = e.neutralFrameLocked(zones)
+			}
+		default: // CaptureVideo or empty
+			if grid == nil || !settings.VideoSync {
+				raw = e.neutralFrameLocked(zones)
+			} else {
+				raw = e.sampleGridLocked(grid, mask, zones)
+			}
 		}
 	}
 
-	smoothed := e.smoother.Step(raw, now, settings.Reactivity)
+	// Unity forcing during preset mode: artistic reactivity/brightness/
+	// saturation moved into graph nodes; global settings pass through.
+	reactivity := settings.Reactivity
+	brightness := settings.Brightness
+	saturation := settings.Saturation
+	if musicRunner != nil {
+		reactivity, brightness, saturation = 100, 100, 100
+	}
+
+	smoothed := e.smoother.Step(raw, now, reactivity)
 
 	channels := make([]hue.Channel, 0, len(zones))
 	colorsByID := make(map[uint8][3]byte, len(zones))
@@ -629,8 +672,8 @@ func (e *Engine) tick(now time.Time) {
 			colorCapable = f.SupportsColor
 		}
 		params := pipeline.ColorParams{
-			Saturation:   settings.Saturation,
-			Brightness:   settings.Brightness,
+			Saturation:   saturation,
+			Brightness:   brightness,
 			BlackCutoff:  settings.BlackCutoff,
 			ChannelGain:  gain,
 			ColorSpace:   colorSpaceFromString(settings.ColorSpace),

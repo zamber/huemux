@@ -18,6 +18,15 @@ func Builtin(slug string) (*Preset, error) {
 	return Parse(data)
 }
 
+// BuiltinRaw returns the raw JSON for a built-in preset, or nil,false.
+func BuiltinRaw(slug string) ([]byte, bool) {
+	data, err := presetFS.ReadFile("presets/" + slug + ".json")
+	if err != nil {
+		return nil, false
+	}
+	return data, true
+}
+
 // BuiltinSlugs lists the available built-in preset slugs, sorted.
 func BuiltinSlugs() []string {
 	entries, err := presetFS.ReadDir("presets")

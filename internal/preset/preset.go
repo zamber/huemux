@@ -16,6 +16,7 @@ package preset
 import (
 	"encoding/json"
 	"fmt"
+	"math"
 	"sort"
 	"sync"
 	"time"
@@ -36,6 +37,12 @@ type Env struct {
 	// false while no source is connected.
 	Frame  music.Frame
 	HasFFT bool
+
+	// Video: per-light linear colors from the most recent grid sample,
+	// populated by the engine when a frame source is active. HasVideo
+	// is false when no grid frame is available (no capture, no source).
+	VideoColors map[string]pipeline.LinearColor
+	HasVideo    bool
 
 	// AllLights is the sorted list of light RIDs known to the current
 	// area (from the zone map at activation). Routing primitives use it.
@@ -62,10 +69,83 @@ type Env struct {
 	Now time.Time
 }
 
+// PrimitiveMeta is the editor-facing metadata for a primitive: ports,
+// parameters, and category for the node palette.
+type PrimitiveMeta struct {
+	Type         string      `json:"type"`
+	Category     Category    `json:"category"`
+	Label        string      `json:"label"`
+	Description  string      `json:"description"`
+	Inputs       []Port      `json:"inputs"`
+	Outputs      []Port      `json:"outputs"`
+	Params       []ParamSpec `json:"params"`
+	OutputEffect bool        `json:"output_effect,omitempty"`
+}
+
+// Category groups primitives for the editor palette.
+type Category string
+
+const (
+	CategorySource       Category = "source"
+	CategoryAnalysis     Category = "analysis"
+	CategoryRouting      Category = "routing"
+	CategoryEffect       Category = "effect"
+	CategoryModulation   Category = "modulation"
+	CategoryOutputEffect Category = "output_effect"
+)
+
+// PortKind describes what flows through a port.
+type PortKind string
+
+const (
+	PortScalar  PortKind = "scalar"
+	PortTrigger PortKind = "trigger"
+	PortColor   PortKind = "color"
+)
+
+// Port is one named input or output on a primitive.
+type Port struct {
+	Name string   `json:"name"`
+	Kind PortKind `json:"kind"`
+}
+
+// ParamSpec describes one editable parameter for the editor inspector.
+type ParamSpec struct {
+	Name        string   `json:"name"`
+	Label       string   `json:"label"`
+	Type        string   `json:"type"` // number | string | bool | color | light_ids
+	Default     any      `json:"default"`
+	Min         *float64 `json:"min,omitempty"`
+	Max         *float64 `json:"max,omitempty"`
+	Step        float64  `json:"step,omitempty"`
+	Choices     []string `json:"choices,omitempty"`
+	Description string   `json:"description,omitempty"`
+}
+
+// NodeSnapshot is a per-node state capture from one tick, streamed to the
+// editor at debug_hz for live node inspection.
+type NodeSnapshot struct {
+	ID     string             `json:"id"`
+	Type   string             `json:"type"`
+	Out    map[string]float64 `json:"out,omitempty"`
+	Lights map[string]float64 `json:"lights,omitempty"`
+	Colors []sRGBColor        `json:"colors,omitempty"`
+}
+
+// sRGBColor is a display-ready 8-bit color for the streaming path.
+type sRGBColor struct {
+	RID string `json:"rid"`
+	R   uint8  `json:"r"`
+	G   uint8  `json:"g"`
+	B   uint8  `json:"b"`
+}
+
 // Primitive is one node in the preset graph.
 type Primitive interface {
 	// Type returns the catalog name, e.g. "beat_detector".
 	Type() string
+	// Meta returns the editor-facing metadata: ports, parameters, category.
+	Meta() PrimitiveMeta
 	// Init applies the node's params from the preset JSON.
 	Init(params json.RawMessage) error
 	// Process runs one tick. Upstream scalar values are in env.In; the
@@ -101,6 +181,24 @@ func Catalog() []string {
 		out = append(out, name)
 	}
 	sort.Strings(out)
+	return out
+}
+
+// CatalogMeta returns editor metadata for every registered primitive, sorted
+// by category then type.
+func CatalogMeta() []PrimitiveMeta {
+	registryMu.RLock()
+	defer registryMu.RUnlock()
+	out := make([]PrimitiveMeta, 0, len(registry))
+	for _, newFn := range registry {
+		out = append(out, newFn().Meta())
+	}
+	sort.Slice(out, func(i, j int) bool {
+		if out[i].Category != out[j].Category {
+			return out[i].Category < out[j].Category
+		}
+		return out[i].Type < out[j].Type
+	})
 	return out
 }
 
@@ -274,11 +372,16 @@ type Runner struct {
 	p         *Preset
 	channel   map[string]uint8 // light RID → area channel id
 	frameFn   func() (music.Frame, bool)
+	videoFn   func() (map[string]pipeline.LinearColor, bool)
 	positions map[string]Pos3
 
 	env     Env
 	all     []string
 	scalars map[string]map[string]float64 // node id → port → value
+
+	snapMu    sync.Mutex
+	snaps     []NodeSnapshot
+	hasOutput bool // true when the preset contains output-effect nodes
 }
 
 // NewRunner builds a Runner for an area. channels maps light RIDs to area
@@ -305,7 +408,19 @@ func NewRunner(p *Preset, channels map[string]uint8, positions map[string]Pos3, 
 	sort.Strings(r.all)
 	r.env.AllLights = r.all
 	r.env.Pos = positions
+	for _, n := range p.nodes {
+		if n.prim.Meta().OutputEffect {
+			r.hasOutput = true
+			break
+		}
+	}
 	return r
+}
+
+// SetVideoFrameFn sets the function that supplies per-light video-sampled
+// colors to the entertainment_area source node. Pass nil to clear.
+func (r *Runner) SetVideoFrameFn(fn func() (map[string]pipeline.LinearColor, bool)) {
+	r.videoFn = fn
 }
 
 // Name returns the preset's display name.
@@ -314,6 +429,9 @@ func (r *Runner) Name() string { return r.p.Name }
 // Step runs the graph once and returns the per-channel linear colors. The
 // latest audio frame is sampled at the start of the tick (DP-8: effects
 // compute at the output rate; analysis is downsampled to it).
+// Video colors are sampled before the main loop and injected into env.
+// Output-effect nodes (OutputEffect: true) run in a second pass after
+// routing nodes have written the per-light buses.
 func (r *Runner) Step(now time.Time) map[uint8]pipeline.LinearColor {
 	r.env.Now = now
 	r.env.Lights = map[string]float64{}
@@ -323,20 +441,26 @@ func (r *Runner) Step(now time.Time) map[uint8]pipeline.LinearColor {
 	} else {
 		r.env.HasFFT = false
 	}
+	if r.videoFn != nil {
+		r.env.VideoColors, r.env.HasVideo = r.videoFn()
+	} else {
+		r.env.HasVideo = false
+	}
 
+	var snaps []NodeSnapshot
+
+	// Main pass: skip output-effect nodes; they run after routing.
 	for _, n := range r.p.nodes {
+		if n.prim.Meta().OutputEffect {
+			continue
+		}
+		beforeLights, beforeColors := snapshotBuses(r.env.Lights, r.env.Colors)
 		clear(r.env.In)
 		for _, e := range n.ins {
-			// Missing upstream ports read as 0: a node that produced no
-			// value this tick (no beat yet, silence, …) must drive its
-			// downstream as quiet, not as its last value.
 			r.env.In[e.inPort] = r.scalars[e.from][e.fromPort]
 		}
 		clear(r.env.Out)
 		n.prim.Process(&r.env)
-		// Copy the primitive's outputs into the tick's value store. The
-		// copy is what makes the "0 when a node produced nothing" rule
-		// work across ticks.
 		if r.scalars[n.id] == nil {
 			r.scalars[n.id] = map[string]float64{}
 		} else {
@@ -345,18 +469,53 @@ func (r *Runner) Step(now time.Time) map[uint8]pipeline.LinearColor {
 		for port, v := range r.env.Out {
 			r.scalars[n.id][port] = v
 		}
+		snap := diffSnapshot(n.id, n.prim.Type(), r.env.Out, beforeLights, beforeColors, r.env.Lights, r.env.Colors)
+		if snap != nil {
+			snaps = append(snaps, *snap)
+		}
 	}
+
+	// Output-effect post-pass: run effect nodes in topo order, mutating
+	// the per-light buses that routing nodes wrote.
+	if r.hasOutput {
+		for _, n := range r.p.nodes {
+			if !n.prim.Meta().OutputEffect {
+				continue
+			}
+			beforeLights, beforeColors := snapshotBuses(r.env.Lights, r.env.Colors)
+			clear(r.env.In)
+			for _, e := range n.ins {
+				r.env.In[e.inPort] = r.scalars[e.from][e.fromPort]
+			}
+			clear(r.env.Out)
+			n.prim.Process(&r.env)
+			if r.scalars[n.id] == nil {
+				r.scalars[n.id] = map[string]float64{}
+			} else {
+				clear(r.scalars[n.id])
+			}
+			for port, v := range r.env.Out {
+				r.scalars[n.id][port] = v
+			}
+			snap := diffSnapshot(n.id, n.prim.Type(), r.env.Out, beforeLights, beforeColors, r.env.Lights, r.env.Colors)
+			if snap != nil {
+				snaps = append(snaps, *snap)
+			}
+		}
+	}
+
+	r.snapMu.Lock()
+	r.snaps = snaps
+	r.snapMu.Unlock()
 
 	out := make(map[uint8]pipeline.LinearColor, len(r.all))
 	for _, rid := range r.all {
 		value := r.env.Lights[rid]
 		if value == 0 && r.env.Colors[rid] == (Color{}) {
-			// Unselected light: never painted. Letting it fall through as
-			// black would strobe off-lights between routing changes.
 			continue
 		}
 		if value == 0 {
-			value = 1 // colored but not value-driven
+			value = 1
 		}
 		if value < 0 {
 			value = 0
@@ -369,9 +528,95 @@ func (r *Runner) Step(now time.Time) map[uint8]pipeline.LinearColor {
 		}
 		ch, ok := r.channel[rid]
 		if !ok {
-			continue // light not in this area's channels
+			continue
 		}
 		out[ch] = pipeline.LinearColor{R: c.R * value, G: c.G * value, B: c.B * value}
 	}
 	return out
+}
+
+// NodeSnapshots returns the per-node state from the most recent tick.
+func (r *Runner) NodeSnapshots() []NodeSnapshot {
+	r.snapMu.Lock()
+	defer r.snapMu.Unlock()
+	out := make([]NodeSnapshot, len(r.snaps))
+	copy(out, r.snaps)
+	return out
+}
+
+// snapshotBuses copies the Lights and Colors buses for before/after diffing.
+func snapshotBuses(lights map[string]float64, colors map[string]Color) (map[string]float64, map[string]Color) {
+	lc := make(map[string]float64, len(lights))
+	for k, v := range lights {
+		lc[k] = v
+	}
+	cc := make(map[string]Color, len(colors))
+	for k, v := range colors {
+		cc[k] = v
+	}
+	return lc, cc
+}
+
+// diffSnapshot returns a NodeSnapshot recording what this node changed, or
+// nil when nothing changed (sparse streaming).
+func diffSnapshot(id, typ string, out map[string]float64, beforeLights map[string]float64, beforeColors map[string]Color, afterLights map[string]float64, afterColors map[string]Color) *NodeSnapshot {
+	var changed bool
+	s := NodeSnapshot{ID: id, Type: typ}
+
+	if len(out) > 0 {
+		s.Out = make(map[string]float64, len(out))
+		for k, v := range out {
+			s.Out[k] = v
+		}
+		changed = true
+	}
+
+	for rid, v := range afterLights {
+		if beforeLights[rid] != v {
+			if s.Lights == nil {
+				s.Lights = map[string]float64{}
+			}
+			s.Lights[rid] = v
+			changed = true
+		}
+	}
+
+	for rid, c := range afterColors {
+		if beforeColors[rid] != c {
+			s.Colors = append(s.Colors, sRGBColor{RID: rid, R: linearTo8(c.R), G: linearTo8(c.G), B: linearTo8(c.B)})
+			changed = true
+		}
+	}
+
+	if !changed {
+		return nil
+	}
+	return &s
+}
+
+// f64ptr returns a pointer to v, for ParamSpec Min/Max fields.
+func f64ptr(v float64) *float64 { return &v }
+
+// linearTo8 converts a linear 0..1 value to an 8-bit sRGB byte (simple gamma).
+func linearTo8(v float64) uint8 {
+	if v <= 0 {
+		return 0
+	}
+	if v >= 1 {
+		return 255
+	}
+	// Approximate sRGB gamma: linear → ~2.2 gamma
+	g := v
+	if g <= 0.0031308 {
+		g *= 12.92
+	} else {
+		g = 1.055*math.Pow(g, 1.0/2.4) - 0.055
+	}
+	if g < 0 {
+		g = 0
+	}
+	if g > 1 {
+		g = 1
+	}
+	return uint8(g*255 + 0.5)
 }

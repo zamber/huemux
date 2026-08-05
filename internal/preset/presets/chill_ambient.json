@@ -9,7 +9,9 @@
     { "id": "bass_drive", "type": "brightness_energy", "params": { "curve": "lin", "min": 0.12, "max": 0.7 } },
     { "id": "lfo", "type": "lfo", "params": { "waveform": "sin", "frequency": 0.08 } },
     { "id": "color", "type": "color_map_energy", "params": { "palette": ["#1B2A4A", "#2E4A62", "#6B5B8A", "#2E4A62", "#1B2A4A"] } },
-    { "id": "lights", "type": "all_lights", "params": {} }
+    { "id": "lights", "type": "all_lights", "params": {} },
+    { "id": "reactivity", "type": "reactivity_effect", "params": { "reactivity": 45 } },
+    { "id": "saturation", "type": "saturation_effect", "params": { "saturation": 130 } }
   ],
   "edges": [
     { "from": "src", "to": "bands" },

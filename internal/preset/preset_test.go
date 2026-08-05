@@ -150,14 +150,22 @@ func TestStrobeFlashComposesOverBrightness(t *testing.T) {
 	out := r.Step(now)
 
 	// On the beat, strobe envelope = 1; the flash color #FF6600 (linear
-	// space) × brightness. Bass is loud (bass band mean 0.5 → exp curve
-	// ≈ 0.29) so the light must be visibly orange, i.e. R > G > B.
-	c := out[1]
-	if c.R <= c.G || c.G <= c.B {
-		t.Fatalf("strobe color not orange on beat: %+v", c)
+	// space) × brightness. The reactivity_effect output node smooths the
+	// brightness bus with reactivity=45, so the first tick after a spike
+	// is attenuated — check several ticks for the peak.
+	var peak pipeline.LinearColor
+	for i := 0; i < 8; i++ {
+		out = r.Step(now.Add(time.Duration(i) * 40 * time.Millisecond))
+		c := out[1]
+		if c.R > peak.R {
+			peak = c
+		}
 	}
-	if c.R < 0.1 {
-		t.Fatalf("strobe too dim on beat: %+v", c)
+	if peak.R <= peak.G || peak.G <= peak.B {
+		t.Fatalf("strobe color not orange on beat: %+v", peak)
+	}
+	if peak.R < 0.1 {
+		t.Fatalf("strobe too dim on beat: %+v", peak)
 	}
 
 	// After the flash decays (duration 250ms, exp decay), the strobe lights

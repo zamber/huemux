@@ -24,6 +24,19 @@ type lfo struct {
 
 func (l *lfo) Type() string { return "lfo" }
 
+func (l *lfo) Meta() PrimitiveMeta {
+	return PrimitiveMeta{
+		Type: "lfo", Category: CategoryModulation,
+		Label: "LFO", Description: "Low-frequency oscillator, cycles 0–1 at a fixed frequency.",
+		Outputs: []Port{{Name: "out", Kind: PortScalar}},
+		Params: []ParamSpec{
+			{Name: "waveform", Label: "Waveform", Type: "string", Default: "sin", Choices: []string{"sin", "tri", "sqr"}, Description: "Oscillator waveform."},
+			{Name: "frequency", Label: "Frequency (Hz)", Type: "number", Default: 0.1, Step: 0.01, Description: "Cycles per second."},
+			{Name: "phase_offset", Label: "Phase Offset", Type: "number", Default: 0.0, Min: f64ptr(0), Max: f64ptr(1), Step: 0.01, Description: "Phase offset as 0–1 fraction of cycle."},
+		},
+	}
+}
+
 func (l *lfo) Init(raw json.RawMessage) error {
 	l.params.Waveform = "sin"
 	l.params.Frequency = 0.1
@@ -84,6 +97,21 @@ const (
 )
 
 func (a *adsrEnvelope) Type() string { return "adsr_envelope" }
+
+func (a *adsrEnvelope) Meta() PrimitiveMeta {
+	return PrimitiveMeta{
+		Type: "adsr_envelope", Category: CategoryModulation,
+		Label: "ADSR Envelope", Description: "Attack/decay/sustain/release envelope triggered by a trigger signal.",
+		Inputs:  []Port{{Name: "trigger", Kind: PortTrigger}},
+		Outputs: []Port{{Name: "out", Kind: PortScalar}},
+		Params: []ParamSpec{
+			{Name: "attack_ms", Label: "Attack (ms)", Type: "number", Default: 10.0, Step: 1, Description: "Rise time to peak."},
+			{Name: "decay_ms", Label: "Decay (ms)", Type: "number", Default: 200.0, Step: 1, Description: "Fall time to sustain level."},
+			{Name: "sustain", Label: "Sustain", Type: "number", Default: 0.6, Step: 0.01, Description: "Sustain level (0–1)."},
+			{Name: "release_ms", Label: "Release (ms)", Type: "number", Default: 400.0, Step: 1, Description: "Fall time to zero after trigger ends."},
+		},
+	}
+}
 
 func (a *adsrEnvelope) Init(raw json.RawMessage) error {
 	a.params.AttackMS = 10
@@ -170,6 +198,19 @@ type smoother struct {
 }
 
 func (s *smoother) Type() string { return "smoother" }
+
+func (s *smoother) Meta() PrimitiveMeta {
+	return PrimitiveMeta{
+		Type: "smoother", Category: CategoryModulation,
+		Label: "Smoother", Description: "Asymmetric one-pole low-pass on a scalar. Attack governs rises, release governs falls.",
+		Inputs:  []Port{{Name: "in", Kind: PortScalar}},
+		Outputs: []Port{{Name: "out", Kind: PortScalar}},
+		Params: []ParamSpec{
+			{Name: "attack_ms", Label: "Attack (ms)", Type: "number", Default: 100.0, Step: 1, Description: "Rise time constant."},
+			{Name: "release_ms", Label: "Release (ms)", Type: "number", Default: 400.0, Step: 1, Description: "Fall time constant."},
+		},
+	}
+}
 
 func (s *smoother) Init(raw json.RawMessage) error {
 	s.params.AttackMS = 100

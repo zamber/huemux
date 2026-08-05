@@ -29,6 +29,20 @@ type brightnessEnergy struct {
 
 func (b *brightnessEnergy) Type() string { return "brightness_energy" }
 
+func (b *brightnessEnergy) Meta() PrimitiveMeta {
+	return PrimitiveMeta{
+		Type: "brightness_energy", Category: CategoryEffect,
+		Label: "Brightness (Energy)", Description: "Maps an energy scalar to a brightness value through a curve.",
+		Inputs:  []Port{{Name: "energy", Kind: PortScalar}},
+		Outputs: []Port{{Name: "out", Kind: PortScalar}},
+		Params: []ParamSpec{
+			{Name: "curve", Label: "Curve", Type: "string", Default: "lin", Choices: []string{"lin", "log", "exp"}, Description: "Mapping curve."},
+			{Name: "min", Label: "Min", Type: "number", Default: 0.0, Step: 0.01, Description: "Minimum output brightness."},
+			{Name: "max", Label: "Max", Type: "number", Default: 1.0, Step: 0.01, Description: "Maximum output brightness."},
+		},
+	}
+}
+
 func (b *brightnessEnergy) Init(raw json.RawMessage) error {
 	b.params.Curve = "lin"
 	b.params.Min = 0
@@ -71,6 +85,19 @@ type colorMapEnergy struct {
 }
 
 func (c *colorMapEnergy) Type() string { return "color_map_energy" }
+
+func (c *colorMapEnergy) Meta() PrimitiveMeta {
+	return PrimitiveMeta{
+		Type: "color_map_energy", Category: CategoryEffect,
+		Label: "Color Map (Energy)", Description: "Maps energy across a palette with piecewise-linear interpolation.",
+		Inputs:  []Port{{Name: "energy", Kind: PortScalar}},
+		Outputs: []Port{{Name: "r", Kind: PortScalar}, {Name: "g", Kind: PortScalar}, {Name: "b", Kind: PortScalar}},
+		Params: []ParamSpec{
+			{Name: "palette", Label: "Palette", Type: "string", Default: []string{"#FFFFFF"}, Description: "List of hex colors to interpolate."},
+			{Name: "hue_shift", Label: "Hue Shift (°)", Type: "number", Default: 0.0, Step: 1, Description: "Rotates every color's hue by this many degrees."},
+		},
+	}
+}
 
 func (c *colorMapEnergy) Init(raw json.RawMessage) error {
 	p := struct {
@@ -181,6 +208,20 @@ type colorMapFrequency struct {
 
 func (c *colorMapFrequency) Type() string { return "color_map_frequency" }
 
+func (c *colorMapFrequency) Meta() PrimitiveMeta {
+	return PrimitiveMeta{
+		Type: "color_map_frequency", Category: CategoryEffect,
+		Label: "Color Map (Frequency)", Description: "Mixes three colors by bass/mid/treble band energies.",
+		Inputs:  []Port{{Name: "bass", Kind: PortScalar}, {Name: "mid", Kind: PortScalar}, {Name: "treble", Kind: PortScalar}},
+		Outputs: []Port{{Name: "r", Kind: PortScalar}, {Name: "g", Kind: PortScalar}, {Name: "b", Kind: PortScalar}},
+		Params: []ParamSpec{
+			{Name: "bass_color", Label: "Bass Color", Type: "color", Default: "#FFFFFF", Description: "Hex color for bass frequencies."},
+			{Name: "mid_color", Label: "Mid Color", Type: "color", Default: "#FFFFFF", Description: "Hex color for mid frequencies."},
+			{Name: "treble_color", Label: "Treble Color", Type: "color", Default: "#FFFFFF", Description: "Hex color for treble frequencies."},
+		},
+	}
+}
+
 func (c *colorMapFrequency) Init(raw json.RawMessage) error {
 	p := struct {
 		Bass   string `json:"bass_color"`
@@ -230,6 +271,20 @@ type strobeBeat struct {
 }
 
 func (s *strobeBeat) Type() string { return "strobe_beat" }
+
+func (s *strobeBeat) Meta() PrimitiveMeta {
+	return PrimitiveMeta{
+		Type: "strobe_beat", Category: CategoryEffect,
+		Label: "Strobe (Beat)", Description: "Flashes on beat with configurable color and decay.",
+		Inputs:  []Port{{Name: "beat", Kind: PortTrigger}},
+		Outputs: []Port{{Name: "out", Kind: PortScalar}, {Name: "r", Kind: PortScalar}, {Name: "g", Kind: PortScalar}, {Name: "b", Kind: PortScalar}},
+		Params: []ParamSpec{
+			{Name: "color", Label: "Color", Type: "color", Default: "#FF6600", Description: "Flash color (hex)."},
+			{Name: "duration_ms", Label: "Duration (ms)", Type: "number", Default: 250.0, Step: 10, Description: "Flash duration."},
+			{Name: "decay", Label: "Decay", Type: "string", Default: "exp", Choices: []string{"exp", "lin"}, Description: "Decay curve shape."},
+		},
+	}
+}
 
 func (s *strobeBeat) Init(raw json.RawMessage) error {
 	s.params.Color = "#FF6600"
@@ -304,6 +359,21 @@ type chaseTrigger struct {
 
 func (c *chaseTrigger) Type() string { return "chase_trigger" }
 
+func (c *chaseTrigger) Meta() PrimitiveMeta {
+	return PrimitiveMeta{
+		Type: "chase_trigger", Category: CategoryEffect,
+		Label: "Chase (Trigger)", Description: "Advances a lit head through target lights on trigger or timer.",
+		Inputs:  []Port{{Name: "trigger", Kind: PortTrigger}},
+		Outputs: []Port{{Name: "out", Kind: PortScalar}, {Name: "position", Kind: PortScalar}},
+		Params: []ParamSpec{
+			{Name: "light_ids", Label: "Light IDs", Type: "light_ids", Default: []string{}, Description: "Target lights. Empty = all."},
+			{Name: "speed", Label: "Speed (s)", Type: "number", Default: 0.3, Step: 0.05, Description: "Seconds per step when no trigger wired."},
+			{Name: "width", Label: "Width", Type: "number", Default: 1.0, Step: 1, Description: "Lit lights behind the head."},
+			{Name: "trail_decay", Label: "Trail Decay", Type: "number", Default: 0.5, Step: 0.05, Description: "Decay multiplier per step behind head."},
+		},
+	}
+}
+
 func (c *chaseTrigger) Init(raw json.RawMessage) error {
 	c.params.Speed = 0.3
 	c.params.Width = 1
@@ -375,6 +445,20 @@ type pulseEnergy struct {
 }
 
 func (p *pulseEnergy) Type() string { return "pulse_energy" }
+
+func (p *pulseEnergy) Meta() PrimitiveMeta {
+	return PrimitiveMeta{
+		Type: "pulse_energy", Category: CategoryEffect,
+		Label: "Pulse (Energy)", Description: "Drives brightness as a spatial pulse from a center light, expanding with energy.",
+		Inputs:  []Port{{Name: "energy", Kind: PortScalar}},
+		Outputs: []Port{{Name: "out", Kind: PortScalar}},
+		Params: []ParamSpec{
+			{Name: "center_light", Label: "Center Light", Type: "string", Default: "", Description: "RID of the center light."},
+			{Name: "radius", Label: "Radius", Type: "number", Default: 0.5, Step: 0.05, Description: "Base pulse radius."},
+			{Name: "decay", Label: "Decay", Type: "number", Default: 0.5, Step: 0.05, Description: "Distance falloff sharpness."},
+		},
+	}
+}
 
 func (p *pulseEnergy) Init(raw json.RawMessage) error {
 	p.params.Radius = 0.5
