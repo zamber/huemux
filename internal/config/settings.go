@@ -51,6 +51,7 @@ type AreaSettings struct {
 	// Debug
 	DebugHz      int     `json:"debug_hz"`      // debug-data push rate (fps/capture/histogram)
 	DebugPreview bool    `json:"debug_preview"` // stream echo to connected UIs (resource burn)
+	VideoSync    bool    `json:"video_sync"`    // when false, skip video sampling (grid is ignored)
 	AudioGain    float64 `json:"audio_gain"`    // FFT band boost for the analysis frame
 	AudioFloor   float64 `json:"audio_floor"`   // FFT bands below this are silenced
 }
@@ -87,9 +88,10 @@ func DefaultAreaSettings(configurationType string) AreaSettings {
 		OutputHz:            20,
 		ColorSpace:          "rgb",
 		DisableEMS:          false,
-		DebugHz:             10,
+		DebugHz:             20,
 		DebugPreview:        false,
-		AudioGain:           2.0,
+		VideoSync:           true,
+		AudioGain:           10.0,
 		AudioFloor:          0,
 	}
 }
@@ -103,10 +105,10 @@ func (s AreaSettings) Validate() AreaSettings {
 		s.OutputHz = 20
 	}
 	if s.DebugHz < 1 || s.DebugHz > 30 {
-		s.DebugHz = 10
+		s.DebugHz = 20
 	}
-	if s.AudioGain < 0.5 || s.AudioGain > 5 {
-		s.AudioGain = 2.0
+	if s.AudioGain < 0.5 || s.AudioGain > 10 {
+		s.AudioGain = 10.0
 	}
 	if s.AudioFloor < 0 || s.AudioFloor > 0.1 {
 		s.AudioFloor = 0
@@ -188,6 +190,7 @@ func backfillDefaults(v AreaSettings, configurationType string) AreaSettings {
 	// idempotent and needs no sentinel.
 	if v.DebugHz == 0 {
 		v.DebugHz = d.DebugHz
+		v.VideoSync = d.VideoSync // field predates the record
 	}
 	if v.AudioGain == 0 {
 		v.AudioGain = d.AudioGain

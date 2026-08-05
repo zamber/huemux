@@ -601,13 +601,13 @@ func (e *Engine) tick(now time.Time) {
 	case CaptureAudioVideo:
 		if musicRunner != nil {
 			raw = musicRunner.Step(now)
-		} else if grid != nil {
+		} else if grid != nil && settings.VideoSync {
 			raw = e.sampleGridLocked(grid, mask, zones)
 		} else {
 			raw = e.neutralFrameLocked(zones)
 		}
 	default: // CaptureVideo or empty
-		if grid == nil {
+		if grid == nil || !settings.VideoSync {
 			raw = e.neutralFrameLocked(zones)
 		} else {
 			raw = e.sampleGridLocked(grid, mask, zones)

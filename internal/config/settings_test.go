@@ -33,13 +33,13 @@ func TestAreaSettingsValidate_DebugHz(t *testing.T) {
 		in   int
 		want int
 	}{
-		{"zero", 0, 10},
-		{"negative", -5, 10},
-		{"tooLarge", 31, 10},
-		{"justAboveMax", 31, 10},
+		{"zero", 0, 20},
+		{"negative", -5, 20},
+		{"tooLarge", 31, 20},
+		{"justAboveMax", 31, 20},
 		{"atMax", 30, 30},
 		{"atMin", 1, 1},
-		{"inRange", 15, 15},
+		{"inRange", 20, 20},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -58,13 +58,13 @@ func TestAreaSettingsValidate_AudioGain(t *testing.T) {
 		in   float64
 		want float64
 	}{
-		{"zero", 0, 2.0},
-		{"negative", -1, 2.0},
-		{"belowMin", 0.49, 2.0},
-		{"aboveMax", 5.1, 2.0},
+		{"zero", 0, 10.0},
+		{"negative", -1, 10.0},
+		{"belowMin", 0.49, 10.0},
+		{"aboveMax", 10.1, 10.0},
 		{"atMin", 0.5, 0.5},
-		{"atMax", 5, 5},
-		{"inRange", 2.5, 2.5},
+		{"atMax", 10, 10},
+		{"inRange", 5, 5},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -113,6 +113,9 @@ func TestBackfillDefaultsMigratesNewFields(t *testing.T) {
 	if v.AudioGain != d.AudioGain {
 		t.Errorf("AudioGain = %v after backfill, want %v", v.AudioGain, d.AudioGain)
 	}
+	if v.VideoSync != d.VideoSync {
+		t.Errorf("VideoSync = %v after backfill, want %v", v.VideoSync, d.VideoSync)
+	}
 	if v.AudioFloor != 0 {
 		t.Errorf("AudioFloor = %v after backfill, want 0", v.AudioFloor)
 	}
@@ -147,7 +150,7 @@ func TestBackfillDefaultsFillsLegacyAxisFields(t *testing.T) {
 	if v.AxisHorizontal != d.AxisHorizontal || v.AxisVertical != d.AxisVertical || v.AxisDepth != d.AxisDepth {
 		t.Errorf("axis fields not filled: %+v", v)
 	}
-	if v.DebugHz != d.DebugHz || v.AudioGain != d.AudioGain {
+	if v.DebugHz != d.DebugHz || v.AudioGain != d.AudioGain || v.VideoSync != d.VideoSync {
 		t.Errorf("debug fields not filled: %+v", v)
 	}
 }

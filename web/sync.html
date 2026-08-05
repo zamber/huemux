@@ -287,6 +287,11 @@
       </div>
 
       <div class="control checkbox">
+        <label><input type="checkbox" data-setting="video_sync" data-type="bool" checked> <span data-i18n="sync.videoSync">Video sync</span></label>
+        <p class="hint" data-i18n="sync.videoSyncHint">When off, video sampling is skipped — only audio drives the output (if capture mode includes audio). On by default.</p>
+      </div>
+
+      <div class="control checkbox">
         <label><input type="checkbox" data-setting="debug_preview" data-type="bool"> <span data-i18n="sync.debugPreview">Stream echo to this device</span></label>
         <p class="hint" data-i18n="sync.debugPreviewHint">Sends a downscaled copy of the video grid to every connected UI. It powers the preview and histogram; it burns CPU and network, so leave it off unless you need it.</p>
       </div>
@@ -296,8 +301,8 @@
           <span data-i18n="sync.audioGain">Audio gain</span>
           (<span data-readout="audio-gain"></span>&times;)
         </label>
-        <input type="range" min="0.5" max="5" step="0.1" data-setting="audio_gain" data-type="float" data-readout-target="audio-gain">
-        <p class="hint" data-i18n="sync.audioGainHint">Boosts the captured audio before analysis. Raise it if the histogram barely moves; 2 is the default.</p>
+        <input type="range" min="0.5" max="10" step="0.1" data-setting="audio_gain" data-type="float" data-readout-target="audio-gain">
+        <p class="hint" data-i18n="sync.audioGainHint">Boosts the captured audio before analysis. Raise it if the histogram barely moves; 10 is the default.</p>
       </div>
 
       <div class="control">

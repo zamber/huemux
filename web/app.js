@@ -826,7 +826,7 @@ const settingKeys = {
   black_cutoff: 'float', scene_cut_sensitivity: 'float',
   capture_width: 'int', capture_height: 'int', capture_fps: 'int',
   output_hz: 'int', color_space: 'string', disable_ems: 'bool',
-  debug_hz: 'int', debug_preview: 'bool', audio_gain: 'float', audio_floor: 'float',
+  debug_hz: 'int', debug_preview: 'bool', video_sync: 'bool', audio_gain: 'float', audio_floor: 'float',
 };
 
 function getControl(key) {
