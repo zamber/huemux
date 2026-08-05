@@ -5,12 +5,15 @@
 
   const $ = function (s) { return document.querySelector(s); };
   const WS_URL = authWSURL('/ws');
-  const isPhone = function () { return window.innerWidth < 768; };
-  const isTablet = function () { return window.innerWidth >= 768 && window.innerWidth < 1024; };
+  // Pointer-type detection: fine pointer = desktop (always show editor),
+  // coarse pointer + narrow = phone (card browser), coarse + wide = tablet editor.
+  const hasCoarsePointer = function () { return window.matchMedia('(pointer: coarse)').matches; };
+  const isPhone = function () { return hasCoarsePointer() && window.innerWidth < 768; };
+  const isTablet = function () { return hasCoarsePointer() && window.innerWidth >= 768; };
 
   // ── State ────────────────────────────────────────────────────────────────
   var ws, catalog = [], currentSlug = '', activeSlug = '', graphDirty = false;
-  var graph, canvas;
+  var graph, canvas, capturing = false;
   var catColor = {
     source: '#4488cc', analysis: '#44aa66', routing: '#ccaa44',
     effect: '#cc4444', modulation: '#8844cc', output_effect: '#cc4488'
@@ -33,12 +36,25 @@
   function updateStatus(s) { $('#status-bar').textContent = s; }
 
   function handleMsg(msg) {
-    if (msg.type === 'status' && msg.snapshot) {
-      var slug = msg.snapshot.MusicPreset || '';
-      if (slug !== activeSlug) {
-        activeSlug = slug;
-        updateButtons();
-        if (isPhone()) renderCards();
+    if (msg.type === 'status') {
+      // Sync area select with engine state
+      if (msg.snapshot && msg.snapshot.AreaID) {
+        var sel = $('#area-select');
+        if (sel.value !== msg.snapshot.AreaID) sel.value = msg.snapshot.AreaID;
+      }
+      if (msg.snapshot) {
+        var slug = msg.snapshot.MusicPreset || '';
+        if (slug !== activeSlug) {
+          activeSlug = slug;
+          updateButtons();
+          if (isPhone()) renderCards();
+        }
+        // Sync capture mode display
+        if (msg.snapshot.CaptureMode === 'audio' || msg.snapshot.CaptureMode === 'audiovideo') {
+          capturing = true; $('#btn-capture').style.background = 'var(--accent)';
+        } else {
+          capturing = false; $('#btn-capture').style.background = '';
+        }
       }
     }
     if (msg.type === 'debug' && msg.nodes && !isPhone()) {
@@ -143,6 +159,7 @@
   function addNodeAt(meta, x, y) {
     if (!graph) return;
     var node = LiteGraph.createNode('preset/' + meta.type);
+    if (!node) return;
     if (meta.params) {
       meta.params.forEach(function (p) {
         if (p.default !== undefined) node.properties[p.name] = p.default;
@@ -156,6 +173,7 @@
   function registerNodeTypes() {
     catalog.forEach(function (meta) {
       var ctor = function () {
+        this.properties = this.properties || {};
         if (meta.params) {
           meta.params.forEach(function (p) {
             if (p.default !== undefined) this.properties[p.name] = p.default;
@@ -346,6 +364,7 @@
     var nodeMap = {};
     doc.nodes.forEach(function (rn) {
       var node = LiteGraph.createNode('preset/' + rn.type);
+      if (!node) return;
       node.id = rn.id;
       if (rn.params) Object.assign(node.properties, rn.params);
       graph.add(node);
@@ -405,6 +424,16 @@
         sel.innerHTML += '<option value="' + p.slug + '">' + escHtml(p.name) + (p.builtin ? ' (built-in)' : '') + '</option>';
       });
     } catch (e) { /* ok */ }
+  }
+
+  async function loadAreas() {
+    try {
+      var resp = await fetch('/api/areas');
+      var areas = await resp.json();
+      var sel = $('#area-select');
+      sel.innerHTML = '<option value="">-- Area --</option>';
+      areas.forEach(function (a) { sel.innerHTML += '<option value="' + a.id + '">' + escHtml(a.name) + '</option>'; });
+    } catch (e) { /* not paired yet */ }
   }
 
   function newGraph() {
@@ -542,6 +571,8 @@
     graph = new LGraph();
     canvas = new LGraphCanvas('#graph-canvas', graph);
     canvas.render_canvas_border = false;
+    canvas.resize();
+    window.addEventListener('resize', function () { canvas.resize(); });
     setupPinchZoom();
 
     connectWS();
@@ -559,6 +590,28 @@
     $('#btn-deactivate').addEventListener('click', deactivatePreset);
     $('#preset-select').addEventListener('change', function () {
       if (this.value) loadPreset(this.value);
+    });
+
+    // Area selector — mirrors sync page, shares engine state
+    loadAreas();
+    $('#area-select').addEventListener('change', function () {
+      if (this.value) send({ type: 'select_area', area_id: this.value });
+    });
+
+    // Audio capture button — reuses HueMuxMusic from music.js
+    $('#btn-capture').addEventListener('click', async function () {
+      if (capturing) {
+        if (window.HueMuxMusic) HueMuxMusic.stopCapture();
+        send({ type: 'capture_mode', preset: 'video' });
+        capturing = false; $('#btn-capture').style.background = '';
+      } else {
+        send({ type: 'capture_mode', preset: 'audiovideo' });
+        if (window.HueMuxMusic) {
+          await HueMuxMusic.init({ send: function (buf) { if (ws && ws.readyState === WebSocket.OPEN) ws.send(buf); }, control: send });
+          HueMuxMusic.startCapture('mic');
+        }
+        capturing = true; $('#btn-capture').style.background = 'var(--accent)';
+      }
     });
 
     // Palette toggle buttons

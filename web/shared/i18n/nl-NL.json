@@ -4,7 +4,8 @@
   },
   "nav": {
     "lights": "Lampen",
-    "sync": "Synchronisatie",
+    "sync": "Sync",
+    "presets": "Presets"
     "settings": "Instellingen"
   },
   "theme": {
@@ -29,7 +30,8 @@
     "bridgeFallbackName": "Hue Bridge",
     "tooOld": "te oud voor Entertainment-zones"
   },
-  "sync": {
+  "sync": "Sync",
+    "presets": "Presets"
     "area": "Entertainment-zone",
     "areaLoading": "Zones worden geladen…",
     "areaInUse": " (in gebruik)",

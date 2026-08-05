@@ -4,7 +4,8 @@
   },
   "nav": {
     "lights": "燈光",
-    "sync": "同步",
+    "sync": "Sync",
+    "presets": "Presets"
     "settings": "設定"
   },
   "theme": {
@@ -29,7 +30,8 @@
     "bridgeFallbackName": "Hue 橋接器",
     "tooOld": "版本過舊，不支援 Entertainment 區域"
   },
-  "sync": {
+  "sync": "Sync",
+    "presets": "Presets"
     "area": "Entertainment 區域",
     "areaLoading": "正在載入區域…",
     "areaInUse": " (使用中)",

@@ -4,7 +4,8 @@
   },
   "nav": {
     "lights": "Lumières",
-    "sync": "Synchronisation",
+    "sync": "Sync",
+    "presets": "Presets"
     "settings": "Paramètres"
   },
   "theme": {
@@ -29,7 +30,8 @@
     "bridgeFallbackName": "Pont Hue",
     "tooOld": "trop ancien pour les zones Entertainment"
   },
-  "sync": {
+  "sync": "Sync",
+    "presets": "Presets"
     "area": "Zone Entertainment",
     "areaLoading": "Chargement des zones…",
     "areaInUse": " (en cours d'utilisation)",

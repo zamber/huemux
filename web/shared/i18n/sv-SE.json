@@ -4,7 +4,8 @@
   },
   "nav": {
     "lights": "Ljus",
-    "sync": "Synkronisering",
+    "sync": "Sync",
+    "presets": "Presets"
     "settings": "Inställningar"
   },
   "theme": {
@@ -29,7 +30,8 @@
     "bridgeFallbackName": "Hue-brygga",
     "tooOld": "för gammal för underhållningszoner"
   },
-  "sync": {
+  "sync": "Sync",
+    "presets": "Presets"
     "area": "Underhållningszon",
     "areaLoading": "Laddar zoner…",
     "areaInUse": " (används)",

@@ -4,7 +4,8 @@
   },
   "nav": {
     "lights": "조명",
-    "sync": "동기화",
+    "sync": "Sync",
+    "presets": "Presets"
     "settings": "설정"
   },
   "theme": {
@@ -29,7 +30,8 @@
     "bridgeFallbackName": "Hue 브리지",
     "tooOld": "Entertainment 에리어를 지원하지 않음"
   },
-  "sync": {
+  "sync": "Sync",
+    "presets": "Presets"
     "area": "Entertainment 존",
     "areaLoading": "존 로드 중…",
     "areaInUse": " (사용 중)",

@@ -4,7 +4,8 @@
   },
   "nav": {
     "lights": "Luminile",
-    "sync": "Sincronizare",
+    "sync": "Sync",
+    "presets": "Presets"
     "settings": "Setări"
   },
   "theme": {
@@ -29,7 +30,8 @@
     "bridgeFallbackName": "Pasarela Hue",
     "tooOld": "prea veche pentru zonele Entertainment"
   },
-  "sync": {
+  "sync": "Sync",
+    "presets": "Presets"
     "area": "Zona Entertainment",
     "areaLoading": "Se încarcă zonele…",
     "areaInUse": " (în uz)",

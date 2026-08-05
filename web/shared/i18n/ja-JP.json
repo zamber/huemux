@@ -4,7 +4,8 @@
   },
   "nav": {
     "lights": "ライト",
-    "sync": "同期",
+    "sync": "Sync",
+    "presets": "Presets"
     "settings": "設定"
   },
   "theme": {
@@ -29,7 +30,8 @@
     "bridgeFallbackName": "Hueブリッジ",
     "tooOld": "Entertainment エリアに対応していません"
   },
-  "sync": {
+  "sync": "Sync",
+    "presets": "Presets"
     "area": "Entertainment ゾーン",
     "areaLoading": "ゾーンを読込中…",
     "areaInUse": " (使用中)",

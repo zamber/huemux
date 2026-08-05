@@ -418,6 +418,7 @@ func cmdRun(cfg appconfig.Config, verbose bool) {
 		select {
 		case <-sigCh:
 			shared.Shutdown(srv.Engine(), store)
+			srv.Close()
 			return
 		case cmd := <-stdinCh:
 			if cmd == "q" {

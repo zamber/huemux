@@ -4,7 +4,8 @@
   },
   "nav": {
     "lights": "الأضواء",
-    "sync": "المزامنة",
+    "sync": "Sync",
+    "presets": "Presets"
     "settings": "الإعدادات"
   },
   "theme": {
@@ -29,7 +30,8 @@
     "bridgeFallbackName": "جسر Hue",
     "tooOld": "قديم جدا لمناطق Entertainment"
   },
-  "sync": {
+  "sync": "Sync",
+    "presets": "Presets"
     "area": "منطقة Entertainment",
     "areaLoading": "جاري تحميل المناطق…",
     "areaInUse": " (قيد الاستخدام)",

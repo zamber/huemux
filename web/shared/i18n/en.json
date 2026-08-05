@@ -5,6 +5,7 @@
   "nav": {
     "lights": "Lights",
     "sync": "Sync",
+    "presets": "Presets",
     "settings": "Settings"
   },
   "theme": {

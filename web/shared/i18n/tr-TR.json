@@ -4,7 +4,8 @@
   },
   "nav": {
     "lights": "Işıklar",
-    "sync": "Senkronizasyon",
+    "sync": "Sync",
+    "presets": "Presets"
     "settings": "Ayarlar"
   },
   "theme": {
@@ -29,7 +30,8 @@
     "bridgeFallbackName": "Hue Köprüsü",
     "tooOld": "Entertainment areas için çok eski"
   },
-  "sync": {
+  "sync": "Sync",
+    "presets": "Presets"
     "area": "Entertainment alanı",
     "areaLoading": "Alanlar yükleniyor…",
     "areaInUse": " (kullanımda)",

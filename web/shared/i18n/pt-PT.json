@@ -4,7 +4,8 @@
   },
   "nav": {
     "lights": "Luzes",
-    "sync": "Sincronização",
+    "sync": "Sync",
+    "presets": "Presets"
     "settings": "Definições"
   },
   "theme": {
@@ -29,7 +30,8 @@
     "bridgeFallbackName": "Ponte Hue",
     "tooOld": "demasiado antiga para Entertainment areas"
   },
-  "sync": {
+  "sync": "Sync",
+    "presets": "Presets"
     "area": "Zona de entretenimento",
     "areaLoading": "A carregar zonas…",
     "areaInUse": " (em uso)",

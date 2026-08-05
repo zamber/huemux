@@ -309,7 +309,10 @@ func (e *Engine) stopLocked(ctx context.Context) {
 	if cancel != nil {
 		cancel()
 		if done != nil {
-			<-done
+			select {
+			case <-done:
+			case <-ctx.Done():
+			}
 		}
 	}
 	if stream != nil {
