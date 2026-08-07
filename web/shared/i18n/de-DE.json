@@ -5,7 +5,7 @@
   "nav": {
     "lights": "Leuchten",
     "sync": "Sync",
-    "presets": "Presets"
+    "presets": "Presets",
     "settings": "Einstellungen"
   },
   "theme": {
@@ -30,8 +30,7 @@
     "bridgeFallbackName": "Hue Bridge",
     "tooOld": "zu alt für Entertainment-Bereiche"
   },
-  "sync": "Sync",
-    "presets": "Presets"
+  "sync": {
     "area": "Entertainment-Bereich",
     "areaLoading": "Lade Bereiche…",
     "areaInUse": " (in Verwendung)",

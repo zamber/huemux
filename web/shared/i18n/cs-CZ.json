@@ -5,7 +5,7 @@
   "nav": {
     "lights": "Světla",
     "sync": "Sync",
-    "presets": "Presets"
+    "presets": "Presets",
     "settings": "Nastavení"
   },
   "theme": {
@@ -30,8 +30,7 @@
     "bridgeFallbackName": "Most Hue",
     "tooOld": "příliš starý pro oblasti Entertainment"
   },
-  "sync": "Sync",
-    "presets": "Presets"
+  "sync": {
     "area": "Oblast Entertainment",
     "areaLoading": "Načítání oblastí…",
     "areaInUse": " (používá se)",

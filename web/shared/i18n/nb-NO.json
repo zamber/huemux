@@ -5,7 +5,7 @@
   "nav": {
     "lights": "Lys",
     "sync": "Sync",
-    "presets": "Presets"
+    "presets": "Presets",
     "settings": "Innstillinger"
   },
   "theme": {
@@ -30,8 +30,7 @@
     "bridgeFallbackName": "Hue-bro",
     "tooOld": "for gammel for underholdningsområder"
   },
-  "sync": "Sync",
-    "presets": "Presets"
+  "sync": {
     "area": "Underholdningsområde",
     "areaLoading": "Laster områder…",
     "areaInUse": " (i bruk)",

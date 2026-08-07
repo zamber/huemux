@@ -5,7 +5,7 @@
   "nav": {
     "lights": "Огни",
     "sync": "Sync",
-    "presets": "Presets"
+    "presets": "Presets",
     "settings": "Параметры"
   },
   "theme": {
@@ -30,8 +30,7 @@
     "bridgeFallbackName": "Мост Hue",
     "tooOld": "слишком старый для Entertainment areas"
   },
-  "sync": "Sync",
-    "presets": "Presets"
+  "sync": {
     "area": "Зона Entertainment",
     "areaLoading": "Загрузка зон…",
     "areaInUse": " (в использовании)",

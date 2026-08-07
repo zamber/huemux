@@ -5,7 +5,7 @@
   "nav": {
     "lights": "लाइटें",
     "sync": "Sync",
-    "presets": "Presets"
+    "presets": "Presets",
     "settings": "सेटिंग्स"
   },
   "theme": {
@@ -30,8 +30,7 @@
     "bridgeFallbackName": "Hue ब्रिज",
     "tooOld": "Entertainment क्षेत्रों के लिए बहुत पुराना"
   },
-  "sync": "Sync",
-    "presets": "Presets"
+  "sync": {
     "area": "Entertainment क्षेत्र",
     "areaLoading": "क्षेत्र लोड किए जा रहे हैं…",
     "areaInUse": " (उपयोग में)",

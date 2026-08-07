@@ -5,7 +5,7 @@
   "nav": {
     "lights": "Valot",
     "sync": "Sync",
-    "presets": "Presets"
+    "presets": "Presets",
     "settings": "Asetukset"
   },
   "theme": {
@@ -30,8 +30,7 @@
     "bridgeFallbackName": "Hue-silta",
     "tooOld": "liian vanha Entertainment-alueiden tukeen"
   },
-  "sync": "Sync",
-    "presets": "Presets"
+  "sync": {
     "area": "Entertainment-alue",
     "areaLoading": "Ladataan alueita…",
     "areaInUse": " (käytössä)",

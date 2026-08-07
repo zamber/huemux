@@ -5,7 +5,7 @@
   "nav": {
     "lights": "Lampu",
     "sync": "Sync",
-    "presets": "Presets"
+    "presets": "Presets",
     "settings": "Pengaturan"
   },
   "theme": {
@@ -30,8 +30,7 @@
     "bridgeFallbackName": "Jembatan Hue",
     "tooOld": "terlalu lama untuk area Entertainment"
   },
-  "sync": "Sync",
-    "presets": "Presets"
+  "sync": {
     "area": "Zona Entertainment",
     "areaLoading": "Memuat zona…",
     "areaInUse": " (sedang digunakan)",

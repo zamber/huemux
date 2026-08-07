@@ -5,7 +5,7 @@
   "nav": {
     "lights": "灯光",
     "sync": "Sync",
-    "presets": "Presets"
+    "presets": "Presets",
     "settings": "设置"
   },
   "theme": {
@@ -30,8 +30,7 @@
     "bridgeFallbackName": "Hue 网桥",
     "tooOld": "太旧不支持 Entertainment 区域"
   },
-  "sync": "Sync",
-    "presets": "Presets"
+  "sync": {
     "area": "Entertainment 区域",
     "areaLoading": "正在加载区域…",
     "areaInUse": " (使用中)",

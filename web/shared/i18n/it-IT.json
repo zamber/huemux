@@ -5,7 +5,7 @@
   "nav": {
     "lights": "Luci",
     "sync": "Sync",
-    "presets": "Presets"
+    "presets": "Presets",
     "settings": "Impostazioni"
   },
   "theme": {
@@ -30,8 +30,7 @@
     "bridgeFallbackName": "Bridge Hue",
     "tooOld": "troppo vecchio per le zone Entertainment"
   },
-  "sync": "Sync",
-    "presets": "Presets"
+  "sync": {
     "area": "Zona Entertainment",
     "areaLoading": "Caricamento zone…",
     "areaInUse": " (in uso)",

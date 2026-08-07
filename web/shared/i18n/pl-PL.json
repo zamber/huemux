@@ -5,7 +5,7 @@
   "nav": {
     "lights": "Światła",
     "sync": "Sync",
-    "presets": "Presets"
+    "presets": "Presets",
     "settings": "Ustawienia"
   },
   "theme": {
@@ -30,8 +30,7 @@
     "bridgeFallbackName": "Mostek Hue",
     "tooOld": "zbyt stary, aby obsługiwać strefy rozrywki"
   },
-  "sync": "Sync",
-    "presets": "Presets"
+  "sync": {
     "area": "Strefa rozrywki",
     "areaLoading": "Wczytywanie stref…",
     "areaInUse": " (w użyciu)",
