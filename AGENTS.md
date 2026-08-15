@@ -11,6 +11,60 @@ The project is licensed under GPL-3.0-or-later (see [LICENSE](LICENSE)).
 Publishing is planned FOSS-first (Obtainium, Flathub, F-Droid),
 none of which needs money or approval. PUBLISHING.md has the order.
 
+## What this is
+
+HueMux is a Philips Hue frontend in one binary: a Go server (loopback, :7654)
+with an embedded web UI, an Electron wrapper (`huemux-desktop`), and an Android
+wrapper (`android/` + the `mobile/` gomobile facade). Two halves, both talking
+to the bridge directly — no cloud:
+
+- **Light control** — every room, light, and scene on the bridge: on/off,
+  brightness, colour, favourites. CLIP v2 REST + the bridge's eventstream
+  (`internal/lightctl`, `internal/hue`).
+- **Screen sync** — the browser captures the screen and sends a reduced grid
+  over the same WebSocket; the server streams it to a Hue Entertainment area
+  over DTLS (`internal/engine`, `internal/hue/stream.go`).
+
+Music reactivity (audio → per-light colour) is a third, newer surface on the
+sync pipeline: `internal/music` (audio-frame transport), `internal/preset`
+(preset DAG engine), `internal/pipeline` (grid→colour chain).
+
+## Repo map
+
+- `cmd/huemux` — main binary: `pair`/`areas`/`test` subcommands + default run.
+- `cmd/huemux-desktop` — Electron wrapper around the same core.
+- `internal/server` — loopback HTTP+WS front end: embedded UI, JSON API
+  (`/api/*`), `/ws`, auth, profiles. Talks to `lightctl`, never `hue` directly.
+- `internal/lightctl` — light control: CLIP v2 REST + eventstream →
+  `light_event` broadcasts.
+- `internal/hue` — CLIP v2 client: discovery, REST, eventstream, DTLS stream.
+- `internal/engine` — screen-sync runtime: zone mapping, pipeline, output loop.
+- `internal/pipeline` — reduced grid → per-light colour: sampling, smoothing,
+  gamut mapping, encoding.
+- `internal/music` — inbound audio-frame wire format (browser does the analysis).
+- `internal/preset` — music-reactivity preset catalog + DAG runner.
+- `internal/config` — bridge credentials + feature data (favourites). Runtime-mutable.
+- `internal/appconfig` — application config: defaults→file→flags, profiles, auth.
+- `internal/ui`, `internal/debuglog` — terminal UI; in-memory log for
+  `/api/diagnostics`.
+- `web/` — embedded frontend: `app.html` shell + iframe pages + `shared/`.
+- `mobile/`, `android/` — gomobile facade and Android wrapper.
+- `assets.go` — the `//go:embed web` that bakes the frontend into the binary.
+- `plans/` — designs for unstarted work; `docs/` — feature deep-dives
+  (e.g. `MUSIC-REACTIVITY.md`).
+
+## Running it
+
+```bash
+make dev && ./huemux
+```
+
+Builds `./huemux` (frontend embedded at build time) and runs it. Open the URL
+it prints (default http://localhost:7654). First run needs a bridge: the page
+drives pairing, or `./huemux pair`. `--profile=lights|sync|full` selects which
+halves exist. The embedded-assets warning below applies to every `web/` edit:
+rebuild, or you are testing a stale binary.
+
 ## Commands
 
 ```bash

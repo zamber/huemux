@@ -29,6 +29,52 @@ intake, the output clock). `internal/lightctl` owns day-to-day light control
 bridge credentials, which is what makes `--profile=lights` able to drop the
 engine entirely.
 
+## Key systems
+
+- **`internal/server`** — the loopback HTTP + WebSocket front end. Serves the
+  embedded UI (`//go:embed web` in `assets.go`), a small JSON API
+  (`/api/lights`, `/api/rooms`, `/api/scenes`, `/api/favorites`,
+  `/api/config`, `/api/diagnostics`, `/api/presets`…), and `/ws`. UI and
+  capture pipeline share that one socket: JSON control messages
+  (`light_toggle`, `scene_recall`, `resync_lights`…) go through
+  `handleControlMessage`; the capture pipeline sends binary frames (0x01
+  reduced grid, 0x02 audio). The server also owns auth/origin checks, the 1 Hz
+  status push, and the `lights_snapshot` full-state push on (re)connect.
+- **`internal/hue`** — the CLIP v2 client: bridge discovery, REST calls, the
+  eventstream (SSE) subscription, and the DTLS Entertainment stream
+  (`stream.go`, UDP :2100). The eventstream is fire-and-forget with no replay —
+  the reason reconnect/foreground resync exists.
+- **`internal/lightctl`** — the light-control service layer over `hue`. It
+  translates eventstream JSON into `lightctl.LightEvent`s for the broadcast and
+  exposes `Snapshot()` for full-state resync. `server` talks to this, never to
+  `hue` directly.
+- **`internal/engine`** — the screen-sync runtime. Owns the output loop: it
+  consumes the grid and audio frames the browser sends, runs them through
+  `internal/pipeline` (sampling → smoothing → gamut → encoding) and
+  `internal/preset` (music presets), and writes per-light values to the bridge
+  over the DTLS stream. Nil under `--profile=lights`.
+- **`internal/pipeline`** — stateless transforms: reduced `Grid` → per-channel
+  colour values. Shared by screen sync and music reactivity.
+- **`internal/music` + `internal/preset`** — the music-reactivity path. The
+  browser does the audio analysis with the Web Audio API and sends small
+  feature frames (32 bands, 0x02); `preset` runs a JSON DAG of primitives whose
+  outputs feed the same per-light bus the sync pipeline uses.
+- **`internal/config` vs `internal/appconfig`** — `config` owns bridge
+  credentials and feature data (favourites); `config.SaveBridge` fsyncs the
+  one-time clientkey. `appconfig` owns application configuration
+  (defaults → file → flags, profiles, auth tokens). Kept separate so runtime
+  settings never share the credential write path.
+- **`web/`** — the embedded frontend. `app.html` is the shell; the tab pages
+  (`lights.html`, `sync.html`, `settings.html`…) live in iframes, each opening
+  its own `/ws`. `shared/` holds the cross-page pieces (theme, i18n, dropdowns,
+  auth, slider-touch, header).
+- **`mobile/` + `android/`** — the gomobile facade and Android wrapper: a
+  WebView around the same embedded UI, pointed at the loopback server.
+
+The wire protocol for all of the above — every JSON message type, the binary
+frame types, and the state pushes — is specified in PROTOCOL.md; the
+build/test loop is in AGENTS.md.
+
 ## What happens when you tap a light
 
 1. `lights.js` delegates the click from `#lights-grid`, reads `data-action`,
