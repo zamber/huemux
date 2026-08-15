@@ -185,6 +185,31 @@ func (s *Service) ListRooms(ctx context.Context) ([]Room, error) {
 	return out, nil
 }
 
+// Snapshot is the full light+room state fetched fresh from the bridge. It is
+// what a client asks for (or the server pushes) when it may have missed the
+// eventstream while it was away — the backgrounded-app resync, where the
+// server cannot replay missed events (the bridge's eventstream has no
+// history), so it reads the current truth from the REST API instead.
+type Snapshot struct {
+	Lights []Light `json:"lights"`
+	Rooms  []Room  `json:"rooms"`
+}
+
+// Snapshot fetches the current light and room state. It goes straight to the
+// bridge for every value, so a client that resynced here has the same truth
+// as a fresh page load, independent of what the eventstream may have missed.
+func (s *Service) Snapshot(ctx context.Context) (*Snapshot, error) {
+	lights, err := s.ListLights(ctx)
+	if err != nil {
+		return nil, err
+	}
+	rooms, err := s.ListRooms(ctx)
+	if err != nil {
+		return nil, err
+	}
+	return &Snapshot{Lights: lights, Rooms: rooms}, nil
+}
+
 // ListScenes fetches every scene, with color-swatch previews and the
 // dynamic-scene indicator.
 func (s *Service) ListScenes(ctx context.Context) ([]Scene, error) {

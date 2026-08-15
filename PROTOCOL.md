@@ -296,7 +296,16 @@ approach lights-ui uses, connecting directly to the bridge's own
 {"type": "room_toggle",      "rid": "<grouped_light id>", "on": true}
 {"type": "room_brightness",  "rid": "<grouped_light id>", "brightness": 42}
 {"type": "scene_recall",     "rid": "<scene id>"}
+{"type": "resync_lights"}
 ```
+
+`resync_lights` is the foreground handshake: sent by the Lights page when it
+becomes visible again (Android backgrounding the app does not drop the WS, it
+just stops the eventstream deltas from arriving — see the `lights_snapshot`
+state push below). The server answers by fetching the full light+room state
+fresh from the bridge and pushing it to the requesting client. The server also
+pushes a `lights_snapshot` on every new WS connection, so the case where the
+socket *did* drop is covered without the client having to ask.
 
 `light_color`'s `rid` always addresses an individual light — CLIP v2 has no
 room/zone-level color PUT. `r`/`g`/`b` (0-255) are converted to CIE xy
@@ -339,3 +348,23 @@ sent the toggle, so multiple open windows stay in sync):
 ```json
 {"type": "favorite_event", "id": "<light id or room:<room id>>", "favorite": true}
 ```
+
+The eventstream is fire-and-forget: it has no replay, so a client that was
+backgrounded (or whose WS dropped and reconnected) cannot catch up on the
+deltas it missed. To cover that, the server pushes the full current light+room
+state — `lights` and `rooms` in the same shapes `/api/lights` and `/api/rooms`
+return — to a client when it connects and again when it asks (`resync_lights`):
+
+```json
+{
+  "type": "lights_snapshot",
+  "lights": [ { "id": "...", "name": "Lamp", "on": true, "brightness": 80, "colorable": true, "x": 0.45, "y": 0.41, "favorite": false, "room_id": "...", "room_name": "Living" } ],
+  "rooms": [ { "id": "...", "name": "Living", "on": true, "brightness": 70, "grouped_light_id": "...", "favorite": false, "zones": [] } ]
+}
+```
+
+`lights_snapshot` is pushed only to the requesting/connecting client (not
+broadcast): the other tabs already hold the same data, and the fresh bridge
+read is the expensive part. The Lights page treats it as authoritative and
+replaces its in-memory arrays wholesale, which is also what the offline cache
+(`lightsCache.v1`) is written from.

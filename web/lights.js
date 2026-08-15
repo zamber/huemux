@@ -179,6 +179,21 @@ function handleMessage(msg) {
     case 'light_event':
       mergeLightEvent(msg.event);
       break;
+    case 'lights_snapshot':
+      // Full-state resync pushed on connect (the server informs a
+      // reconnecting client of the current truth) and in answer to the
+      // resync_lights handshake sent when the page comes back to the
+      // foreground. The eventstream only carries *future* deltas, so a
+      // backgrounded app that missed events while it was away is otherwise
+      // stuck on stale state until the next light change happens to arrive.
+      lights = Array.isArray(msg.lights) ? msg.lights : [];
+      rooms = Array.isArray(msg.rooms) ? msg.rooms : [];
+      loaded = true;
+      renderFilterMenu();
+      renderGrid();
+      renderZoneScenes();
+      saveCache();
+      break;
     case 'favorite_event':
       mergeFavorite(msg.id, msg.favorite);
       break;
@@ -1209,4 +1224,23 @@ HueMuxI18n.init().then(() => {
   renderFilterMenu();
   renderGrid();
 });
+
+// ---------- foreground resync ----------
+//
+// Android backgrounds the app without tearing the WS down (the WebView's
+// timers get throttled, the socket usually stays up), so lights changed
+// elsewhere while the app was away never arrive as light_events — and the
+// eventstream only carries *future* deltas, so there is nothing to replay.
+// When the page becomes visible again, ask the server for a fresh full-state
+// snapshot. The server also pushes one on connect, so the case where the WS
+// really did drop is covered by the reconnect path; this handshake covers the
+// far more common case where it didn't. The server reads lights+rooms fresh
+// from the bridge, so the resync is a hard re-sync, not "whatever the
+// server cached."
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState === 'visible' && wsReady) {
+    send({ type: 'resync_lights' });
+  }
+});
+
 connect();

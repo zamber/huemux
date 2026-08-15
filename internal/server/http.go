@@ -388,6 +388,49 @@ type lightEventWire struct {
 	Event lightctl.LightEvent `json:"event"`
 }
 
+// lightsSnapshotWire is the full light+room state pushed to a client that
+// just connected or explicitly asked for a resync — the "catch up on anything
+// the eventstream delivered while you were away" payload. Without it a
+// reconnecting client is stuck with whatever it last fetched until the *next*
+// light change happens to arrive as a light_event.
+//
+// The bridge's eventstream has no replay/history, so the server cannot
+// reconstruct what the client missed; it reads the current truth fresh from
+// the REST API instead. lights+rooms cover everything the panel renders from
+// live bridge state — per-light and grouped_light (aggregate) on/off/
+// brightness/color alike.
+type lightsSnapshotWire struct {
+	Type   string           `json:"type"`
+	Lights []lightctl.Light `json:"lights"`
+	Rooms  []lightctl.Room  `json:"rooms"`
+}
+
+// pushLightsSnapshot fetches the current light+room state fresh from the
+// bridge and sends it to one client. Runs in its own goroutine because the
+// bridge round-trips take network time; a write to a conn that closed
+// meanwhile is simply dropped (WriteMessage errors, and the goroutine ends).
+// Gated on the Lights tab existing — under a sync-only profile the lightctl
+// service exists solely to answer /api/scenes for the sync page, and pushing
+// light state to that page is pure waste.
+func (s *Server) pushLightsSnapshot(conn *Conn) {
+	lights := s.lights()
+	if lights == nil || !s.Config().ShowsLightsTab() {
+		return
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+	snap, err := lights.Snapshot(ctx)
+	if err != nil {
+		log.Printf("huemux: lights_snapshot: %v", err)
+		return
+	}
+	raw, err := json.Marshal(lightsSnapshotWire{Type: "lights_snapshot", Lights: snap.Lights, Rooms: snap.Rooms})
+	if err != nil {
+		return
+	}
+	_ = conn.WriteMessage(opText, raw)
+}
+
 // favoriteEventWire is pushed after a light_favorite toggle — ToggleFavorite
 // has no eventstream counterpart (favorites are local state, not a bridge
 // resource), so without this the requesting tab has no way to learn the new
@@ -779,6 +822,14 @@ func (s *Server) handleWS(w http.ResponseWriter, r *http.Request) {
 	debugDone := make(chan struct{})
 	go s.pushStatusLoop(conn, statusDone)
 	go s.pushDebugLoop(conn, debugDone)
+
+	// Inform a (re)connecting client of the current light+room state. A
+	// connection that was dropped while the app was backgrounded comes back
+	// with a stale in-memory grid — the bridge's eventstream can't replay what
+	// it missed, so the server pushes the current truth fresh on connect. The
+	// frontend's foreground handshake (resync_lights) covers the case where
+	// the WS never actually dropped; this covers the one where it did.
+	go s.pushLightsSnapshot(conn)
 
 	defer func() {
 		close(statusDone)
@@ -1211,6 +1262,15 @@ func (s *Server) handleControlMessage(conn *Conn, payload []byte) {
 			if err := lights.RecallScene(ctx, msg.RID); err != nil {
 				log.Printf("huemux: scene_recall %s: %v", msg.RID, err)
 			}
+			return
+		case "resync_lights":
+			// Foreground handshake / post-reconnect catch-up: fetch the full
+			// light+room state fresh from the bridge and push it to this
+			// client. The eventstream cannot replay what the client missed
+			// while it was backgrounded, so a resync is a fresh REST read,
+			// not a replay. Async: the bridge round-trips would stall the
+			// connection's read loop.
+			go s.pushLightsSnapshot(conn)
 			return
 		}
 	}
