@@ -143,7 +143,8 @@
     "entertainmentScenes": "Entertainment 에리어 장면",
     "sceneDynamic": "동적",
     "empty": "이 브리지에서 조명을 찾을 수 없습니다.",
-    "stopStreaming": "스트리밍 중지"
+    "stopStreaming": "스트리밍 중지",
+    "closeColorPicker": "색상 선택기 닫기"
   },
   "music": {
     "heading": "음악 반응",

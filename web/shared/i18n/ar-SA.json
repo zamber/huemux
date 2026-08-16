@@ -143,7 +143,8 @@
     "entertainmentScenes": "مشاهد مناطق Entertainment",
     "sceneDynamic": "ديناميكي",
     "empty": "لم يتم العثور على أضواء على هذا الجسر.",
-    "stopStreaming": "إيقاف البث"
+    "stopStreaming": "إيقاف البث",
+    "closeColorPicker": "إغلاق منتقي الألوان"
   },
   "music": {
     "heading": "استجابة للموسيقى",

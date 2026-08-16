@@ -143,7 +143,8 @@
     "entertainmentScenes": "Entertainment 區域場景",
     "sceneDynamic": "動態",
     "empty": "在此橋接器上找不到任何燈光。",
-    "stopStreaming": "停止串流"
+    "stopStreaming": "停止串流",
+    "closeColorPicker": "關閉顏色選擇器"
   },
   "music": {
     "heading": "音樂反應",

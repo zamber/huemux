@@ -143,7 +143,8 @@
     "entertainmentScenes": "Scene zone Entertainment",
     "sceneDynamic": "Dinamica",
     "empty": "Nessuna luce trovata su questo bridge.",
-    "stopStreaming": "Arresta trasmissione"
+    "stopStreaming": "Arresta trasmissione",
+    "closeColorPicker": "Chiudi selettore colore"
   },
   "music": {
     "heading": "Reattività musicale",

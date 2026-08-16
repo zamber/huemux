@@ -143,7 +143,8 @@
     "entertainmentScenes": "Entertainment क्षेत्र दृश्य",
     "sceneDynamic": "गतिशील",
     "empty": "इस ब्रिज पर कोई लाइट नहीं मिली।",
-    "stopStreaming": "स्ट्रीमिंग बंद करें"
+    "stopStreaming": "स्ट्रीमिंग बंद करें",
+    "closeColorPicker": "रंग चयनकर्ता बंद करें"
   },
   "music": {
     "heading": "संगीत प्रतिक्रिया",

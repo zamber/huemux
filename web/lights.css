@@ -180,8 +180,36 @@ body { margin: 0; }
   background: #000;
   touch-action: none;
 }
-.color-picker-head { padding: 1.1rem; text-align: center; background: rgba(0,0,0,0.8); }
+.color-picker-head {
+  position: relative;
+  padding: 1.1rem;
+  text-align: center;
+  background: rgba(0,0,0,0.8);
+  /* Excluded from the overlay's touch-action:none so the Android back swipe
+     still works when it starts on the header — see onDown in lights.js. */
+  touch-action: auto;
+}
 .color-picker-head h2 { margin: 0; color: #fff; font-size: 1.15rem; font-weight: 600; }
+.color-picker-close {
+  position: absolute;
+  left: 0.6rem;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 44px;
+  height: 44px;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  color: #fff;
+  border: 0;
+  border-radius: 8px;
+  font-size: 1.4rem;
+  line-height: 1;
+  cursor: pointer;
+}
+.color-picker-close:active { transform: translateY(-50%) scale(0.94); }
 /* min-height:0 so the canvas can actually shrink inside the column flex
    container — without it a flex item refuses to go below its content size and
    the footer gets pushed off a short screen. */

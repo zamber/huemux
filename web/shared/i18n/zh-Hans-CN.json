@@ -143,7 +143,8 @@
     "entertainmentScenes": "Entertainment 区域场景",
     "sceneDynamic": "动态",
     "empty": "在此网桥上未找到灯光。",
-    "stopStreaming": "停止流式传输"
+    "stopStreaming": "停止流式传输",
+    "closeColorPicker": "关闭颜色选择器"
   },
   "music": {
     "heading": "音乐响应",

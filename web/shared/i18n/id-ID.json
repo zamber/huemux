@@ -143,7 +143,8 @@
     "entertainmentScenes": "Adegan zona Entertainment",
     "sceneDynamic": "Dinamis",
     "empty": "Tidak ada lampu yang ditemukan di jembatan ini.",
-    "stopStreaming": "Hentikan streaming"
+    "stopStreaming": "Hentikan streaming",
+    "closeColorPicker": "Tutup pemilih warna"
   },
   "music": {
     "heading": "Reaktivitas musik",

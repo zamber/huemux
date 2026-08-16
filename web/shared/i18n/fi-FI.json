@@ -143,7 +143,8 @@
     "entertainmentScenes": "Entertainment-alueiden kohtaukset",
     "sceneDynamic": "Dynaaminen",
     "empty": "Tällä sillalla ei löytynyt valoja.",
-    "stopStreaming": "Pysäytä virtaus"
+    "stopStreaming": "Pysäytä virtaus",
+    "closeColorPicker": "Sulje värinvalitsin"
   },
   "music": {
     "heading": "Musiikkireaktiivisuus",

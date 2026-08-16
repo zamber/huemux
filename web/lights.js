@@ -872,17 +872,120 @@ function actionColorAll(r, g, b) {
 // id is either a light id, the sentinel "__all__", or "room:<grouped_light_id>"
 // (the room tile's slider — prefixed since, unlike a light id, it isn't
 // self-describing on its own).
+//
+// Brightness transitions follow an intentionally odd rule set (the user is
+// still experimenting with this UX):
+//   - dragging from 0 (or off) to a positive value turns the light ON — a
+//     bare light_brightness only dims, so a physically-off bulb silently
+//     stayed dark while the UI claimed it was on;
+//   - dragging from a positive value to 0 dims to the floor but stays ON;
+//   - a repeat 0 → 0 touch (the light is already at the floor, or off) is an
+//     explicit turn-OFF.
+// The "previous" value is what the user last committed via a slider
+// (lastBrightnessPct), falling back to the live model on first touch, so the
+// turn-off rule survives the bridge reporting the dimming floor as 1 rather
+// than 0.
+const lastBrightnessPct = {};
+const brightnessGestures = {};
+
+// A light that is on at the dimming floor reads as 0 for the 0→0 turn-off
+// rule even when the bridge reports the clamped minimum as 1.
+function lightUserPrev(l) {
+  if (!l) return 0;
+  const model = l.on ? l.brightness : 0;
+  if (lastBrightnessPct.hasOwnProperty(l.id) && lastBrightnessPct[l.id] === 0 && model <= 1) return 0;
+  return model;
+}
+
+function roomUserPrev(room) {
+  if (!room) return 0;
+  const model = room.on ? room.brightness : 0;
+  const key = 'room:' + room.grouped_light_id;
+  if (lastBrightnessPct.hasOwnProperty(key) && lastBrightnessPct[key] === 0 && model <= 1) return 0;
+  return model;
+}
+
+// Pre-gesture state for a slider id. For "__all__" this is a per-light map;
+// for a light or a room it is a single number.
+function userPrevFor(id) {
+  if (id === '__all__') {
+    const prevs = {};
+    for (const l of lights) {
+      if (l.dimmable) prevs[l.id] = lightUserPrev(l);
+    }
+    return prevs;
+  }
+  if (id.indexOf('room:') === 0) {
+    return roomUserPrev(rooms.find((r) => r.grouped_light_id === id.slice(5)));
+  }
+  return lightUserPrev(lights.find((x) => x.id === id));
+}
+
+function brightnessTransition(prev, pct) {
+  if (pct > 0 && prev <= 0) return 'on';
+  if (pct === 0 && prev > 0) return 'dim';
+  if (pct === 0 && prev <= 0) return 'off';
+  return 'set';
+}
+
 function scheduleBrightness(id, pct) {
+  // Capture the pre-gesture state on the first input event of a drag. The
+  // optimistic updates below mutate the model immediately, so a transition
+  // computed later would see the state mid-gesture rather than where the
+  // user actually started from.
+  if (!brightnessGestures.hasOwnProperty(id)) {
+    brightnessGestures[id] = userPrevFor(id);
+  }
   editingIds.add(id);
   clearTimeout(brightnessTimers[id]);
   brightnessTimers[id] = setTimeout(() => {
+    const prev = brightnessGestures[id];
+    delete brightnessGestures[id];
+    lastBrightnessPct[id] = pct;
+
     if (id === '__all__') {
-      lights.filter((l) => l.dimmable).forEach((l) => send({ type: 'light_brightness', rid: l.id, brightness: pct }));
+      for (const l of lights) {
+        if (!l.dimmable) continue;
+        const p = prev && prev.hasOwnProperty(l.id) ? prev[l.id] : (l.on ? l.brightness : 0);
+        const t = brightnessTransition(p, pct);
+        if (t === 'on') {
+          send({ type: 'light_toggle', rid: l.id, on: true });
+          send({ type: 'light_brightness', rid: l.id, brightness: pct });
+        } else if (t === 'off') {
+          send({ type: 'light_toggle', rid: l.id, on: false });
+        } else if (t === 'dim') {
+          send({ type: 'light_brightness', rid: l.id, brightness: 0 });
+        } else {
+          send({ type: 'light_brightness', rid: l.id, brightness: pct });
+        }
+      }
     } else if (id.indexOf('room:') === 0) {
-      send({ type: 'room_brightness', rid: id.slice(5), brightness: pct });
+      const rid = id.slice(5);
+      const t = brightnessTransition(prev, pct);
+      if (t === 'on') {
+        send({ type: 'room_toggle', rid, on: true });
+        send({ type: 'room_brightness', rid, brightness: pct });
+      } else if (t === 'off') {
+        send({ type: 'room_toggle', rid, on: false });
+      } else if (t === 'dim') {
+        send({ type: 'room_brightness', rid, brightness: 0 });
+      } else {
+        send({ type: 'room_brightness', rid, brightness: pct });
+      }
     } else {
-      send({ type: 'light_brightness', rid: id, brightness: pct });
+      const t = brightnessTransition(prev, pct);
+      if (t === 'on') {
+        send({ type: 'light_toggle', rid: id, on: true });
+        send({ type: 'light_brightness', rid: id, brightness: pct });
+      } else if (t === 'off') {
+        send({ type: 'light_toggle', rid: id, on: false });
+      } else if (t === 'dim') {
+        send({ type: 'light_brightness', rid: id, brightness: 0 });
+      } else {
+        send({ type: 'light_brightness', rid: id, brightness: pct });
+      }
     }
+
     setTimeout(() => {
       editingIds.delete(id);
       renderGrid();
@@ -892,15 +995,38 @@ function scheduleBrightness(id, pct) {
   // Optimistic local update (no re-render — keeps the slider under the
   // user's finger instead of getting replaced mid-drag).
   if (id === '__all__') {
-    lights.filter((l) => l.dimmable).forEach((l) => { l.brightness = pct; l.on = pct > 0; });
+    const prevs = brightnessGestures[id] || {};
+    for (const l of lights) {
+      if (!l.dimmable) continue;
+      const p = prevs.hasOwnProperty(l.id) ? prevs[l.id] : (l.on ? l.brightness : 0);
+      const t = brightnessTransition(p, pct);
+      l.brightness = pct;
+      l.on = t !== 'off';
+    }
   } else if (id.indexOf('room:') === 0) {
-    const room = rooms.find((r) => r.grouped_light_id === id.slice(5));
+    // Room sliders carry "room:<grouped_light_id>", so find the room by its
+    // grouped_light_id, then update that room's lights by room.id (the two
+    // are different resources on the bridge — see Room in lightctl/service.go).
+    const roomId = id.slice(5);
+    const room = rooms.find((r) => r.grouped_light_id === roomId);
+    const t = brightnessTransition(brightnessGestures[id], pct);
     if (room) {
-      lights.filter((l) => l.room_id === room.id && l.dimmable).forEach((l) => { l.brightness = pct; l.on = pct > 0; });
+      room.brightness = pct;
+      room.on = t !== 'off';
+      for (const l of lights) {
+        if (l.room_id === room.id && l.dimmable) {
+          l.brightness = pct;
+          l.on = t !== 'off';
+        }
+      }
     }
   } else {
     const l = lights.find((x) => x.id === id);
-    if (l) { l.brightness = pct; l.on = pct > 0; }
+    if (l) {
+      const t = brightnessTransition(brightnessGestures[id], pct);
+      l.brightness = pct;
+      l.on = t !== 'off';
+    }
   }
 }
 
@@ -921,7 +1047,14 @@ function openColorPicker(targetId) {
   }
   overlay.setAttribute('aria-label', HueMuxI18n.t('lights.colorPickerTitle', { name }));
   overlay.innerHTML =
-    `<div class="color-picker-head"><h2>${escapeHtml(name)}</h2></div>` +
+    // The close button is top-left, and the whole overlay hijacks pointer
+    // events to pick colors — so the header has to be excluded from that
+    // (see onDown) or the button would be unusable and the Android back
+    // gesture, which also swipes from the left edge, would pick a colour.
+    `<div class="color-picker-head">` +
+      `<button type="button" class="color-picker-close" aria-label="${escapeHtml(HueMuxI18n.t('lights.closeColorPicker'))}">✕</button>` +
+      `<h2>${escapeHtml(name)}</h2>` +
+    `</div>` +
     `<canvas class="color-picker-canvas"></canvas>` +
     `<div class="color-picker-foot"><div class="color-picker-swatch"></div><span class="color-picker-readout"></span></div>`;
   document.body.appendChild(overlay);
@@ -930,6 +1063,7 @@ function openColorPicker(targetId) {
   const ctx = canvas.getContext('2d');
   const swatch = overlay.querySelector('.color-picker-swatch');
   const readout = overlay.querySelector('.color-picker-readout');
+  const closeBtn = overlay.querySelector('.color-picker-close');
 
   let hue = 0;
   let sat = 0;
@@ -1012,7 +1146,15 @@ function openColorPicker(targetId) {
     cursorEl.hidden = false;
   }
 
-  function onDown(e) { active = true; pick(e); }
+  function onDown(e) {
+    // The header (and its close button) must never start a colour pick: the
+    // whole overlay captures pointerdown to drive the canvas, but this area is
+    // where the close button lives and where Android's back swipe is expected
+    // to work. Pointerdown on it just does nothing.
+    if (e.target.closest('.color-picker-head')) return;
+    active = true;
+    pick(e);
+  }
   function onMove(e) { if (!active) return; e.preventDefault(); pick(e); }
   function onUp(e) {
     if (!active) return;
@@ -1029,6 +1171,11 @@ function openColorPicker(targetId) {
     window.removeEventListener('resize', resize);
     overlay.remove();
   }
+
+  if (closeBtn) closeBtn.addEventListener('click', (e) => {
+    e.stopPropagation();
+    closePicker();
+  });
 
   overlay.addEventListener('pointerdown', onDown);
   document.addEventListener('pointermove', onMove);

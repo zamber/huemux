@@ -143,7 +143,8 @@
     "entertainmentScenes": "Entertainment-Bereich-Szenen",
     "sceneDynamic": "Dynamisch",
     "empty": "Keine Leuchten auf dieser Bridge gefunden.",
-    "stopStreaming": "Streaming stoppen"
+    "stopStreaming": "Streaming stoppen",
+    "closeColorPicker": "Farbwähler schließen"
   },
   "music": {
     "heading": "Musik-Reaktivität",
