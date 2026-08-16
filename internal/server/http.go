@@ -221,7 +221,7 @@ func (s *Server) broadcastConfigChanged() {
 		Sync:    cfg.ShowsSyncTab(),
 		Auth: configAuthWire{
 			Mode:     string(cfg.Auth.Mode),
-			HasToken: cfg.Auth.Token != "",
+			HasToken: strings.TrimSpace(cfg.Auth.Token) != "",
 		},
 		Listen: configListenWire{
 			Host: displayHost(cfg.Listen.Host),

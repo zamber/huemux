@@ -80,7 +80,9 @@ func TestValidate(t *testing.T) {
 		{"hostname host", func(c *Config) { c.Listen.Host = "lights.example" }, ""},
 		{"unknown auth", func(c *Config) { c.Auth.Mode = "password" }, "unknown auth mode"},
 		{"token mode without token", func(c *Config) { c.Auth.Mode = AuthToken }, "no token is set"},
+		{"token mode with whitespace-only token", func(c *Config) { c.Auth.Mode = AuthToken; c.Auth.Token = "   " }, "no token is set"},
 		{"token mode with token", func(c *Config) { c.Auth.Mode = AuthToken; c.Auth.Token = "a.b.c" }, ""},
+		{"token mode with padded token", func(c *Config) { c.Auth.Mode = AuthToken; c.Auth.Token = "  a.b.c  " }, ""},
 		{"unknown tls", func(c *Config) { c.TLS.Mode = "acme" }, "unknown tls mode"},
 		{"tls files without paths", func(c *Config) { c.TLS.Mode = TLSFiles }, "cert_file and/or key_file is empty"},
 		{"tls files with paths", func(c *Config) {

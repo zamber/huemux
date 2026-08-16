@@ -200,7 +200,10 @@ func (c Config) Validate() error {
 	default:
 		return fmt.Errorf("unknown auth mode %q (want %q or %q)", c.Auth.Mode, AuthNone, AuthToken)
 	}
-	if c.Auth.Mode == AuthToken && c.Auth.Token == "" {
+	// TrimSpace, not just == "": a whitespace-only token passes an empty check
+	// and yet locks everyone out with a "password" that is invisible to type —
+	// the classic self-inflicted lockout the UI's lock button exists to avoid.
+	if c.Auth.Mode == AuthToken && strings.TrimSpace(c.Auth.Token) == "" {
 		return fmt.Errorf("auth mode is %q but no token is set", AuthToken)
 	}
 

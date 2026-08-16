@@ -5,6 +5,7 @@ import (
 	"net"
 	"net/http"
 	"strconv"
+	"strings"
 
 	"github.com/zamber/huemux/internal/appconfig"
 	"github.com/zamber/huemux/internal/config"
@@ -78,7 +79,7 @@ func (s *Server) writeConfig(w http.ResponseWriter, r *http.Request) {
 	out.Listen.Host = displayHost(cfg.Listen.Host)
 	out.Listen.Port = listenPort(s.Addr)
 	out.Auth.Mode = string(cfg.Auth.Mode)
-	out.Auth.HasToken = cfg.Auth.Token != ""
+	out.Auth.HasToken = strings.TrimSpace(cfg.Auth.Token) != ""
 	out.TLS.Mode = string(cfg.TLS.Mode)
 	out.Editable = isLoopbackRequest(r)
 	out.ShareControl = isWildcardHost(cfg.Listen.Host)
@@ -114,6 +115,10 @@ func (s *Server) patchConfig(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "invalid JSON: "+err.Error(), http.StatusBadRequest)
 		return
 	}
+	// A token with surrounding whitespace is almost never the intended
+	// credential — it is a paste artifact that silently locks everyone out.
+	// Normalize on write so a saved token is exactly what will be asked for.
+	updated.Auth.Token = strings.TrimSpace(updated.Auth.Token)
 	if err := updated.Validate(); err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
