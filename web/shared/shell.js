@@ -16,11 +16,32 @@ window.HueMuxShell = (() => {
     if (el) frames[tab] = el;
   }
 
-  // Whichever frame exists, preferring sync to match the historical default.
-  let active = frames.sync ? 'sync' : (frames.lights ? 'lights' : (frames.settings ? 'settings' : (frames.presets ? 'presets' : null)));
+  // Whichever frame exists, preferring lights to match the new default: light
+  // control is the day-to-day screen, screen sync the less frequent one. A
+  // profile that disabled the Lights tab falls through to whatever remains.
+  let active = frames.lights ? 'lights' : (frames.sync ? 'sync' : (frames.settings ? 'settings' : (frames.presets ? 'presets' : null)));
 
   const NAV_KEY = { lights: 'nav.lights', sync: 'nav.sync', settings: 'nav.settings', presets: 'nav.presets' };
   const PATH = { lights: '/lights.html', sync: '/sync.html', settings: '/settings.html', presets: '/node-editor.html' };
+
+  // Last tab the user had open. The shell switches tabs by toggling iframe
+  // visibility (not navigating), so the address bar does not reliably
+  // remember where the user was: a fresh WebView launch opens /app.html with
+  // no tab in the URL. Without this the app always reopened on the same screen.
+  const LAST_KEY = 'huemux.lastTab';
+
+  function lastTab() {
+    try {
+      const t = localStorage.getItem(LAST_KEY);
+      return t && frames[t] ? t : null;
+    } catch (_) {
+      return null;
+    }
+  }
+
+  function rememberTab(tab) {
+    try { localStorage.setItem(LAST_KEY, tab); } catch (_) {}
+  }
 
   function titleFor(tab) {
     return 'HueMux — ' + HueMuxI18n.t(NAV_KEY[tab] || NAV_KEY.sync);
@@ -37,6 +58,7 @@ window.HueMuxShell = (() => {
       history.replaceState(null, '', PATH[tab] || PATH.sync);
     }
     document.title = titleFor(tab);
+    rememberTab(tab);
   }
 
   document.addEventListener('huemux:langchange', () => { document.title = titleFor(active); });
@@ -54,19 +76,23 @@ window.HueMuxShell = (() => {
   // The hash is checked before the path because that is how
   // shared/standalone-redirect.js hands over the tab when a page is loaded
   // directly: it can only navigate to /app.html, so the tab travels out-of-path.
+  // Returns null when neither names a tab, so the caller can fall back to the
+  // remembered tab rather than always defaulting to sync.
   function tabFromLocation() {
     const from = location.hash ? location.hash.slice(1) : location.pathname;
     if (from.indexOf('lights') !== -1) return 'lights';
     if (from.indexOf('settings') !== -1) return 'settings';
     if (from.indexOf('presets') !== -1 || from.indexOf('node-editor') !== -1) return 'presets';
-    return 'sync';
+    if (from.indexOf('sync') !== -1) return 'sync';
+    return null;
   }
 
   // Honour the URL only if that tab exists in this build; otherwise fall back
-  // to whatever single frame there is. A lights-only deployment opened at
+  // to the last tab the user had open (also only if it exists), then to
+  // whatever single frame there is. A lights-only deployment opened at
   // /sync.html used to land on a frame that does not exist and show nothing.
   const wanted = tabFromLocation();
-  const initial = frames[wanted] ? wanted : active;
+  const initial = frames[wanted] ? wanted : (lastTab() || active);
   if (initial) {
     frames[initial].classList.add('active');
     active = initial;
