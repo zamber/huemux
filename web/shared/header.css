@@ -38,7 +38,15 @@ huemux-header { display: block; }
 .ls-nav a:hover { background: var(--card-hover); color: var(--ink); }
 .ls-nav a.active { background: var(--card); color: var(--ink); border: 1px solid var(--border); }
 
-.ls-header-actions { display: flex; gap: 0.4rem; }
+.ls-header-actions {
+  display: flex;
+  gap: 0.4rem;
+  /* Right-aligns the lock/theme/effects buttons. On desktop .ls-nav's flex:1
+     already pushes them over, but on mobile the nav leaves the flex row (it
+     becomes a fixed bottom bar), so without this the buttons sit directly next
+     to the brand instead of against the right edge. */
+  margin-left: auto;
+}
 
 .ls-icon-btn {
   width: 44px;

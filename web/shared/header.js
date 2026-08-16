@@ -104,7 +104,13 @@ class HueMuxHeader extends HTMLElement {
   _updateLogout() {
     if (!this._logoutBtn) return;
     var auth = (typeof HueMuxFeatures !== 'undefined' && HueMuxFeatures.current().auth) || {};
-    this._logoutBtn.hidden = !(auth.has_token && auth.mode === 'token');
+    // Only offer "log out" when there is actually a password to be asked for
+    // again. has_token is the server saying a credential is configured; a
+    // stored token on this device says the user is actually logged in.
+    // Requiring both means the button never appears when locking ourselves
+    // out would lead nowhere — e.g. an auth config whose token is blank.
+    var locked = auth.mode === 'token' && auth.has_token && typeof hasAuthToken === 'function' && hasAuthToken();
+    this._logoutBtn.hidden = !locked;
   }
 
   _renderNav() {
