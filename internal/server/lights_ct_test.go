@@ -67,10 +67,12 @@ func TestLightColorTempControl(t *testing.T) {
 }
 
 func TestLightsAPICarriesColorTemp(t *testing.T) {
+	l1 := testCTLight("l1", "Ambiance", "dev1", 270, false) // white-ambiance: CT only
+	l1.Metadata.Archetype = "ceiling_round"
 	fb := newFakeBridge(t,
 		[]hue.Light{
-			testCTLight("l1", "Ambiance", "dev1", 270, false), // white-ambiance: CT only
-			testCTLight("l2", "Color", "dev2", 300, true),     // full-color bulb in CT mode
+			l1,
+			testCTLight("l2", "Color", "dev2", 300, true), // full-color bulb in CT mode
 		},
 		[]hue.Group{testRoom("room1", "Living", "dev1", "dev2")},
 		map[string]hue.GroupedLight{"gl-room1": testGroupedLight("gl-room1", true, 70)},
@@ -92,6 +94,9 @@ func TestLightsAPICarriesColorTemp(t *testing.T) {
 	if !list[0].CTCapable || list[0].Colorable || list[0].Mirek != 270 {
 		t.Fatalf("white-ambiance light: ct_capable=%v colorable=%v mirek=%d, want true/false/270",
 			list[0].CTCapable, list[0].Colorable, list[0].Mirek)
+	}
+	if list[0].Archetype != "ceiling_round" {
+		t.Fatalf("white-ambiance light archetype = %q, want ceiling_round", list[0].Archetype)
 	}
 	if !list[1].CTCapable || !list[1].Colorable || list[1].Mirek != 300 {
 		t.Fatalf("color bulb: ct_capable=%v colorable=%v mirek=%d, want true/true/300",

@@ -273,15 +273,26 @@ input[type=range], .brightness-slider {
   touch-action: pan-y;
   width: 100%;
   height: 8px;
-  background: var(--surface-alt);
+  /* The track is the input's own background. lights.js sets --slider-fill /
+     --slider-pct inline so the filled portion paints with the light's own
+     color; both default to a plain surface-alt bar (accent-color alone
+     never showed — the custom track background overrides it). */
+  background: linear-gradient(
+    to right,
+    var(--slider-fill, var(--surface-alt)) 0%,
+    var(--slider-fill, var(--surface-alt)) var(--slider-pct, 0%),
+    var(--surface-alt) var(--slider-pct, 0%),
+    var(--surface-alt) 100%
+  );
   border-radius: 999px;
   cursor: pointer;
   accent-color: var(--accent);
 }
 input[type=range]::-moz-range-track, .brightness-slider::-moz-range-track {
   height: 8px;
-  background: var(--surface-alt);
-  border-radius: 999px;
+  /* Transparent so the input's own background (the fill gradient above)
+     shows through — Firefox paints the pseudo-track over the input. */
+  background: transparent;
 }
 input[type=range]::-webkit-slider-thumb, .brightness-slider::-webkit-slider-thumb {
   -webkit-appearance: none;

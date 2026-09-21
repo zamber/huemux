@@ -39,6 +39,16 @@ const ICONS = {
   roomGym: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6.5 6.5v11M17.5 6.5v11M3 9v6M21 9v6M6.5 12h11"/></svg>',
   roomPlant: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 21v-8"/><path d="M12 13c0-3-2-5-5-5 0 3 2 5 5 5z"/><path d="M12 11c0-3 2-5 5-5 0 3-2 5-5 5z"/><path d="M12 15c0-2-1.5-3.5-3.5-3.5 0 2 1.5 3.5 3.5 3.5z"/></svg>',
   roomDoor: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 21V4a1 1 0 0 1 1-1h12a1 1 0 0 1 1 1v17"/><path d="M15 12h.01"/></svg>',
+  // Light-type icons, mapped from the light's own archetype (a different
+  // field from the room archetype — a ceiling lamp and a bulb can share a
+  // room). Default fallback is lightbulb.
+  lightSpot: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="10" r="4"/><path d="M8.5 13.5 5 21"/><path d="M15.5 13.5 19 21"/><path d="M12 6V4"/></svg>',
+  lightCeiling: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="4" y1="3" x2="20" y2="3"/><path d="M12 3v3"/><circle cx="12" cy="12" r="6"/></svg>',
+  lightFloor: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 21v-8"/><path d="M8 21h8"/><path d="M12 13 8 7h8z"/></svg>',
+  lightTable: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 21v-6"/><path d="M8 21h8"/><path d="M6 9h12l-1.5 6h-9z"/></svg>',
+  lightStrip: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="9" width="18" height="6" rx="3"/></svg>',
+  lightGlobe: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="10" r="6"/><path d="M12 16v5"/><path d="M9 21h6"/></svg>',
+  lightWall: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 21V8"/><path d="M7 8h6v6H7z"/><path d="M13 11h3"/></svg>',
 };
 
 // Hue room archetypes (CLIP v2 metadata.archetype) mapped to the icon set
@@ -64,6 +74,30 @@ const ARCHETYPE_ICONS = {
 
 function iconForArchetype(archetype) {
   return ICONS[ARCHETYPE_ICONS[archetype] || 'roomHome'];
+}
+
+// Light archetypes (CLIP v2 metadata.archetype on the light resource — the
+// physical lamp type, not the room it is in) grouped into the icon shapes a
+// glance can tell apart. Unknown or absent → lightbulb.
+const LIGHT_ARCHETYPE_ICONS = {
+  spotlight_bulb: 'lightSpot', flood_bulb: 'lightSpot', single_spot: 'lightSpot',
+  double_spot: 'lightSpot', wall_spot: 'lightSpot', ground_spot: 'lightSpot',
+  ceiling_round: 'lightCeiling', ceiling_horizontal: 'lightCeiling',
+  ceiling_square: 'lightCeiling', ceiling_tube: 'lightCeiling',
+  ceiling_spot: 'lightCeiling', ceiling_lamp: 'lightCeiling',
+  pendant_round: 'lightCeiling', pendant_long: 'lightCeiling',
+  recessed_ceiling: 'lightCeiling', recessed_floor: 'lightCeiling',
+  floor_shade: 'lightFloor', floor_lantern: 'lightFloor', bollard: 'lightFloor',
+  table_shade: 'lightTable',
+  hue_lightstrip: 'lightStrip', flexible_lamp: 'lightStrip',
+  string_light: 'lightStrip', hue_play: 'lightStrip', hue_tube: 'lightStrip',
+  hue_signe: 'lightStrip', wall_washer: 'lightStrip',
+  hue_go: 'lightGlobe', hue_iris: 'lightGlobe', hue_bloom: 'lightGlobe',
+  wall_shade: 'lightWall', wall_lantern: 'lightWall',
+};
+
+function iconForLight(l) {
+  return ICONS[LIGHT_ARCHETYPE_ICONS[l.archetype] || 'lightbulb'];
 }
 
 const els = {
@@ -330,6 +364,10 @@ function patchLightCard(l) {
   const slider = card.querySelector('.brightness-slider');
   if (slider && !editingIds.has(l.id) && document.activeElement !== slider) {
     slider.value = String(brightnessPct);
+    if (rgb) {
+      slider.style.setProperty('--slider-fill', `rgb(${rgb[0]},${rgb[1]},${rgb[2]})`);
+      slider.style.setProperty('--slider-pct', brightnessPct + '%');
+    }
   }
   return true;
 }
@@ -641,6 +679,15 @@ function cardRgbFor(l, brightnessPct) {
   return null;
 }
 
+// Inline custom properties that paint a light card's brightness slider with
+// the light's own color up to the current level (theme.css turns them into
+// the track gradient; accent-color alone never showed because the custom
+// track background overrides it).
+function sliderFillStyle(rgb, pct) {
+  if (!rgb) return '';
+  return `--slider-fill:rgb(${rgb[0]},${rgb[1]},${rgb[2]});--slider-pct:${pct}%;`;
+}
+
 // The room header's color-summary dots: up to 4 representative colors from
 // the room's lights, deduped by xy (or mirek for CT-mode lights). Off lights
 // keep their hue but render dimmed — the dot answers "what does this room
@@ -792,14 +839,14 @@ function renderLightCard(l) {
     <div class="light-card ${off ? 'off' : ''}" data-id="${escapeHtml(l.id)}" style="${accent}">
       ${gradient ? `<div class="light-card-gradient" style="${gradient}"></div>` : ''}
       <div class="light-card-head">
-        <h3 title="${escapeHtml(l.name)}">${ICONS.lightbulb}<span>${escapeHtml(l.name)}</span></h3>
+        <h3 title="${escapeHtml(l.name)}">${iconForLight(l)}<span>${escapeHtml(l.name)}</span></h3>
         <div class="light-card-actions">
           ${showFavBtn ? `<button type="button" class="icon-btn ${l.favorite ? 'active' : ''}" data-action="favorite" data-id="${escapeHtml(l.id)}" title="${escapeHtml(HueMuxI18n.t('lights.toggleFavorite'))}">${l.favorite ? ICONS.star : ICONS.starOutline}</button>` : ''}
           ${l.colorable || l.ct_capable ? `<button type="button" class="icon-btn" data-action="color" data-id="${escapeHtml(l.id)}" title="${escapeHtml(HueMuxI18n.t(l.colorable ? 'lights.chooseColor' : 'lights.chooseColorTemp'))}">${ICONS.palette}</button>` : ''}
           <button type="button" class="icon-btn ${l.on ? 'active' : ''}" data-action="toggle" data-id="${escapeHtml(l.id)}" title="${escapeHtml(HueMuxI18n.t(l.on ? 'lights.turnOff' : 'lights.turnOn'))}">${l.on ? ICONS.powerOn : ICONS.powerOff}</button>
         </div>
       </div>
-      ${l.dimmable ? `<input type="range" class="brightness-slider" min="0" max="100" value="${brightnessPct}" data-action="brightness" data-id="${escapeHtml(l.id)}">` : ''}
+      ${l.dimmable ? `<input type="range" class="brightness-slider" min="0" max="100" value="${brightnessPct}" data-action="brightness" data-id="${escapeHtml(l.id)}" style="${sliderFillStyle(rgb, brightnessPct)}">` : ''}
     </div>`;
 }
 
@@ -1536,11 +1583,22 @@ els.grid.addEventListener('click', (e) => {
 
 els.grid.addEventListener('input', (e) => {
   const el = e.target;
+  const pct = parseInt(el.value, 10);
   if (el.dataset.action === 'brightness' || el.dataset.action === 'brightness-room') {
+    if (el.dataset.action === 'brightness') {
+      // The fill tracks the finger, not the model: this is the optimistic
+      // update that keeps the slider colored mid-drag.
+      const l = lights.find((x) => x.id === el.dataset.id);
+      const rgb = l ? cardRgbFor(l, pct) : null;
+      if (rgb) {
+        el.style.setProperty('--slider-fill', `rgb(${rgb[0]},${rgb[1]},${rgb[2]})`);
+        el.style.setProperty('--slider-pct', pct + '%');
+      }
+    }
     // el.dataset.id already carries the "room:" prefix for brightness-room.
-    scheduleBrightness(el.dataset.id, parseInt(el.value, 10));
+    scheduleBrightness(el.dataset.id, pct);
   } else if (el.dataset.action === 'brightness-all') {
-    scheduleBrightness('__all__', parseInt(el.value, 10));
+    scheduleBrightness('__all__', pct);
   }
 });
 

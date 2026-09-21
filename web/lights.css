@@ -131,10 +131,25 @@ body { margin: 0; }
   border-inline-start-color: var(--card-accent, var(--border));
   transition: transform 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease, opacity 0.3s ease;
 }
-.light-card:hover { transform: translateY(-2px); border-color: var(--border-strong); box-shadow: 0 6px 18px var(--shadow); }
+.light-card:hover {
+  transform: translateY(-2px);
+  border-color: var(--border-strong);
+  /* The 6px inline-start border IS the light's colour — the hover
+     border-color above must not wipe it. */
+  border-inline-start-color: var(--card-accent, var(--border));
+  box-shadow: 0 6px 18px var(--shadow);
+}
 .light-card.off { opacity: 0.6; }
 .light-card.off:hover { opacity: 0.8; }
 .light-card.all-lights-tile { border: 2px solid var(--ink); }
+/* The per-room bulk tile lives inside its room card and is the least
+   interesting control there — borderless and inert, so it reads as a
+   summary row instead of competing with the lamps below it. */
+.light-card.all-lights-tile[data-room-id] { border: 0; background: transparent; }
+.light-card.all-lights-tile[data-room-id]:hover { transform: none; box-shadow: none; }
+/* The all-lights tile's own wrapper is a direct child of #lights-grid —
+   spacing it like a room card, which carries the margin-bottom. */
+#lights-grid > .lights-cards-grid { margin: 0.6rem 0 1.2rem; }
 
 .light-card-head { display: flex; align-items: center; justify-content: space-between; gap: 0.5rem; min-height: 44px; margin-bottom: 0.7rem; }
 .light-card-head h3 {
@@ -207,8 +222,8 @@ body { margin: 0; }
 .scenes-section { margin-top: 1.2rem; }
 .scenes-section h2 { font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.04em; color: var(--ink-muted); margin: 0 0 0.5rem; }
 /* The zone-scenes strip is one horizontally scrollable row — presets must
-   not grow the page vertically, and the strip bleeds to the screen edges so
-   the overflow affordance is visible. Room-internal strips keep wrapping. */
+   not grow the page vertically. It stays inside the main container (no edge
+   bleed) and hides its scrollbar. Room-internal strips keep wrapping. */
 .scenes-section > .scenes-strip {
   flex-wrap: nowrap;
   overflow-x: auto;
@@ -216,9 +231,7 @@ body { margin: 0; }
   gap: 0.5rem;
   scrollbar-width: none;
   -ms-overflow-style: none;
-  margin-left: calc(var(--page-pad) * -1);
-  margin-right: calc(var(--page-pad) * -1);
-  padding: 0.1rem var(--page-pad) 0.4rem;
+  padding: 0.1rem 0 0.4rem;
 }
 .scenes-section > .scenes-strip::-webkit-scrollbar { display: none; }
 /* The Favorites view groups zone scenes under per-zone headers — that
@@ -226,8 +239,6 @@ body { margin: 0; }
 .scenes-section > .scenes-strip.grouped {
   display: block;
   overflow-x: visible;
-  margin-left: 0;
-  margin-right: 0;
   padding: 0;
 }
 

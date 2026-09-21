@@ -27,8 +27,9 @@ type Light struct {
 	Colorable  bool    `json:"colorable"`
 	X          float64 `json:"x"` // CIE xy chromaticity; meaningless if !Colorable
 	Y          float64 `json:"y"`
-	CTCapable  bool    `json:"ct_capable"`      // supports color temperature at all (color or white-ambiance)
-	Mirek      int     `json:"mirek,omitempty"` // current white point; meaningful only while the light is in CT mode
+	CTCapable  bool    `json:"ct_capable"`          // supports color temperature at all (color or white-ambiance)
+	Mirek      int     `json:"mirek,omitempty"`     // current white point; meaningful only while the light is in CT mode
+	Archetype  string  `json:"archetype,omitempty"` // the light's CLIP v2 archetype (ceiling_round, table_shade, ...), "" if absent
 	Favorite   bool    `json:"favorite"`
 }
 
@@ -154,6 +155,7 @@ func (s *Service) ListLights(ctx context.Context) ([]Light, error) {
 			ID: l.ID, Name: l.Metadata.Name,
 			RoomID: room.ID, RoomName: room.Metadata.Name,
 			On: l.On.On, Favorite: fav,
+			Archetype: l.Metadata.Archetype,
 		}
 		if l.Dimming != nil {
 			lt.Dimmable = true
