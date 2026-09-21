@@ -214,14 +214,14 @@ function persistCollapsedRooms() {
 }
 
 const COLUMNS_KEY = 'huemux.lightsColumns';
-let lightsColumns = ''; // '' or 'auto' = responsive default; else "1".."4" user override
+let lightsColumns = 'auto'; // 'auto' = responsive default; else "1".."4" user override
 
 function loadColumnsPref() {
   try {
     const v = localStorage.getItem(COLUMNS_KEY);
-    lightsColumns = ['1', '2', '3', '4', 'auto'].indexOf(v) >= 0 ? v : '';
+    lightsColumns = ['1', '2', '3', '4', 'auto'].indexOf(v) >= 0 ? v : 'auto';
   } catch (e) {
-    lightsColumns = '';
+    lightsColumns = 'auto';
   }
 }
 
@@ -432,6 +432,13 @@ function patchAllLightsTile() {
     tile.insertBefore(el, tile.firstChild);
   }
 
+  // The tile's tinted chrome (bulb icon, colour button, active buttons) all
+  // read --card-accent — refresh it so colour changes made from another
+  // app re-tint the tile without a rebuild.
+  const rep = representativeRgb(lights);
+  if (rep) tile.style.setProperty('--card-accent', `rgb(${rep[0]},${rep[1]},${rep[2]})`);
+  else tile.style.removeProperty('--card-accent');
+
   const slider = tile.querySelector('.brightness-slider');
   if (slider && !editingIds.has('__all__') && document.activeElement !== slider) {
     const on = lights.filter((l) => l.on && l.dimmable);
@@ -464,6 +471,11 @@ function patchRoomTileFor(l) {
   }
   const tile = els.grid.querySelector(`.all-lights-tile[data-room-id="${cssEscape(room.id)}"]`);
   if (!tile) return;
+  // Same as patchAllLightsTile: external colour changes must re-tint the
+  // room tile's bulb icon, colour button and active state.
+  const rep = representativeRgb(roomLights);
+  if (rep) tile.style.setProperty('--card-accent', `rgb(${rep[0]},${rep[1]},${rep[2]})`);
+  else tile.style.removeProperty('--card-accent');
   // Use the room's grouped_light state when available — same logic as
   // renderRoomTile and patchRoomTile, so a grouped_light event reporting
   // off is not overridden by a subsequent per-light event's aggregate.
@@ -979,7 +991,7 @@ function renderRoomTile(room, roomLights) {
     <div class="light-card all-lights-tile" data-room-id="${escapeHtml(room.id)}" style="${repAccent}">
       ${roomGradient ? `<div class="light-card-gradient" style="${roomGradient}"></div>` : ''}
       <div class="light-card-head">
-        <h3 title="${escapeHtml(HueMuxI18n.t('lights.allInRoom'))}">${ICONS.lightbulb}</h3>
+        <h3 title="${escapeHtml(HueMuxI18n.t('lights.allInRoom'))}">${ICONS.lightbulb}<span>${escapeHtml(HueMuxI18n.t('lights.allInRoom'))}</span></h3>
         <span class="room-dots" title="${escapeHtml(HueMuxI18n.t('lights.roomColors'))}">${roomDotsFor(roomLights)}</span>
         <div class="light-card-actions">
           ${hasColor ? `<button type="button" class="icon-btn" data-action="color-room" data-room-id="${escapeHtml(room.id)}" title="${escapeHtml(HueMuxI18n.t('lights.chooseColorAll'))}">${ICONS.palette}</button>` : ''}

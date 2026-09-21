@@ -533,7 +533,7 @@ const COLUMNS_KEY = 'huemux.lightsColumns';
 const colsEl = document.getElementById('set-cols');
 
 function renderCols() {
-  let v = '2';
+  let v = 'auto';
   try {
     const stored = localStorage.getItem(COLUMNS_KEY);
     if (['1', '2', '3', '4', 'auto'].indexOf(stored) >= 0) v = stored;

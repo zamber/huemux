@@ -32,6 +32,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"log"
 	"os"
 	"path/filepath"
 	"sync"
@@ -114,6 +115,14 @@ func Start(configDir string) (string, error) {
 		return "", fmt.Errorf("invalid config: %w", err)
 	}
 
+	// Pin the loopback port. localStorage is origin-scoped, and config's
+	// default port 0 makes ListenAndServe scan upward for a free port — a
+	// launch where 7654 happens to be occupied lands the WebView on a
+	// different origin and silently resets every client preference (theme,
+	// collapsed rooms, columns, filter). A stable origin keeps them.
+	cfg.Listen.Host = appconfig.DefaultHost
+	cfg.Listen.Port = appconfig.DefaultPort
+
 	store, err := config.NewStore()
 	if err != nil {
 		return "", fmt.Errorf("open settings: %w", err)
@@ -132,7 +141,18 @@ func Start(configDir string) (string, error) {
 	s := server.New(cfg, store, favorites, eng, lights)
 	url, err := s.ListenAndServe()
 	if err != nil {
-		return "", fmt.Errorf("start server: %w", err)
+		// A stale process holding 7654 is rare; falling back to the scan
+		// behaviour for that launch (with a fresh origin, so preferences
+		// reset once) beats an app that cannot serve at all. New takes the
+		// config by value, so the retry needs a fresh server built with the
+		// scan port.
+		log.Printf("huemux: pinned port %d unavailable, falling back to a free port: %v", cfg.Listen.Port, err)
+		cfg.Listen.Port = 0
+		s = server.New(cfg, store, favorites, eng, lights)
+		url, err = s.ListenAndServe()
+		if err != nil {
+			return "", fmt.Errorf("start server: %w", err)
+		}
 	}
 	srv, baseURL = s, url
 	return url, nil

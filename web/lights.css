@@ -42,11 +42,11 @@ body { margin: 0; }
 
 .lights-cards-grid {
   display: grid;
-  grid-template-columns: repeat(var(--light-cols, 2), minmax(0, 1fr));
+  grid-template-columns: repeat(var(--light-cols, 1), minmax(0, 1fr));
   gap: 0.75rem;
 }
-@media (min-width: 900px) {
-  .lights-cards-grid { gap: 1rem; }
+@media (min-width: 600px) {
+  .lights-cards-grid { --light-cols: 2; gap: 1rem; }
 }
 /* Auto mode (the Settings "Auto" choice leaves --light-cols unset inline):
    wider surfaces get more columns. A fixed 1-4 choice sets the variable
@@ -57,11 +57,10 @@ body { margin: 0; }
 @media (min-width: 1800px) {
   .lights-cards-grid { --light-cols: 4; }
 }
-/* Narrow phones: one column no matter what the setting says — two cards
-   below 420px don't fit a name plus a 44px action row. The old 359px
-   boundary never fired on real 360px-wide phones, which stayed stuck on
-   two columns. */
-@media (max-width: 419px) {
+/* Narrow screens: one column no matter what the setting says — two cards
+   below 600px don't fit a name plus the action row (the old 419px boundary
+   never fired on real phones). */
+@media (max-width: 599px) {
   .lights-cards-grid { grid-template-columns: minmax(0, 1fr); }
 }
 /* Aggregate tiles span the whole row — they are full-width controls, not
