@@ -57,9 +57,11 @@ body { margin: 0; }
 @media (min-width: 1800px) {
   .lights-cards-grid { --light-cols: 4; }
 }
-/* Very small phones: one column no matter what the setting says — two
-   cards at ~320px wide don't fit a name plus a 44px action row. */
-@media (max-width: 359px) {
+/* Narrow phones: one column no matter what the setting says — two cards
+   below 420px don't fit a name plus a 44px action row. The old 359px
+   boundary never fired on real 360px-wide phones, which stayed stuck on
+   two columns. */
+@media (max-width: 419px) {
   .lights-cards-grid { grid-template-columns: minmax(0, 1fr); }
 }
 /* Aggregate tiles span the whole row — they are full-width controls, not
@@ -208,6 +210,22 @@ body { margin: 0; }
 .light-card .icon-btn[data-action="color-all"] {
   color: var(--card-accent, var(--ink-muted));
   border-color: var(--card-accent, var(--border));
+}
+
+/* On the aggregate tiles the buttons are icon-only: no outline at all,
+   larger glyphs, and state carried by fill — hover gets a soft fill, the
+   active power button a stronger one. Equal specificity to the colour rule
+   above, later in the file, so the tint survives but the border does not. */
+.light-card.all-lights-tile .icon-btn {
+  border-color: transparent;
+}
+.light-card.all-lights-tile .icon-btn svg { width: 26px; height: 26px; flex-shrink: 0; }
+.light-card.all-lights-tile .icon-btn:hover { background: rgba(127, 127, 127, 0.12); }
+/* The tile's --card-accent would leak into the active power icon via the
+   accent-active rule above — power state stays ink; the fill carries it. */
+.light-card.all-lights-tile .icon-btn.active {
+  color: var(--ink);
+  background: rgba(127, 127, 127, 0.18);
 }
 
 /* Per-card brightness slider inherits the light's colour: --card-accent

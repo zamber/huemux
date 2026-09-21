@@ -370,7 +370,6 @@ input[type=checkbox], input[type=radio] {
   border-radius: 999px 0 0 999px;
 }
 .scene-chip-star:only-child, .scene-chip-main:only-child { border-radius: 999px; }
-.scene-chip-main:hover { background: var(--card-hover); }
 .scene-swatches { display: flex; }
 .scene-swatch { width: 14px; height: 14px; border-radius: 50%; border: 1px solid var(--border); margin-inline-start: -6px; }
 .scene-swatch:first-child { margin-inline-start: 0; }
