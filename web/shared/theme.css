@@ -354,12 +354,16 @@ input[type=checkbox], input[type=radio] {
   /* --chip-tint/--chip-tint-strong are set inline by lights.js from the
      scene's first swatch (sync.html sets neither, and gets the plain card) —
      the chip's identity tint, faint enough that the swatches stay the real
-     colour source. */
+     colour source. The -hover pair is the same hue with boosted saturation,
+     so hover pops the tint rather than cancelling it. */
   background: var(--chip-tint, var(--card));
   border: 1px solid var(--chip-tint-strong, var(--border));
   border-radius: 999px; color: var(--ink); font-size: 0.82rem;
 }
-.scene-chip:hover { border-color: var(--border-strong); }
+.scene-chip:hover {
+  background: var(--chip-tint-hover, var(--card-hover));
+  border-color: var(--chip-tint-strong-hover, var(--border-strong));
+}
 .scene-chip-main {
   display: flex; align-items: center; gap: 0.5rem;
   padding: 0.5rem 0.8rem; cursor: pointer; white-space: nowrap; flex: 1;

@@ -637,6 +637,24 @@ function hsvToRgb(h, s, v) {
   return [Math.round((r + m) * 255), Math.round((g + m) * 255), Math.round((b + m) * 255)];
 }
 
+// rgbToHsv is hsvToRgb's inverse — used to derive the hover variant of a
+// scene chip's tint by boosting saturation.
+function rgbToHsv(r, g, b) {
+  r /= 255; g /= 255; b /= 255;
+  const max = Math.max(r, g, b);
+  const min = Math.min(r, g, b);
+  const d = max - min;
+  let h = 0;
+  if (d > 0) {
+    if (max === r) h = 60 * (((g - b) / d) % 6);
+    else if (max === g) h = 60 * ((b - r) / d + 2);
+    else h = 60 * ((r - g) / d + 4);
+  }
+  if (h < 0) h += 360;
+  const s = max === 0 ? 0 : (d / max) * 100;
+  return [h, s, max * 100];
+}
+
 function gradientStyleFor(rgb, brightnessPct) {
   const t = Math.max(0, Math.min(1, brightnessPct / 100));
   const innerFactor = 0.3 + t * 0.7;
@@ -1022,12 +1040,18 @@ function renderSceneChip(sc) {
   }).join('');
   // The first swatch doubles as the chip's identity tint — a faint wash of
   // it on the border and background so a preset reads as "the warm one"
-  // before its name does. Inline rgba rather than color-mix(): the wall
-  // panel's Chromium 83 predates it.
+  // before its name does. The hover variant is the same hue with boosted
+  // saturation (HSV), which makes the hover pop on the background and the
+  // border instead of cancelling the tint. Inline rgba rather than
+  // color-mix(): the wall panel's Chromium 83 predates it.
   const first = sc.swatches[0] ? xyToRgb(sc.swatches[0].x, sc.swatches[0].y) : null;
-  const tint = first
-    ? `--chip-tint:rgba(${first[0]},${first[1]},${first[2]},0.10);--chip-tint-strong:rgba(${first[0]},${first[1]},${first[2]},0.35);`
-    : '';
+  let tint = '';
+  if (first) {
+    const [h, s, v] = rgbToHsv(first[0], first[1], first[2]);
+    const [hr, hg, hb] = hsvToRgb(h, Math.min(100, Math.round(s * 1.3 + 20)), v);
+    tint = `--chip-tint:rgba(${first[0]},${first[1]},${first[2]},0.10);--chip-tint-strong:rgba(${first[0]},${first[1]},${first[2]},0.35);` +
+      `--chip-tint-hover:rgba(${hr},${hg},${hb},0.16);--chip-tint-strong-hover:rgba(${hr},${hg},${hb},0.55);`;
+  }
   const title = sc.group_name ? `${sc.name} — ${sc.group_name}` : sc.name;
   const fav = !!favoritesRaw[sc.id];
   const showFavBtn = filter !== 'favorites';
@@ -1631,6 +1655,7 @@ els.filterList.addEventListener('click', (e) => {
   else if (key.indexOf('room:') === 0) { filter = 'room'; filterRoomId = key.slice(5); }
   filterExplicitFromURL = true;
   persistFilterToURL();
+  persistFilterToStorage();
   // shared/dropdown.js already closes it on any item click; this stays so the
   // page does not depend on that script having loaded to remain usable.
   els.filterDetails.open = false;
@@ -1656,7 +1681,14 @@ document.addEventListener('huemux:langchange', () => {
   renderZoneScenes();
 });
 
-// ---------- filter <-> URL ----------
+// ---------- filter <-> URL / storage ----------
+
+// The filter survives in two places: the URL (for direct bookmarks — the
+// standalone redirect forwards ?filter=... onto the shell URL, and this page
+// reads the parent's URL when running inside the shell) and localStorage
+// (for cold starts through the shell, whose iframe src never carries a
+// query). URL wins when both exist: it is the more recent, explicit choice.
+const FILTER_KEY = 'huemux.lightsFilter';
 
 function persistFilterToURL() {
   const params = new URLSearchParams();
@@ -1665,17 +1697,42 @@ function persistFilterToURL() {
   history.replaceState(null, '', '?' + params.toString());
 }
 
-function restoreFilterFromURL() {
-  const params = new URLSearchParams(location.search);
-  const f = params.get('filter');
-  const r = params.get('room');
+function persistFilterToStorage() {
+  try {
+    localStorage.setItem(FILTER_KEY, filter === 'room' && filterRoomId ? 'room:' + filterRoomId : filter);
+  } catch (e) {}
+}
+
+function applyFilterChoice(f, r) {
   if (f === 'favorites' || f === 'all') { filter = f; filterRoomId = null; filterExplicitFromURL = true; }
   else if (f === 'room' && r) { filter = 'room'; filterRoomId = r; filterExplicitFromURL = true; }
+}
+
+function restoreFilterFromURL() {
+  let params = new URLSearchParams(location.search);
+  // Inside the shell the iframe's own src has no query — the standalone
+  // redirect put it on the shell URL instead. Same origin, so reading it
+  // is allowed; a cross-origin parent just stays a no-op.
+  if (!params.get('filter') && window.self !== window.top) {
+    try { params = new URLSearchParams(window.parent.location.search); } catch (e) {}
+  }
+  applyFilterChoice(params.get('filter'), params.get('room'));
+}
+
+function restoreFilterFromStorage() {
+  try {
+    const v = localStorage.getItem(FILTER_KEY);
+    if (v && v.indexOf('room:') === 0) applyFilterChoice('room', v.slice(5));
+    else applyFilterChoice(v, null);
+  } catch (e) {}
 }
 
 // ---------- init ----------
 
 restoreFilterFromURL();
+// The URL names the filter explicitly (bookmark) — otherwise fall back to
+// the last choice, stored per device like the theme.
+if (!filterExplicitFromURL) restoreFilterFromStorage();
 loadCollapsedRooms();
 loadColumnsPref();
 HueMuxFeatures.load();

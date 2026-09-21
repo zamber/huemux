@@ -27,6 +27,8 @@
     : (location.pathname.indexOf('node-editor') !== -1 ? 'presets' : 'sync'));
   // replace(), not assign(): the standalone URL must not become a history
   // entry, or Back from the shell returns to the page we just redirected away
-  // from and bounces straight back here.
-  location.replace('/app.html#' + tab);
+  // from and bounces straight back here. The page's query (?filter=...) rides
+  // along so a bookmark of a filtered view keeps its filter; lights.js reads
+  // it back from the shell URL.
+  location.replace('/app.html' + location.search + '#' + tab);
 })();

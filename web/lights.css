@@ -141,12 +141,12 @@ body { margin: 0; }
 }
 .light-card.off { opacity: 0.6; }
 .light-card.off:hover { opacity: 0.8; }
-.light-card.all-lights-tile { border: 2px solid var(--ink); }
-/* The per-room bulk tile lives inside its room card and is the least
-   interesting control there — borderless and inert, so it reads as a
-   summary row instead of competing with the lamps below it. */
-.light-card.all-lights-tile[data-room-id] { border: 0; background: transparent; }
-.light-card.all-lights-tile[data-room-id]:hover { transform: none; box-shadow: none; }
+/* Both aggregate tiles are borderless summary rows — the ink outline used
+   to compete with the lamps, which are the actual controls. They keep their
+   colour wash (multiGradientStyle) as identity and are hover-inert like the
+   room tile. */
+.light-card.all-lights-tile { border: 0; background: transparent; }
+.light-card.all-lights-tile:hover { transform: none; box-shadow: none; }
 /* The all-lights tile's own wrapper is a direct child of #lights-grid —
    spacing it like a room card, which carries the margin-bottom. */
 #lights-grid > .lights-cards-grid { margin: 0.6rem 0 1.2rem; }
@@ -221,26 +221,10 @@ body { margin: 0; }
 
 .scenes-section { margin-top: 1.2rem; }
 .scenes-section h2 { font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.04em; color: var(--ink-muted); margin: 0 0 0.5rem; }
-/* The zone-scenes strip is one horizontally scrollable row — presets must
-   not grow the page vertically. It stays inside the main container (no edge
-   bleed) and hides its scrollbar. Room-internal strips keep wrapping. */
-.scenes-section > .scenes-strip {
-  flex-wrap: nowrap;
-  overflow-x: auto;
-  overscroll-behavior-x: contain;
-  gap: 0.5rem;
-  scrollbar-width: none;
-  -ms-overflow-style: none;
-  padding: 0.1rem 0 0.4rem;
-}
-.scenes-section > .scenes-strip::-webkit-scrollbar { display: none; }
-/* The Favorites view groups zone scenes under per-zone headers — that
-   wrapper stays a stacked block and wraps normally. */
-.scenes-section > .scenes-strip.grouped {
-  display: block;
-  overflow-x: visible;
-  padding: 0;
-}
+/* The zone-scenes strip wraps like the room-internal strips — multiple rows
+   inside the main container, never an overflowing single row. The shared
+   .scenes-strip rule in theme.css provides flex-wrap; the grouped Favorites
+   wrapper stacks per zone. */
 
 /* Full-screen color picker overlay */
 .color-picker-overlay {
