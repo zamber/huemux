@@ -223,7 +223,8 @@
     "columnsTwo": "2 colonnes",
     "columnsThree": "3 colonnes",
     "columnsFour": "4 colonnes",
-    "columnsHint": "Nombre de cartes de lampes par rangée. Les très petits téléphones gardent une colonne."
+    "columnsHint": "Nombre de cartes de lampes par rangée. Les très petits téléphones gardent une colonne.",
+    "columnsAuto": "Automatique (selon la largeur d'écran)"
   },
   "auth": {
     "heading": "Enter your access token",

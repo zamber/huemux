@@ -536,7 +536,7 @@ function renderCols() {
   let v = '2';
   try {
     const stored = localStorage.getItem(COLUMNS_KEY);
-    if (['1', '2', '3', '4'].indexOf(stored) >= 0) v = stored;
+    if (['1', '2', '3', '4', 'auto'].indexOf(stored) >= 0) v = stored;
   } catch (e) {
     // A blocked localStorage just means the default sticks.
   }

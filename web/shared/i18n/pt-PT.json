@@ -223,7 +223,8 @@
     "columnsTwo": "2 colunas",
     "columnsThree": "3 colunas",
     "columnsFour": "4 colunas",
-    "columnsHint": "Quantos cartões de luzes cabem numa linha. Telemóveis muito pequenos mantêm uma coluna."
+    "columnsHint": "Quantos cartões de luzes cabem numa linha. Telemóveis muito pequenos mantêm uma coluna.",
+    "columnsAuto": "Automático (pela largura do ecrã)"
   },
   "auth": {
     "heading": "Enter your access token",

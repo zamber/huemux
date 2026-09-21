@@ -223,7 +223,8 @@
     "columnsTwo": "2 sütun",
     "columnsThree": "3 sütun",
     "columnsFour": "4 sütun",
-    "columnsHint": "Bir satıra kaç ışık kartı sığar. Çok küçük telefonlar tek sütun tutar."
+    "columnsHint": "Bir satıra kaç ışık kartı sığar. Çok küçük telefonlar tek sütun tutar.",
+    "columnsAuto": "Otomatik (ekran genişliğine göre)"
   },
   "auth": {
     "heading": "Enter your access token",

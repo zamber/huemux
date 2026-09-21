@@ -214,21 +214,22 @@ function persistCollapsedRooms() {
 }
 
 const COLUMNS_KEY = 'huemux.lightsColumns';
-let lightsColumns = ''; // '' = responsive default (2); else "1".."4" user override
+let lightsColumns = ''; // '' or 'auto' = responsive default; else "1".."4" user override
 
 function loadColumnsPref() {
   try {
     const v = localStorage.getItem(COLUMNS_KEY);
-    lightsColumns = ['1', '2', '3', '4'].indexOf(v) >= 0 ? v : '';
+    lightsColumns = ['1', '2', '3', '4', 'auto'].indexOf(v) >= 0 ? v : '';
   } catch (e) {
     lightsColumns = '';
   }
 }
 
 // Inline on each .lights-cards-grid when the user has overridden the count;
-// absent otherwise, so the responsive default in lights.css applies.
+// absent otherwise (and for 'auto'), so the responsive defaults in
+// lights.css apply.
 function gridStyleAttr() {
-  return lightsColumns ? ` style="--light-cols:${lightsColumns}"` : '';
+  return lightsColumns && lightsColumns !== 'auto' ? ` style="--light-cols:${lightsColumns}"` : '';
 }
 
 // ---------- transport ----------
@@ -510,8 +511,12 @@ function mergeLightEvent(ev) {
       // server drops the mirek_valid:false companion events, so this is
       // what actually clears a stale mirek on the client.
       l.mirek = 0;
+      noteColorEvent(ev.id);
     }
-    if (ev.mirek !== undefined) l.mirek = ev.mirek;
+    if (ev.mirek !== undefined) {
+      l.mirek = ev.mirek;
+      noteColorEvent(ev.id);
+    }
 
     // Patch just this card. A light_event cannot change the grid's structure
     // — no card appears, disappears or moves — so a full rebuild was always
@@ -706,6 +711,17 @@ function sliderFillStyle(rgb, pct) {
   return `--slider-fill:rgb(${rgb[0]},${rgb[1]},${rgb[2]});--slider-pct:${pct}%;`;
 }
 
+// One representative color for an aggregate tile's palette button — the
+// first light that has a usable color (xy or mirek), whether it is on or
+// off, so the button keeps showing the tile's selected colour.
+function representativeRgb(list) {
+  for (const l of list) {
+    const rgb = cardRgbFor(l, 60);
+    if (rgb) return rgb;
+  }
+  return null;
+}
+
 // The room header's color-summary dots: up to 4 representative colors from
 // the room's lights, deduped by xy (or mirek for CT-mode lights). Off lights
 // keep their hue but render dimmed — the dot answers "what does this room
@@ -879,11 +895,13 @@ function renderAllLightsTile() {
   const allFav = !!favoritesRaw.all;
   const showFavBtn = filter !== 'favorites';
   const allGradient = multiGradientStyle(lights);
+  const repRgb = representativeRgb(lights);
+  const repAccent = repRgb ? `--card-accent:rgb(${repRgb[0]},${repRgb[1]},${repRgb[2]});` : '';
   return `
-    <div class="light-card all-lights-tile" data-id="__all__">
+    <div class="light-card all-lights-tile" data-id="__all__" style="${repAccent}">
       ${allGradient ? `<div class="light-card-gradient" style="${allGradient}"></div>` : ''}
       <div class="light-card-head">
-        <h3>${ICONS.lightbulb}<span>${escapeHtml(HueMuxI18n.t('lights.allLights'))}</span></h3>
+        <h3 title="${escapeHtml(HueMuxI18n.t('lights.allLights'))}">${ICONS.lightbulb}</h3>
         <span class="room-dots" title="${escapeHtml(HueMuxI18n.t('lights.roomColors'))}">${roomDotsFor(lights)}</span>
         <div class="light-card-actions">
           ${showFavBtn ? `<button type="button" class="icon-btn ${allFav ? 'active' : ''}" data-action="favorite" data-id="all" title="${escapeHtml(HueMuxI18n.t('lights.toggleFavorite'))}">${allFav ? ICONS.star : ICONS.starOutline}</button>` : ''}
@@ -926,11 +944,13 @@ function renderRoomTile(room, roomLights) {
     : (roomLights.filter((l) => l.on && l.dimmable).length
         ? Math.round(roomLights.filter((l) => l.on && l.dimmable).reduce((sum, l) => sum + l.brightness, 0) / roomLights.filter((l) => l.on && l.dimmable).length)
         : 50);
+  const repRgb = representativeRgb(roomLights);
+  const repAccent = repRgb ? `--card-accent:rgb(${repRgb[0]},${repRgb[1]},${repRgb[2]});` : '';
   return `
-    <div class="light-card all-lights-tile" data-room-id="${escapeHtml(room.id)}">
+    <div class="light-card all-lights-tile" data-room-id="${escapeHtml(room.id)}" style="${repAccent}">
       ${roomGradient ? `<div class="light-card-gradient" style="${roomGradient}"></div>` : ''}
       <div class="light-card-head">
-        <h3>${ICONS.lightbulb}<span>${escapeHtml(HueMuxI18n.t('lights.allInRoom'))}</span></h3>
+        <h3 title="${escapeHtml(HueMuxI18n.t('lights.allInRoom'))}">${ICONS.lightbulb}</h3>
         <span class="room-dots" title="${escapeHtml(HueMuxI18n.t('lights.roomColors'))}">${roomDotsFor(roomLights)}</span>
         <div class="light-card-actions">
           ${showFavBtn ? `<button type="button" class="icon-btn ${roomFav ? 'active' : ''}" data-action="favorite" data-id="room:${escapeHtml(room.id)}" title="${escapeHtml(HueMuxI18n.t('lights.toggleFavorite'))}">${roomFav ? ICONS.star : ICONS.starOutline}</button>` : ''}
@@ -1162,6 +1182,91 @@ function sendColorTemp(targetId, mirek) {
   }
 }
 
+// The light ids a temperature probe would address — mirror of the fan-out in
+// sendColorTemp, used to know which light_events confirm a probe.
+function colorTempTargetIds(targetId) {
+  if (targetId && targetId.indexOf('room:') === 0) {
+    return lights.filter((l) => l.room_id === targetId.slice(5) && l.ct_capable).map((l) => l.id);
+  }
+  if (targetId) return [targetId];
+  return lights.filter((l) => l.ct_capable).map((l) => l.id);
+}
+
+// Same pair for color probes (sendColorRgb is the picker's RGB send path,
+// replacing the old flush() fan-out).
+function colorTargetIds(targetId) {
+  if (targetId && targetId.indexOf('room:') === 0) {
+    return lights.filter((l) => l.room_id === targetId.slice(5) && l.colorable).map((l) => l.id);
+  }
+  if (targetId) return [targetId];
+  return lights.filter((l) => l.colorable).map((l) => l.id);
+}
+
+function sendColorRgb(targetId, rgb) {
+  const [r, g, b] = rgb;
+  if (targetId && targetId.indexOf('room:') === 0) {
+    const roomId = targetId.slice(5);
+    lights.filter((l) => l.room_id === roomId && l.colorable).forEach((l) => send({ type: 'light_color', rid: l.id, r, g, b }));
+  } else if (targetId) {
+    send({ type: 'light_color', rid: targetId, r, g, b });
+  } else {
+    actionColorAll(r, g, b);
+  }
+}
+
+// ---------- color-probe send pacing ----------
+//
+// The bridge, not the network, is the slow hop: an unthrottled drag sends a
+// probe per animation frame, the bridge applies each change in ~200ms+ and
+// its eventstream reports them all back — so after the finger lifts, a tail
+// of queued color updates keeps arriving and re-colouring the lamps.
+//
+// The pacer sends at most one probe at a time and holds the latest pick as
+// "pending" until the in-flight probe is confirmed by a matching light_event
+// (x/y or mirek). The probe→confirm time feeds an EWMA, which self-corrects
+// the pace to whatever the bridge actually delivers. A timeout at
+// max(rtt×3, 1s), capped at 4s, releases the budget when an event is lost —
+// a missed delta can never wedge the pipeline, it only slows one probe.
+let probeInFlight = false;
+let probeTargets = new Set(); // light ids the in-flight probe addressed
+let probeSentAt = 0;
+let probeTimeout = null;
+let probeRttMs = 200; // EWMA of probe→confirm roundtrip
+let pendingProbe = null; // () => void — latest unsent pick (latest wins)
+
+function maybeSendProbe() {
+  if (!pendingProbe || probeInFlight) return;
+  probeInFlight = true;
+  probeSentAt = performance.now();
+  const sendFn = pendingProbe;
+  pendingProbe = null;
+  sendFn();
+  const budgetMs = Math.min(Math.max(probeRttMs * 3, 1000), 4000);
+  probeTimeout = setTimeout(() => confirmProbe(null), budgetMs);
+}
+
+// lightId is the id from a confirming light_event, or null for the timeout
+// path (which releases the budget unconditionally).
+function confirmProbe(lightId) {
+  if (!probeInFlight) return;
+  if (lightId && !probeTargets.has(lightId)) return;
+  clearTimeout(probeTimeout);
+  probeInFlight = false;
+  if (probeSentAt) {
+    const sample = performance.now() - probeSentAt;
+    if (sample < 4000) probeRttMs = probeRttMs * 0.7 + sample * 0.3;
+  }
+  probeSentAt = 0;
+  probeTargets = new Set();
+  if (pendingProbe) maybeSendProbe();
+}
+
+// Called from mergeLightEvent for every color/mirek delta: if a probe is in
+// flight for that light, its roundtrip is complete.
+function noteColorEvent(lightId) {
+  if (probeInFlight && probeTargets.has(lightId)) confirmProbe(lightId);
+}
+
 // id is either a light id, the sentinel "__all__", or "room:<grouped_light_id>"
 // (the room tile's slider — prefixed since, unlike a light id, it isn't
 // self-describing on its own).
@@ -1363,9 +1468,6 @@ function openColorPicker(targetId) {
   let hue = 0;
   let sat = 0;
   let cursorEl = null;
-  let pendingColor = null;
-  let pendingTemp = null; // mirek, set while dragging in the temperature strip
-  let rafScheduled = false;
   let active = false;
 
   // The lights this picker will actually touch, to decide whether the HSV
@@ -1419,58 +1521,42 @@ function openColorPicker(targetId) {
     renderGradient();
   }
 
-  function flush() {
-    rafScheduled = false;
-    if (pendingTemp !== null) {
-      const mirek = pendingTemp;
-      pendingTemp = null;
-      sendColorTemp(targetId, mirek);
-      return;
-    }
-    if (!pendingColor) return;
-    const { r, g, b } = pendingColor;
-    pendingColor = null;
-    if (targetId && targetId.indexOf('room:') === 0) {
-      const roomId = targetId.slice(5);
-      lights.filter((l) => l.room_id === roomId && l.colorable).forEach((l) => send({ type: 'light_color', rid: l.id, r, g, b }));
-    } else if (targetId) {
-      send({ type: 'light_color', rid: targetId, r, g, b });
-    } else {
-      actionColorAll(r, g, b);
-    }
-  }
-
   function pick(e) {
     const rect = canvas.getBoundingClientRect();
     const x = Math.max(0, Math.min(e.clientX - rect.left, rect.width));
     const y = Math.max(0, Math.min(e.clientY - rect.top, rect.height));
+    let pickedRgb = null; // the picked colour, hoisted for the cursor below
 
     if (split > 0 && x >= split * rect.width) {
       // White-temperature strip: height maps to Kelvin, which maps to mirek.
       const kelvin = 6500 - (y / rect.height) * 4500;
       const mirek = Math.max(153, Math.min(500, Math.round(1e6 / kelvin)));
-      const [r, g, b] = kelvinToRgb(kelvin);
+      pickedRgb = kelvinToRgb(kelvin);
+      const [r, g, b] = pickedRgb;
       swatch.style.backgroundColor = `rgb(${r}, ${g}, ${b})`;
       // Unit notation, untranslated — same policy as the H/S readout below.
       readout.textContent = `${Math.round(kelvin)} K`;
-      pendingColor = null;
-      pendingTemp = mirek;
+      pendingProbe = () => {
+        probeTargets = new Set(colorTempTargetIds(targetId));
+        sendColorTemp(targetId, mirek);
+      };
     } else {
       const w = split > 0 ? split * rect.width : rect.width;
       hue = Math.round((x / w) * 360);
       sat = Math.round(100 - (y / rect.height) * 100);
 
-      const [r, g, b] = hsvToRgb(hue, sat, 100);
+      pickedRgb = hsvToRgb(hue, sat, 100);
+      const [r, g, b] = pickedRgb;
       swatch.style.backgroundColor = `rgb(${r}, ${g}, ${b})`;
       readout.textContent = `H: ${hue}° S: ${sat}%`;
 
-      pendingColor = { r, g, b };
-      pendingTemp = null;
+      const rgb = [r, g, b];
+      pendingProbe = () => {
+        probeTargets = new Set(colorTargetIds(targetId));
+        sendColorRgb(targetId, rgb);
+      };
     }
-    if (!rafScheduled) {
-      rafScheduled = true;
-      requestAnimationFrame(flush);
-    }
+    maybeSendProbe();
 
     if (!cursorEl) {
       cursorEl = document.createElement('div');
@@ -1480,7 +1566,7 @@ function openColorPicker(targetId) {
     const isTouch = e.pointerType === 'touch';
     cursorEl.style.left = e.clientX + 'px';
     cursorEl.style.top = (isTouch ? e.clientY - 50 : e.clientY) + 'px';
-    cursorEl.style.backgroundColor = `rgb(${r}, ${g}, ${b})`;
+    if (pickedRgb) cursorEl.style.backgroundColor = `rgb(${pickedRgb[0]}, ${pickedRgb[1]}, ${pickedRgb[2]})`;
     cursorEl.hidden = false;
   }
 

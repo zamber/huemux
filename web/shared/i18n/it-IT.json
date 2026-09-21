@@ -223,7 +223,8 @@
     "columnsTwo": "2 colonne",
     "columnsThree": "3 colonne",
     "columnsFour": "4 colonne",
-    "columnsHint": "Quante schede luci stanno in una riga. I telefoni molto piccoli tengono una colonna."
+    "columnsHint": "Quante schede luci stanno in una riga. I telefoni molto piccoli tengono una colonna.",
+    "columnsAuto": "Automatico (in base alla larghezza dello schermo)"
   },
   "auth": {
     "heading": "Enter your access token",

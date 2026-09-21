@@ -223,7 +223,8 @@
     "columnsTwo": "2 sloupce",
     "columnsThree": "3 sloupce",
     "columnsFour": "4 sloupce",
-    "columnsHint": "Kolik karet světel se vejde do řady. Velmi malé telefony ponechají jeden sloupec."
+    "columnsHint": "Kolik karet světel se vejde do řady. Velmi malé telefony ponechají jeden sloupec.",
+    "columnsAuto": "Automaticky (podle šířky obrazovky)"
   },
   "auth": {
     "heading": "Enter your access token",

@@ -223,7 +223,8 @@
     "columnsTwo": "2 kolom",
     "columnsThree": "3 kolom",
     "columnsFour": "4 kolom",
-    "columnsHint": "Berapa banyak kartu lampu yang muat dalam satu baris. Ponsel yang sangat kecil tetap satu kolom."
+    "columnsHint": "Berapa banyak kartu lampu yang muat dalam satu baris. Ponsel yang sangat kecil tetap satu kolom.",
+    "columnsAuto": "Otomatis (sesuai lebar layar)"
   },
   "auth": {
     "heading": "Enter your access token",

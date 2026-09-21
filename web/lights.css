@@ -48,6 +48,15 @@ body { margin: 0; }
 @media (min-width: 900px) {
   .lights-cards-grid { gap: 1rem; }
 }
+/* Auto mode (the Settings "Auto" choice leaves --light-cols unset inline):
+   wider surfaces get more columns. A fixed 1-4 choice sets the variable
+   inline, which beats these media-query defaults. */
+@media (min-width: 1400px) {
+  .lights-cards-grid { --light-cols: 3; }
+}
+@media (min-width: 1800px) {
+  .lights-cards-grid { --light-cols: 4; }
+}
 /* Very small phones: one column no matter what the setting says — two
    cards at ~320px wide don't fit a name plus a 44px action row. */
 @media (max-width: 359px) {
@@ -188,6 +197,17 @@ body { margin: 0; }
 .light-card .icon-btn.active {
   border-color: var(--card-accent, var(--ink));
   color: var(--card-accent, var(--ink));
+}
+
+/* The colour button doubles as the colour swatch: always tinted with the
+   light's selected colour — including while the light is off, so the
+   selected colour stays visible without any label. Icon-only buttons, no
+   text, on cards and on both aggregate tiles. */
+.light-card .icon-btn[data-action="color"],
+.light-card .icon-btn[data-action="color-room"],
+.light-card .icon-btn[data-action="color-all"] {
+  color: var(--card-accent, var(--ink-muted));
+  border-color: var(--card-accent, var(--border));
 }
 
 /* Per-card brightness slider inherits the light's colour: --card-accent

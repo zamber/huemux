@@ -223,7 +223,8 @@
     "columnsTwo": "2 coloane",
     "columnsThree": "3 coloane",
     "columnsFour": "4 coloane",
-    "columnsHint": "Câte carduri de lumini încap pe un rând. Telefoanele foarte mici păstrează o coloană."
+    "columnsHint": "Câte carduri de lumini încap pe un rând. Telefoanele foarte mici păstrează o coloană.",
+    "columnsAuto": "Automat (după lățimea ecranului)"
   },
   "auth": {
     "heading": "Enter your access token",

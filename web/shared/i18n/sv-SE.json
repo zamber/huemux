@@ -223,7 +223,8 @@
     "columnsTwo": "2 kolumner",
     "columnsThree": "3 kolumner",
     "columnsFour": "4 kolumner",
-    "columnsHint": "Hur många lampkort som får plats i en rad. Mycket små telefoner behåller en kolumn."
+    "columnsHint": "Hur många lampkort som får plats i en rad. Mycket små telefoner behåller en kolumn.",
+    "columnsAuto": "Auto (efter skärmbredd)"
   },
   "auth": {
     "heading": "Enter your access token",

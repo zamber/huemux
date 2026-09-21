@@ -223,7 +223,8 @@
     "columnsTwo": "2열",
     "columnsThree": "3열",
     "columnsFour": "4열",
-    "columnsHint": "한 줄에 들어가는 조명 카드 수입니다. 아주 작은 휴대폰은 한 열을 유지합니다."
+    "columnsHint": "한 줄에 들어가는 조명 카드 수입니다. 아주 작은 휴대폰은 한 열을 유지합니다.",
+    "columnsAuto": "자동(화면 너비에 따라)"
   },
   "auth": {
     "heading": "Enter your access token",

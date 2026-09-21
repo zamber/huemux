@@ -223,7 +223,8 @@
     "columnsTwo": "2 欄",
     "columnsThree": "3 欄",
     "columnsFour": "4 欄",
-    "columnsHint": "一行可容納多少燈光卡片。非常小的手機保持一欄。"
+    "columnsHint": "一行可容納多少燈光卡片。非常小的手機保持一欄。",
+    "columnsAuto": "自動（按螢幕寬度）"
   },
   "auth": {
     "heading": "Enter your access token",

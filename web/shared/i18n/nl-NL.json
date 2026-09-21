@@ -223,7 +223,8 @@
     "columnsTwo": "2 kolommen",
     "columnsThree": "3 kolommen",
     "columnsFour": "4 kolommen",
-    "columnsHint": "Hoeveel lampkaarten er in een rij passen. Zeer kleine telefoons houden één kolom."
+    "columnsHint": "Hoeveel lampkaarten er in een rij passen. Zeer kleine telefoons houden één kolom.",
+    "columnsAuto": "Automatisch (op schermbreedte)"
   },
   "auth": {
     "heading": "Enter your access token",

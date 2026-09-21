@@ -223,7 +223,8 @@
     "columnsTwo": "2列",
     "columnsThree": "3列",
     "columnsFour": "4列",
-    "columnsHint": "1行に並ぶライトカードの数。とても小さいスマートフォンでは1列のままです。"
+    "columnsHint": "1行に並ぶライトカードの数。とても小さいスマートフォンでは1列のままです。",
+    "columnsAuto": "自動（画面幅に応じて）"
   },
   "auth": {
     "heading": "Enter your access token",

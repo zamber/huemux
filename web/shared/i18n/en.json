@@ -223,6 +223,7 @@
     "columnsTwo": "2 columns",
     "columnsThree": "3 columns",
     "columnsFour": "4 columns",
+    "columnsAuto": "Auto (by screen width)",
     "columnsHint": "How many light cards fit in a row. Very small phones keep one column."
   },
   "auth": {

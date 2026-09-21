@@ -218,6 +218,7 @@
     "columnsTwo": "2 kolumny",
     "columnsThree": "3 kolumny",
     "columnsFour": "4 kolumny",
+    "columnsAuto": "Automatycznie (wg szerokości ekranu)",
     "columnsHint": "Ile kart lampek mieści się w rzędzie. Bardzo małe telefony zachowują jedną kolumnę.",
     "copied": "Copied.",
     "reconnecting": "Reconnecting to new address…",

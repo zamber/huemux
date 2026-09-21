@@ -223,7 +223,8 @@
     "columnsTwo": "2 saraketta",
     "columnsThree": "3 saraketta",
     "columnsFour": "4 saraketta",
-    "columnsHint": "Kuinka monta valokorttia mahtuu riville. Hyvin pienet puhelimet pitävät yhden sarakkeen."
+    "columnsHint": "Kuinka monta valokorttia mahtuu riville. Hyvin pienet puhelimet pitävät yhden sarakkeen.",
+    "columnsAuto": "Automaattinen (näytön leveyden mukaan)"
   },
   "auth": {
     "heading": "Enter your access token",

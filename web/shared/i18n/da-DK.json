@@ -223,7 +223,8 @@
     "columnsTwo": "2 søjler",
     "columnsThree": "3 søjler",
     "columnsFour": "4 søjler",
-    "columnsHint": "Hvor mange lyskort der er i en række. Meget små telefoner beholder én søjle."
+    "columnsHint": "Hvor mange lyskort der er i en række. Meget små telefoner beholder én søjle.",
+    "columnsAuto": "Auto (efter skærmbredde)"
   },
   "auth": {
     "heading": "Enter your access token",

@@ -223,7 +223,8 @@
     "columnsTwo": "2 Spalten",
     "columnsThree": "3 Spalten",
     "columnsFour": "4 Spalten",
-    "columnsHint": "Wie viele Lampenkarten in eine Reihe passen. Sehr kleine Telefone behalten eine Spalte."
+    "columnsHint": "Wie viele Lampenkarten in eine Reihe passen. Sehr kleine Telefone behalten eine Spalte.",
+    "columnsAuto": "Automatisch (nach Bildschirmbreite)"
   },
   "auth": {
     "heading": "Enter your access token",

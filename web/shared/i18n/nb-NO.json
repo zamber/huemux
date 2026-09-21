@@ -223,7 +223,8 @@
     "columnsTwo": "2 kolonner",
     "columnsThree": "3 kolonner",
     "columnsFour": "4 kolonner",
-    "columnsHint": "Hvor mange lyskort som får plass i en rad. Svært små telefoner beholder én kolonne."
+    "columnsHint": "Hvor mange lyskort som får plass i en rad. Svært små telefoner beholder én kolonne.",
+    "columnsAuto": "Automatisk (etter skjermbredde)"
   },
   "auth": {
     "heading": "Enter your access token",
