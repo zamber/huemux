@@ -342,7 +342,10 @@ function patchLightCard(l) {
   const rgb = cardRgbFor(l, brightnessPct);
 
   card.classList.toggle('off', !l.on);
-  if (rgb) card.style.setProperty('--card-accent', `rgb(${rgb[0]},${rgb[1]},${rgb[2]})`);
+  if (rgb) {
+    card.style.setProperty('--card-accent', `rgb(${rgb[0]},${rgb[1]},${rgb[2]})`);
+    card.style.setProperty('--card-accent-soft', `rgba(${rgb[0]},${rgb[1]},${rgb[2]},0.35)`);
+  }
 
   const grad = card.querySelector('.light-card-gradient');
   if (grad && rgb) grad.setAttribute('style', gradientStyleFor(rgb, brightnessPct || 40));
@@ -887,7 +890,9 @@ function renderLightCard(l) {
   // xyToRgb returns [r,g,b]. Indexing it as .r/.g/.b produced
   // "rgb(undefined,undefined,undefined)", which browsers drop as invalid — so
   // the simple theme's tinted border silently never appeared.
-  const accent = rgb ? `--card-accent:rgb(${rgb[0]},${rgb[1]},${rgb[2]});` : '';
+  const accent = rgb
+    ? `--card-accent:rgb(${rgb[0]},${rgb[1]},${rgb[2]});--card-accent-soft:rgba(${rgb[0]},${rgb[1]},${rgb[2]},0.35);`
+    : '';
   // Hidden, not just disabled, in the Favorites view — lights-ui's own rule
   // (showFavoriteButton={currentFilter !== 'favorites'}): favorites are for
   // quick access, and a star sitting right there invites an accidental

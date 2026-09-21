@@ -135,23 +135,37 @@ body { margin: 0; }
   border-radius: 16px;
   padding: 1rem;
   /* The per-light colour moves to a tinted left border in every theme —
-     previously simple-theme-only at 4px, now a uniform 6px. Aggregate
-     tiles override with .all-lights-tile's 2px ink border and are
-     unaffected. */
+     previously simple-theme-only at 4px, now a uniform 6px. The aggregate
+     tiles drop the border entirely (see .all-lights-tile below). */
   border-inline-start-width: 6px;
   border-inline-start-color: var(--card-accent, var(--border));
   transition: transform 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease, opacity 0.3s ease;
 }
+/* ON: the ring carries a faint wash of the light's colour, like a preset
+   pill (the 6px strip stays full-strength). OFF: grey all round — the
+   border reads on/off at a glance, and the colour button keeps the hue. */
+.light-card:not(.off) {
+  border-color: var(--card-accent-soft, var(--border));
+  border-inline-start-color: var(--card-accent, var(--border));
+}
+.light-card.off {
+  border-color: var(--border);
+  border-inline-start-color: var(--border);
+}
 .light-card:hover {
   transform: translateY(-2px);
-  border-color: var(--border-strong);
+  border-color: var(--card-accent-soft, var(--border-strong));
   /* The 6px inline-start border IS the light's colour — the hover
      border-color above must not wipe it. */
   border-inline-start-color: var(--card-accent, var(--border));
   box-shadow: 0 6px 18px var(--shadow);
 }
 .light-card.off { opacity: 0.6; }
-.light-card.off:hover { opacity: 0.8; }
+.light-card.off:hover {
+  opacity: 0.8;
+  border-color: var(--border-strong);
+  border-inline-start-color: var(--border);
+}
 /* Both aggregate tiles are borderless summary rows — the ink outline used
    to compete with the lamps, which are the actual controls. They keep their
    colour wash (multiGradientStyle) as identity and are hover-inert like the
