@@ -179,7 +179,9 @@ body { margin: 0; }
   overflow: hidden;
   text-overflow: ellipsis;
 }
-.light-card-head h3 svg { flex-shrink: 0; width: 20px; height: 20px; color: var(--ink); }
+/* The h3 icon is the lamp-type icon (or the tile's bulb) — tinted with the
+   light's own colour so the icon reads as part of the card's identity. */
+.light-card-head h3 svg { flex-shrink: 0; width: 20px; height: 20px; color: var(--card-accent, var(--ink)); }
 .light-card-actions { display: flex; align-items: center; gap: 0.4rem; flex-shrink: 0; }
 
 .icon-btn {
@@ -221,10 +223,10 @@ body { margin: 0; }
 }
 .light-card.all-lights-tile .icon-btn svg { width: 26px; height: 26px; flex-shrink: 0; }
 .light-card.all-lights-tile .icon-btn:hover { background: rgba(127, 127, 127, 0.12); }
-/* The tile's --card-accent would leak into the active power icon via the
-   accent-active rule above — power state stays ink; the fill carries it. */
+/* The active tile button inherits the tile's representative colour — the
+   fill still carries the on/off state, the colour names the lamp. */
 .light-card.all-lights-tile .icon-btn.active {
-  color: var(--ink);
+  color: var(--card-accent, var(--ink));
   background: rgba(127, 127, 127, 0.18);
 }
 

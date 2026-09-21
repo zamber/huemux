@@ -275,15 +275,17 @@ input[type=range], .brightness-slider {
   height: 8px;
   /* The track is the input's own background. lights.js sets --slider-fill /
      --slider-pct inline so the filled portion paints with the light's own
-     color; both default to a plain surface-alt bar (accent-color alone
-     never showed — the custom track background overrides it). */
-  background: linear-gradient(
+     color; the aggregate tiles set --slider-grad instead, a gradient of
+     every active light's color. All default to a plain surface-alt bar
+     (accent-color alone never showed — the custom track background
+     overrides it). */
+  background: var(--slider-grad, linear-gradient(
     to right,
     var(--slider-fill, var(--surface-alt)) 0%,
     var(--slider-fill, var(--surface-alt)) var(--slider-pct, 0%),
     var(--surface-alt) var(--slider-pct, 0%),
     var(--surface-alt) 100%
-  );
+  ));
   border-radius: 999px;
   cursor: pointer;
   accent-color: var(--accent);
@@ -381,13 +383,15 @@ input[type=checkbox], input[type=radio] {
   border-radius: 50%; cursor: pointer; color: var(--ink-muted);
 }
 .scene-chip-star svg { width: 16px; height: 16px; }
-.scene-chip-star:hover { background: var(--card-hover); color: var(--ink); }
+/* The same fill treatment as the aggregate tiles' icon buttons: a soft
+   translucent fill on hover rather than the old card-hover slab. */
+.scene-chip-star:hover { background: rgba(127, 127, 127, 0.12); color: var(--ink); }
 .scene-chip-star.active {
-  /* Not --accent (blue): a star communicates "favourited" by being filled, and
-     tinting it the link colour made it read as a link. The icon itself is
-     swapped to the filled variant in JS; this just keeps it high-contrast
-     against the chip in both themes. */
-  color: var(--ink);
+  /* A favourited scene's star speaks the scene's own tint colour
+     (--chip-color, set inline by lights.js alongside the chip tint) — the
+     icon is already swapped to the filled variant in JS; the colour ties it
+     to its scene. Plain ink when the scene has no swatch. */
+  color: var(--chip-color, var(--ink));
 }
 
 /* 32px is well under the 44px finger minimum, and this control toggles a

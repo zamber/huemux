@@ -387,7 +387,9 @@ function patchRoomTile(room) {
   }
   const slider = tile.querySelector('.brightness-slider');
   if (slider && !editingIds.has(room.id) && document.activeElement !== slider) {
-    slider.value = String(Math.round(room.brightness || 0));
+    const pct = Math.round(room.brightness || 0);
+    slider.value = String(pct);
+    slider.setAttribute('style', multiSliderFillStyle(lights.filter((x) => x.room_id === room.id), pct));
   }
   // The room's color-summary dots derive from its lights' states; a
   // room-wide change (toggle-room, toggle-all) dims or brightens them.
@@ -430,9 +432,11 @@ function patchAllLightsTile() {
   const slider = tile.querySelector('.brightness-slider');
   if (slider && !editingIds.has('__all__') && document.activeElement !== slider) {
     const on = lights.filter((l) => l.on && l.dimmable);
-    if (on.length) {
-      slider.value = String(Math.round(on.reduce((t, l) => t + l.brightness, 0) / on.length));
-    }
+    const avg = on.length
+      ? Math.round(on.reduce((t, l) => t + l.brightness, 0) / on.length)
+      : 0;
+    slider.value = String(avg);
+    slider.setAttribute('style', multiSliderFillStyle(lights, avg));
   }
 
   const dots = tile.querySelector('.room-dots');
@@ -722,6 +726,26 @@ function representativeRgb(list) {
   return null;
 }
 
+// The tile sliders' fill: a gradient of every active light's color across
+// the filled portion, trailing into the track — the slider edition of the
+// tiles' multiGradientStyle wash. Falls back to '' (plain track) when no
+// active light has a color.
+function multiSliderFillStyle(list, pct) {
+  const colors = [];
+  for (const l of list) {
+    if (!l.on) continue;
+    const rgb = cardRgbFor(l, Math.max(20, Math.round(l.brightness) || 40));
+    if (rgb) colors.push(rgb);
+    if (colors.length >= 5) break;
+  }
+  if (!colors.length) return '';
+  const stops = colors.map((c, i) => {
+    const pos = colors.length === 1 ? pct : Math.round((i / (colors.length - 1)) * pct);
+    return `rgb(${c[0]},${c[1]},${c[2]}) ${pos}%`;
+  });
+  return `--slider-grad:linear-gradient(to right, ${stops.join(',')}, var(--surface-alt) ${pct}%, var(--surface-alt) 100%);`;
+}
+
 // The room header's color-summary dots: up to 4 representative colors from
 // the room's lights, deduped by xy (or mirek for CT-mode lights). Off lights
 // keep their hue but render dimmed — the dot answers "what does this room
@@ -901,15 +925,15 @@ function renderAllLightsTile() {
     <div class="light-card all-lights-tile" data-id="__all__" style="${repAccent}">
       ${allGradient ? `<div class="light-card-gradient" style="${allGradient}"></div>` : ''}
       <div class="light-card-head">
-        <h3 title="${escapeHtml(HueMuxI18n.t('lights.allLights'))}">${ICONS.lightbulb}</h3>
+        <h3 title="${escapeHtml(HueMuxI18n.t('lights.allLights'))}">${ICONS.lightbulb}<span>${escapeHtml(HueMuxI18n.t('lights.allLights'))}</span></h3>
         <span class="room-dots" title="${escapeHtml(HueMuxI18n.t('lights.roomColors'))}">${roomDotsFor(lights)}</span>
         <div class="light-card-actions">
-          ${showFavBtn ? `<button type="button" class="icon-btn ${allFav ? 'active' : ''}" data-action="favorite" data-id="all" title="${escapeHtml(HueMuxI18n.t('lights.toggleFavorite'))}">${allFav ? ICONS.star : ICONS.starOutline}</button>` : ''}
           ${hasColor ? `<button type="button" class="icon-btn" data-action="color-all" title="${escapeHtml(HueMuxI18n.t('lights.chooseColorAll'))}">${ICONS.palette}</button>` : ''}
+          ${showFavBtn ? `<button type="button" class="icon-btn ${allFav ? 'active' : ''}" data-action="favorite" data-id="all" title="${escapeHtml(HueMuxI18n.t('lights.toggleFavorite'))}">${allFav ? ICONS.star : ICONS.starOutline}</button>` : ''}
           <button type="button" class="icon-btn ${anyOn ? 'active' : ''}" data-action="toggle-all" title="${escapeHtml(HueMuxI18n.t(anyOn ? 'lights.turnAllOff' : 'lights.turnAllOn'))}">${anyOn ? ICONS.powerOn : ICONS.powerOff}</button>
         </div>
       </div>
-      ${hasBrightness ? `<input type="range" class="brightness-slider" min="0" max="100" value="${avgBrightness}" data-action="brightness-all">` : ''}
+      ${hasBrightness ? `<input type="range" class="brightness-slider" min="0" max="100" value="${avgBrightness}" data-action="brightness-all" style="${multiSliderFillStyle(lights, avgBrightness)}">` : ''}
     </div>`;
 }
 
@@ -953,12 +977,12 @@ function renderRoomTile(room, roomLights) {
         <h3 title="${escapeHtml(HueMuxI18n.t('lights.allInRoom'))}">${ICONS.lightbulb}</h3>
         <span class="room-dots" title="${escapeHtml(HueMuxI18n.t('lights.roomColors'))}">${roomDotsFor(roomLights)}</span>
         <div class="light-card-actions">
-          ${showFavBtn ? `<button type="button" class="icon-btn ${roomFav ? 'active' : ''}" data-action="favorite" data-id="room:${escapeHtml(room.id)}" title="${escapeHtml(HueMuxI18n.t('lights.toggleFavorite'))}">${roomFav ? ICONS.star : ICONS.starOutline}</button>` : ''}
           ${hasColor ? `<button type="button" class="icon-btn" data-action="color-room" data-room-id="${escapeHtml(room.id)}" title="${escapeHtml(HueMuxI18n.t('lights.chooseColorAll'))}">${ICONS.palette}</button>` : ''}
+          ${showFavBtn ? `<button type="button" class="icon-btn ${roomFav ? 'active' : ''}" data-action="favorite" data-id="room:${escapeHtml(room.id)}" title="${escapeHtml(HueMuxI18n.t('lights.toggleFavorite'))}">${roomFav ? ICONS.star : ICONS.starOutline}</button>` : ''}
           <button type="button" class="icon-btn ${anyOn ? 'active' : ''}" data-action="toggle-room" data-room-id="${escapeHtml(room.id)}" data-id="${escapeHtml(room.grouped_light_id)}" title="${escapeHtml(HueMuxI18n.t(anyOn ? 'lights.turnAllOff' : 'lights.turnAllOn'))}">${anyOn ? ICONS.powerOn : ICONS.powerOff}</button>
         </div>
       </div>
-      ${hasBrightness ? `<input type="range" class="brightness-slider" min="0" max="100" value="${roomBrightness}" data-action="brightness-room" data-id="room:${escapeHtml(room.grouped_light_id)}">` : ''}
+      ${hasBrightness ? `<input type="range" class="brightness-slider" min="0" max="100" value="${roomBrightness}" data-action="brightness-room" data-id="room:${escapeHtml(room.grouped_light_id)}" style="${multiSliderFillStyle(roomLights, roomBrightness)}">` : ''}
     </div>`;
 }
 
@@ -1069,7 +1093,8 @@ function renderSceneChip(sc) {
   if (first) {
     const [h, s, v] = rgbToHsv(first[0], first[1], first[2]);
     const [hr, hg, hb] = hsvToRgb(h, Math.min(100, Math.round(s * 1.3 + 20)), v);
-    tint = `--chip-tint:rgba(${first[0]},${first[1]},${first[2]},0.10);--chip-tint-strong:rgba(${first[0]},${first[1]},${first[2]},0.35);` +
+    tint = `--chip-color:rgb(${first[0]},${first[1]},${first[2]});` +
+      `--chip-tint:rgba(${first[0]},${first[1]},${first[2]},0.10);--chip-tint-strong:rgba(${first[0]},${first[1]},${first[2]},0.35);` +
       `--chip-tint-hover:rgba(${hr},${hg},${hb},0.16);--chip-tint-strong-hover:rgba(${hr},${hg},${hb},0.55);`;
   }
   const title = sc.group_name ? `${sc.name} — ${sc.group_name}` : sc.name;
@@ -1704,10 +1729,15 @@ els.grid.addEventListener('input', (e) => {
         el.style.setProperty('--slider-fill', `rgb(${rgb[0]},${rgb[1]},${rgb[2]})`);
         el.style.setProperty('--slider-pct', pct + '%');
       }
+    } else {
+      // Room tile: the gradient fill follows the finger the same way.
+      const roomId = el.dataset.id.slice('room:'.length);
+      el.setAttribute('style', multiSliderFillStyle(lights.filter((x) => x.room_id === roomId), pct));
     }
     // el.dataset.id already carries the "room:" prefix for brightness-room.
     scheduleBrightness(el.dataset.id, pct);
   } else if (el.dataset.action === 'brightness-all') {
+    el.setAttribute('style', multiSliderFillStyle(lights, pct));
     scheduleBrightness('__all__', pct);
   }
 });
