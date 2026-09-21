@@ -209,18 +209,9 @@ body { margin: 0; }
 .icon-btn:hover { border-color: var(--border-strong); color: var(--ink); }
 .icon-btn.active { border: 2px solid var(--ink); background: rgba(127,127,127,0.12); color: var(--ink); }
 
-/* Inside a light card the active-button state speaks the light's own
-   colour rather than the generic ink. Aggregate tiles have no
-   --card-accent and fall back to ink — unchanged. */
-.light-card .icon-btn.active {
-  border-color: var(--card-accent, var(--ink));
-  color: var(--card-accent, var(--ink));
-}
-
 /* The colour button doubles as the colour swatch: always tinted with the
    light's selected colour — including while the light is off, so the
-   selected colour stays visible without any label. Icon-only buttons, no
-   text, on cards and on both aggregate tiles. */
+   selected colour stays visible without any label. */
 .light-card .icon-btn[data-action="color"],
 .light-card .icon-btn[data-action="color-room"],
 .light-card .icon-btn[data-action="color-all"] {
@@ -228,18 +219,15 @@ body { margin: 0; }
   border-color: var(--card-accent, var(--border));
 }
 
-/* On the aggregate tiles the buttons are icon-only: no outline at all,
-   larger glyphs, and state carried by fill — hover gets a soft fill, the
-   active power button a stronger one. Equal specificity to the colour rule
-   above, later in the file, so the tint survives but the border does not. */
-.light-card.all-lights-tile .icon-btn {
-  border-color: transparent;
-}
-.light-card.all-lights-tile .icon-btn svg { width: 26px; height: 26px; flex-shrink: 0; }
-.light-card.all-lights-tile .icon-btn:hover { background: rgba(127, 127, 127, 0.12); }
-/* The active tile button inherits the tile's representative colour — the
-   fill still carries the on/off state, the colour names the lamp. */
-.light-card.all-lights-tile .icon-btn.active {
+/* Icon-only buttons on every card and tile: no outline at all, larger
+   glyphs, state carried by fill — hover gets a soft fill, the active state
+   a stronger one plus the lamp's colour. Later in the file than the rules
+   above, so the tint survives and the border stays gone. */
+.light-card .icon-btn { border: 0; }
+.light-card .icon-btn svg { width: 26px; height: 26px; flex-shrink: 0; }
+.light-card .icon-btn:hover { background: rgba(127, 127, 127, 0.12); }
+.light-card .icon-btn.active {
+  border: 0;
   color: var(--card-accent, var(--ink));
   background: rgba(127, 127, 127, 0.18);
 }
