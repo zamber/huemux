@@ -144,7 +144,11 @@
     "sceneDynamic": "动态",
     "empty": "在此网桥上未找到灯光。",
     "stopStreaming": "停止流式传输",
-    "closeColorPicker": "关闭颜色选择器"
+    "closeColorPicker": "关闭颜色选择器",
+    "chooseColorTemp": "选择色温",
+    "collapseRoom": "折叠房间",
+    "expandRoom": "展开房间",
+    "roomColors": "房间颜色"
   },
   "music": {
     "heading": "音乐响应",
@@ -213,7 +217,13 @@
     "reconnecting": "Reconnecting to new address…",
     "shareLabel": "Share control on local network",
     "shareUrls": "Reachable at:",
-    "tokenSave": "Save token"
+    "tokenSave": "Save token",
+    "columns": "灯光列数",
+    "columnsOne": "1 列",
+    "columnsTwo": "2 列",
+    "columnsThree": "3 列",
+    "columnsFour": "4 列",
+    "columnsHint": "一行可容纳多少灯光卡片。非常小的手机保持一列。"
   },
   "auth": {
     "heading": "Enter your access token",

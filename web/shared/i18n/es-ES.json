@@ -144,7 +144,11 @@
     "sceneDynamic": "Dinámica",
     "empty": "No se encontraron luces en este puente.",
     "stopStreaming": "Detener transmisión",
-    "closeColorPicker": "Cerrar selector de color"
+    "closeColorPicker": "Cerrar selector de color",
+    "chooseColorTemp": "Elegir temperatura de color",
+    "collapseRoom": "Contraer habitación",
+    "expandRoom": "Expandir habitación",
+    "roomColors": "Colores de la habitación"
   },
   "music": {
     "heading": "Reactividad musical",
@@ -213,7 +217,13 @@
     "reconnecting": "Reconnecting to new address…",
     "shareLabel": "Share control on local network",
     "shareUrls": "Reachable at:",
-    "tokenSave": "Save token"
+    "tokenSave": "Save token",
+    "columns": "Columnas de luces",
+    "columnsOne": "1 columna",
+    "columnsTwo": "2 columnas",
+    "columnsThree": "3 columnas",
+    "columnsFour": "4 columnas",
+    "columnsHint": "Cuántas tarjetas de luces caben en una fila. Los teléfonos muy pequeños mantienen una columna."
   },
   "auth": {
     "heading": "Enter your access token",

@@ -523,6 +523,40 @@ about.btn.addEventListener('click', () => {
     });
 });
 
+// ---------- light columns ----------
+//
+// Per-device presentation preference (same class as theme and language):
+// localStorage, no server round-trip. The lights frame listens for the
+// storage event and re-renders its grid live when this changes.
+
+const COLUMNS_KEY = 'huemux.lightsColumns';
+const colsEl = document.getElementById('set-cols');
+
+function renderCols() {
+  let v = '2';
+  try {
+    const stored = localStorage.getItem(COLUMNS_KEY);
+    if (['1', '2', '3', '4'].indexOf(stored) >= 0) v = stored;
+  } catch (e) {
+    // A blocked localStorage just means the default sticks.
+  }
+  colsEl.value = v;
+}
+
+colsEl.addEventListener('change', () => {
+  try {
+    localStorage.setItem(COLUMNS_KEY, colsEl.value);
+  } catch (e) {}
+});
+
+// The lights frame changes this too in theory (it doesn't today — only this
+// page writes), but the select must not disagree with the storage it reads.
+window.addEventListener('storage', (e) => {
+  if (e.key === COLUMNS_KEY) renderCols();
+});
+
+renderCols();
+
 // ---------- language and direction ----------
 
 const langEls = {

@@ -144,7 +144,11 @@
     "sceneDynamic": "Dynamic",
     "empty": "No lights found on this bridge.",
     "stopStreaming": "Stop streaming",
-    "closeColorPicker": "Close color picker"
+    "closeColorPicker": "Close color picker",
+    "chooseColorTemp": "Choose color temperature",
+    "collapseRoom": "Collapse room",
+    "expandRoom": "Expand room",
+    "roomColors": "Room colours"
   },
   "music": {
     "heading": "Music reactivity",
@@ -213,7 +217,13 @@
     "directionAuto": "Follow the language",
     "directionLtr": "Left to right",
     "directionRtl": "Right to left",
-    "directionHint": "Normally follows the language — only Arabic is right to left. Forcing it is for checking that the mirrored layout is correct without having to read the language it belongs to."
+    "directionHint": "Normally follows the language — only Arabic is right to left. Forcing it is for checking that the mirrored layout is correct without having to read the language it belongs to.",
+    "columns": "Light columns",
+    "columnsOne": "1 column",
+    "columnsTwo": "2 columns",
+    "columnsThree": "3 columns",
+    "columnsFour": "4 columns",
+    "columnsHint": "How many light cards fit in a row. Very small phones keep one column."
   },
   "auth": {
     "heading": "Enter your access token",

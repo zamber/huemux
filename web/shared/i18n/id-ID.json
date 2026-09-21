@@ -144,7 +144,11 @@
     "sceneDynamic": "Dinamis",
     "empty": "Tidak ada lampu yang ditemukan di jembatan ini.",
     "stopStreaming": "Hentikan streaming",
-    "closeColorPicker": "Tutup pemilih warna"
+    "closeColorPicker": "Tutup pemilih warna",
+    "chooseColorTemp": "Pilih suhu warna",
+    "collapseRoom": "Ciutkan ruangan",
+    "expandRoom": "Perluas ruangan",
+    "roomColors": "Warna ruangan"
   },
   "music": {
     "heading": "Reaktivitas musik",
@@ -213,7 +217,13 @@
     "reconnecting": "Reconnecting to new address…",
     "shareLabel": "Share control on local network",
     "shareUrls": "Reachable at:",
-    "tokenSave": "Save token"
+    "tokenSave": "Save token",
+    "columns": "Kolom lampu",
+    "columnsOne": "1 kolom",
+    "columnsTwo": "2 kolom",
+    "columnsThree": "3 kolom",
+    "columnsFour": "4 kolom",
+    "columnsHint": "Berapa banyak kartu lampu yang muat dalam satu baris. Ponsel yang sangat kecil tetap satu kolom."
   },
   "auth": {
     "heading": "Enter your access token",

@@ -117,6 +117,23 @@
     </div>
   </form>
 
+  <!-- Light-grid column count. A per-device presentation preference like the
+       theme and language — stored in localStorage and applied live by the
+       lights frame via the storage event — so it sits outside the
+       server-config form above. -->
+  <section class="setting" id="columns">
+    <label for="set-cols" data-i18n="settings.columns">Light columns</label>
+    <select id="set-cols">
+      <option value="1" data-i18n="settings.columnsOne">1 column</option>
+      <option value="2" data-i18n="settings.columnsTwo">2 columns</option>
+      <option value="3" data-i18n="settings.columnsThree">3 columns</option>
+      <option value="4" data-i18n="settings.columnsFour">4 columns</option>
+    </select>
+    <p class="hint" data-i18n="settings.columnsHint">
+      How many light cards fit in a row. Very small phones keep one column.
+    </p>
+  </section>
+
   <!-- Language and direction. Above Diagnostics because someone who has landed
        in the wrong language needs this before anything else on the page, and
        the language names are written in their own language so it is findable

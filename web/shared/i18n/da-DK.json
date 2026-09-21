@@ -144,7 +144,11 @@
     "sceneDynamic": "Dynamisk",
     "empty": "Ingen lys fundet på denne bro.",
     "stopStreaming": "Stop streaming",
-    "closeColorPicker": "Luk farvevælger"
+    "closeColorPicker": "Luk farvevælger",
+    "chooseColorTemp": "Vælg farvetemperatur",
+    "collapseRoom": "Skjul rum",
+    "expandRoom": "Vis rum",
+    "roomColors": "Rummets farver"
   },
   "music": {
     "heading": "Musikreaktivitet",
@@ -213,7 +217,13 @@
     "reconnecting": "Reconnecting to new address…",
     "shareLabel": "Share control on local network",
     "shareUrls": "Reachable at:",
-    "tokenSave": "Save token"
+    "tokenSave": "Save token",
+    "columns": "Lyssøjler",
+    "columnsOne": "1 søjle",
+    "columnsTwo": "2 søjler",
+    "columnsThree": "3 søjler",
+    "columnsFour": "4 søjler",
+    "columnsHint": "Hvor mange lyskort der er i en række. Meget små telefoner beholder én søjle."
   },
   "auth": {
     "heading": "Enter your access token",

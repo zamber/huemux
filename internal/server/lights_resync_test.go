@@ -47,16 +47,17 @@ import (
 // external light change (the official app) simply by writing new values; the
 // next REST read observes them, exactly like a real bridge would.
 type fakeBridge struct {
-	mu      sync.Mutex
-	srv     *httptest.Server
-	lights  []hue.Light
-	rooms   []hue.Group
-	grouped map[string]hue.GroupedLight
+	mu           sync.Mutex
+	srv          *httptest.Server
+	lights       []hue.Light
+	rooms        []hue.Group
+	grouped      map[string]hue.GroupedLight
+	lastLightPUT map[string]map[string]any // light rid -> last decoded PUT body
 }
 
 func newFakeBridge(t *testing.T, lights []hue.Light, rooms []hue.Group, grouped map[string]hue.GroupedLight) *fakeBridge {
 	t.Helper()
-	fb := &fakeBridge{lights: lights, rooms: rooms, grouped: grouped}
+	fb := &fakeBridge{lights: lights, rooms: rooms, grouped: grouped, lastLightPUT: make(map[string]map[string]any)}
 	fb.srv = httptest.NewTLSServer(http.HandlerFunc(fb.serveHTTP))
 	t.Cleanup(fb.srv.Close)
 	return fb
@@ -93,6 +94,16 @@ func (fb *fakeBridge) serveHTTP(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		writeV2(w, []hue.GroupedLight{gl})
+	case strings.HasPrefix(r.URL.Path, "/clip/v2/resource/light/") && r.Method == http.MethodPut:
+		// Record per-light PUT bodies (set brightness/color/temperature) so
+		// control-message tests can assert what reached the bridge.
+		var body map[string]any
+		if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+			http.Error(w, err.Error(), http.StatusBadRequest)
+			return
+		}
+		fb.lastLightPUT[strings.TrimPrefix(r.URL.Path, "/clip/v2/resource/light/")] = body
+		writeV2(w, []any{})
 	default:
 		http.NotFound(w, r)
 	}

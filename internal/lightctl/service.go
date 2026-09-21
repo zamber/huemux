@@ -27,6 +27,8 @@ type Light struct {
 	Colorable  bool    `json:"colorable"`
 	X          float64 `json:"x"` // CIE xy chromaticity; meaningless if !Colorable
 	Y          float64 `json:"y"`
+	CTCapable  bool    `json:"ct_capable"`      // supports color temperature at all (color or white-ambiance)
+	Mirek      int     `json:"mirek,omitempty"` // current white point; meaningful only while the light is in CT mode
 	Favorite   bool    `json:"favorite"`
 }
 
@@ -42,6 +44,7 @@ type Room struct {
 	On             bool    `json:"on"`
 	Brightness     float64 `json:"brightness"`
 	LightCount     int     `json:"light_count"`
+	Archetype      string  `json:"archetype,omitempty"` // the room's CLIP v2 archetype (living_room, kitchen, ...), "" if absent
 	Favorite       bool    `json:"favorite"`
 }
 
@@ -74,6 +77,7 @@ type LightEvent struct {
 	Brightness *float64 `json:"brightness,omitempty"`
 	X          *float64 `json:"x,omitempty"`
 	Y          *float64 `json:"y,omitempty"`
+	Mirek      *int     `json:"mirek,omitempty"` // color-temperature change; only emitted when mirek_valid is true
 }
 
 // Service is the light-control feature's orchestrator: one per paired
@@ -159,6 +163,17 @@ func (s *Service) ListLights(ctx context.Context) ([]Light, error) {
 			lt.Colorable = true
 			lt.X, lt.Y = l.Color.XY.X, l.Color.XY.Y
 		}
+		// A light reporting either `color` or `color_temperature` supports
+		// color temperature (every Hue color and white-ambiance bulb does).
+		// `color_temperature` is only reported while CT is the active mode,
+		// so preferring mirek when present reflects what the light is
+		// actually doing.
+		if l.Color != nil || l.ColorTemperature != nil {
+			lt.CTCapable = true
+		}
+		if l.ColorTemperature != nil && l.ColorTemperature.MirekValid {
+			lt.Mirek = l.ColorTemperature.Mirek
+		}
 		out = append(out, lt)
 	}
 	return out, nil
@@ -174,7 +189,7 @@ func (s *Service) ListRooms(ctx context.Context) ([]Room, error) {
 
 	out := make([]Room, 0, len(rooms))
 	for _, r := range rooms {
-		room := Room{ID: r.ID, GroupedLightID: r.GroupedLightRID(), Name: r.Metadata.Name, LightCount: len(r.Children)}
+		room := Room{ID: r.ID, GroupedLightID: r.GroupedLightRID(), Name: r.Metadata.Name, LightCount: len(r.Children), Archetype: r.Metadata.Archetype}
 		if gl, err := s.client.GetGroupedLight(ctx, r.GroupedLightRID()); err == nil {
 			room.On = gl.On.On
 			room.Brightness = gl.Dimming.Brightness
@@ -249,6 +264,9 @@ func (s *Service) SetLightBrightness(ctx context.Context, rid string, pct float6
 }
 func (s *Service) SetLightColorXY(ctx context.Context, rid string, x, y float64) error {
 	return s.client.SetColorXY(ctx, rid, x, y)
+}
+func (s *Service) SetLightColorTemperature(ctx context.Context, rid string, mirek int) error {
+	return s.client.SetColorTemperature(ctx, rid, mirek)
 }
 
 // SetRoomOn and SetRoomBrightness control every light in a room/zone at once.
@@ -325,6 +343,19 @@ func translateUpdate(d map[string]any) (LightEvent, bool) {
 			}
 			if v, ok := xyRaw["y"].(float64); ok {
 				le.Y = &v
+			}
+		}
+	}
+	// Color-temperature deltas arrive only while the light is in CT mode. A
+	// switch back to color mode often arrives as color_temperature with
+	// mirek_valid:false — emitting that would clobber the frontend's mirek
+	// with a stale value, so only valid mireks are forwarded. Eventstream
+	// JSON numbers decode as float64.
+	if ctRaw, ok := d["color_temperature"].(map[string]any); ok {
+		if valid, _ := ctRaw["mirek_valid"].(bool); valid {
+			if v, ok := ctRaw["mirek"].(float64); ok {
+				m := int(v)
+				le.Mirek = &m
 			}
 		}
 	}

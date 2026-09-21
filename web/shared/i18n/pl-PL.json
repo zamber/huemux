@@ -144,7 +144,11 @@
     "sceneDynamic": "Dynamiczna",
     "empty": "Nie znaleziono świateł na tym mostku.",
     "stopStreaming": "Zatrzymaj strumieniowanie",
-    "closeColorPicker": "Zamknij wybór koloru"
+    "closeColorPicker": "Zamknij wybór koloru",
+    "chooseColorTemp": "Wybierz temperaturę barwową",
+    "collapseRoom": "Zwiń pokój",
+    "expandRoom": "Rozwiń pokój",
+    "roomColors": "Kolory pokoju"
   },
   "music": {
     "heading": "Reakcja na muzykę",
@@ -209,6 +213,12 @@
     "directionLtr": "Od lewej do prawej",
     "directionRtl": "Od prawej do lewej",
     "directionHint": "Zwykle zgodny z językiem — tylko arabski jest pisany od prawej. Wymuszenie służy do sprawdzenia lustrzanego układu bez znajomości tego języka.",
+    "columns": "Liczba kolumn",
+    "columnsOne": "1 kolumna",
+    "columnsTwo": "2 kolumny",
+    "columnsThree": "3 kolumny",
+    "columnsFour": "4 kolumny",
+    "columnsHint": "Ile kart lampek mieści się w rzędzie. Bardzo małe telefony zachowują jedną kolumnę.",
     "copied": "Copied.",
     "reconnecting": "Reconnecting to new address…",
     "shareLabel": "Share control on local network",

@@ -69,9 +69,13 @@ type EntertainmentConfiguration struct {
 	} `json:"locations"`
 }
 
-// Metadata carries the user-facing name Hue attaches to most resources.
+// Metadata carries the user-facing name Hue attaches to most resources, and
+// (for rooms and zones) the archetype it categorises the room as — the CLIP
+// v2 metadata.archetype field (living_room, kitchen, bedroom, ...). Empty
+// when the resource has no archetype.
 type Metadata struct {
-	Name string `json:"name"`
+	Name      string `json:"name"`
+	Archetype string `json:"archetype,omitempty"`
 }
 
 // IsActive reports whether another application is currently streaming to

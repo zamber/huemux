@@ -144,7 +144,11 @@
     "sceneDynamic": "Dinamik",
     "empty": "Bu köprüde ışık bulunamadı.",
     "stopStreaming": "Akışı durdur",
-    "closeColorPicker": "Renk seçiciyi kapat"
+    "closeColorPicker": "Renk seçiciyi kapat",
+    "chooseColorTemp": "Renk sıcaklığını seç",
+    "collapseRoom": "Odayı daralt",
+    "expandRoom": "Odayı genişlet",
+    "roomColors": "Oda renkleri"
   },
   "music": {
     "heading": "Müzik tepkisi",
@@ -213,7 +217,13 @@
     "reconnecting": "Reconnecting to new address…",
     "shareLabel": "Share control on local network",
     "shareUrls": "Reachable at:",
-    "tokenSave": "Save token"
+    "tokenSave": "Save token",
+    "columns": "Işık sütunları",
+    "columnsOne": "1 sütun",
+    "columnsTwo": "2 sütun",
+    "columnsThree": "3 sütun",
+    "columnsFour": "4 sütun",
+    "columnsHint": "Bir satıra kaç ışık kartı sığar. Çok küçük telefonlar tek sütun tutar."
   },
   "auth": {
     "heading": "Enter your access token",

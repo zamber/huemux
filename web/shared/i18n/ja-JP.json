@@ -144,7 +144,11 @@
     "sceneDynamic": "ダイナミック",
     "empty": "このブリッジ上にライトが見つかりません。",
     "stopStreaming": "ストリーミングを停止",
-    "closeColorPicker": "カラーピッカーを閉じる"
+    "closeColorPicker": "カラーピッカーを閉じる",
+    "chooseColorTemp": "色温度を選択",
+    "collapseRoom": "部屋を折りたたむ",
+    "expandRoom": "部屋を展開",
+    "roomColors": "部屋の色"
   },
   "music": {
     "heading": "ミュージックリアクティブ",
@@ -213,7 +217,13 @@
     "reconnecting": "Reconnecting to new address…",
     "shareLabel": "Share control on local network",
     "shareUrls": "Reachable at:",
-    "tokenSave": "Save token"
+    "tokenSave": "Save token",
+    "columns": "ライトの列数",
+    "columnsOne": "1列",
+    "columnsTwo": "2列",
+    "columnsThree": "3列",
+    "columnsFour": "4列",
+    "columnsHint": "1行に並ぶライトカードの数。とても小さいスマートフォンでは1列のままです。"
   },
   "auth": {
     "heading": "Enter your access token",

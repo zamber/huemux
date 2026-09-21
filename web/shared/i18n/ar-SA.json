@@ -144,7 +144,11 @@
     "sceneDynamic": "ديناميكي",
     "empty": "لم يتم العثور على أضواء على هذا الجسر.",
     "stopStreaming": "إيقاف البث",
-    "closeColorPicker": "إغلاق منتقي الألوان"
+    "closeColorPicker": "إغلاق منتقي الألوان",
+    "chooseColorTemp": "اختر درجة حرارة اللون",
+    "collapseRoom": "طيّ الغرفة",
+    "expandRoom": "توسيع الغرفة",
+    "roomColors": "ألوان الغرفة"
   },
   "music": {
     "heading": "استجابة للموسيقى",
@@ -213,7 +217,13 @@
     "reconnecting": "Reconnecting to new address…",
     "shareLabel": "Share control on local network",
     "shareUrls": "Reachable at:",
-    "tokenSave": "Save token"
+    "tokenSave": "Save token",
+    "columns": "أعمدة الأضواء",
+    "columnsOne": "عمود واحد",
+    "columnsTwo": "عمودان",
+    "columnsThree": "3 أعمدة",
+    "columnsFour": "4 أعمدة",
+    "columnsHint": "عدد بطاقات الأضواء في الصف الواحد. الهواتف الصغيرة جدًا تحتفظ بعمود واحد."
   },
   "auth": {
     "heading": "Enter your access token",

@@ -144,7 +144,11 @@
     "sceneDynamic": "動態",
     "empty": "在此橋接器上找不到任何燈光。",
     "stopStreaming": "停止串流",
-    "closeColorPicker": "關閉顏色選擇器"
+    "closeColorPicker": "關閉顏色選擇器",
+    "chooseColorTemp": "選擇色溫",
+    "collapseRoom": "摺疊房間",
+    "expandRoom": "展開房間",
+    "roomColors": "房間顏色"
   },
   "music": {
     "heading": "音樂反應",
@@ -213,7 +217,13 @@
     "reconnecting": "Reconnecting to new address…",
     "shareLabel": "Share control on local network",
     "shareUrls": "Reachable at:",
-    "tokenSave": "Save token"
+    "tokenSave": "Save token",
+    "columns": "燈光欄數",
+    "columnsOne": "1 欄",
+    "columnsTwo": "2 欄",
+    "columnsThree": "3 欄",
+    "columnsFour": "4 欄",
+    "columnsHint": "一行可容納多少燈光卡片。非常小的手機保持一欄。"
   },
   "auth": {
     "heading": "Enter your access token",

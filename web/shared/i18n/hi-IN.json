@@ -144,7 +144,11 @@
     "sceneDynamic": "गतिशील",
     "empty": "इस ब्रिज पर कोई लाइट नहीं मिली।",
     "stopStreaming": "स्ट्रीमिंग बंद करें",
-    "closeColorPicker": "रंग चयनकर्ता बंद करें"
+    "closeColorPicker": "रंग चयनकर्ता बंद करें",
+    "chooseColorTemp": "रंग तापमान चुनें",
+    "collapseRoom": "कमरा संक्षिप्त करें",
+    "expandRoom": "कमरा विस्तृत करें",
+    "roomColors": "कमरे के रंग"
   },
   "music": {
     "heading": "संगीत प्रतिक्रिया",
@@ -213,7 +217,13 @@
     "reconnecting": "Reconnecting to new address…",
     "shareLabel": "Share control on local network",
     "shareUrls": "Reachable at:",
-    "tokenSave": "Save token"
+    "tokenSave": "Save token",
+    "columns": "लाइट कॉलम",
+    "columnsOne": "1 कॉलम",
+    "columnsTwo": "2 कॉलम",
+    "columnsThree": "3 कॉलम",
+    "columnsFour": "4 कॉलम",
+    "columnsHint": "एक पंक्ति में कितने लाइट कार्ड फिट हों। बहुत छोटे फ़ोन एक कॉलम रखते हैं।"
   },
   "auth": {
     "heading": "Enter your access token",

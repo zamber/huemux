@@ -144,7 +144,11 @@
     "sceneDynamic": "Dynamisch",
     "empty": "Keine Leuchten auf dieser Bridge gefunden.",
     "stopStreaming": "Streaming stoppen",
-    "closeColorPicker": "Farbwähler schließen"
+    "closeColorPicker": "Farbwähler schließen",
+    "chooseColorTemp": "Farbtemperatur wählen",
+    "collapseRoom": "Raum einklappen",
+    "expandRoom": "Raum ausklappen",
+    "roomColors": "Raumfarben"
   },
   "music": {
     "heading": "Musik-Reaktivität",
@@ -213,7 +217,13 @@
     "reconnecting": "Reconnecting to new address…",
     "shareLabel": "Share control on local network",
     "shareUrls": "Reachable at:",
-    "tokenSave": "Save token"
+    "tokenSave": "Save token",
+    "columns": "Lampenspalten",
+    "columnsOne": "1 Spalte",
+    "columnsTwo": "2 Spalten",
+    "columnsThree": "3 Spalten",
+    "columnsFour": "4 Spalten",
+    "columnsHint": "Wie viele Lampenkarten in eine Reihe passen. Sehr kleine Telefone behalten eine Spalte."
   },
   "auth": {
     "heading": "Enter your access token",

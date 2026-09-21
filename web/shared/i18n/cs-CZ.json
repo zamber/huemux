@@ -144,7 +144,11 @@
     "sceneDynamic": "Dynamická",
     "empty": "Na tomto mostě nebyla nalezena žádná světla.",
     "stopStreaming": "Zastavit streamování",
-    "closeColorPicker": "Zavřít výběr barev"
+    "closeColorPicker": "Zavřít výběr barev",
+    "chooseColorTemp": "Vybrat teplotu barev",
+    "collapseRoom": "Sbalit místnost",
+    "expandRoom": "Rozbalit místnost",
+    "roomColors": "Barvy místnosti"
   },
   "music": {
     "heading": "Reakce na hudbu",
@@ -213,7 +217,13 @@
     "reconnecting": "Reconnecting to new address…",
     "shareLabel": "Share control on local network",
     "shareUrls": "Reachable at:",
-    "tokenSave": "Save token"
+    "tokenSave": "Save token",
+    "columns": "Sloupce světel",
+    "columnsOne": "1 sloupec",
+    "columnsTwo": "2 sloupce",
+    "columnsThree": "3 sloupce",
+    "columnsFour": "4 sloupce",
+    "columnsHint": "Kolik karet světel se vejde do řady. Velmi malé telefony ponechají jeden sloupec."
   },
   "auth": {
     "heading": "Enter your access token",

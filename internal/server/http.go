@@ -796,6 +796,7 @@ type controlMessage struct {
 	R          uint8   `json:"r"`
 	G          uint8   `json:"g"`
 	B          uint8   `json:"b"`
+	Mirek      int     `json:"mirek"`
 
 	// Preset names a built-in music-reactivity preset for music_preset;
 	// "" deactivates music and hands the output back to screen sync.
@@ -1240,6 +1241,11 @@ func (s *Server) handleControlMessage(conn *Conn, payload []byte) {
 		case "light_color":
 			if err := lights.SetLightColorRGB(ctx, msg.RID, msg.R, msg.G, msg.B); err != nil {
 				log.Printf("huemux: light_color %s: %v", msg.RID, err)
+			}
+			return
+		case "light_color_temp":
+			if err := lights.SetLightColorTemperature(ctx, msg.RID, msg.Mirek); err != nil {
+				log.Printf("huemux: light_color_temp %s: %v", msg.RID, err)
 			}
 			return
 		case "light_favorite":

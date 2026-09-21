@@ -22,7 +22,8 @@ type Light struct {
 		Brightness float64 `json:"brightness"` // 0-100
 	} `json:"dimming,omitempty"`
 	ColorTemperature *struct {
-		Mirek int `json:"mirek"`
+		Mirek      int  `json:"mirek"`
+		MirekValid bool `json:"mirek_valid"`
 	} `json:"color_temperature,omitempty"`
 	Color *struct {
 		XY struct {
@@ -161,6 +162,15 @@ func (c *Client) SetBrightness(ctx context.Context, lightRID string, pct float64
 func (c *Client) SetColorXY(ctx context.Context, lightRID string, x, y float64) error {
 	return c.doV2(ctx, http.MethodPut, "/clip/v2/resource/light/"+lightRID,
 		map[string]any{"color": map[string]any{"xy": map[string]any{"x": x, "y": y}}}, nil)
+}
+
+// SetColorTemperature sets a light's white point directly in mirek (153 =
+// 6500 K, 500 = 2000 K — the bridge clamps out-of-range values itself).
+// CLIP v2 accepts mirek natively, so unlike color there is no conversion
+// step between the picker and the bridge.
+func (c *Client) SetColorTemperature(ctx context.Context, lightRID string, mirek int) error {
+	return c.doV2(ctx, http.MethodPut, "/clip/v2/resource/light/"+lightRID,
+		map[string]any{"color_temperature": map[string]any{"mirek": mirek}}, nil)
 }
 
 // GetGroupedLight fetches one room/zone's aggregate state.

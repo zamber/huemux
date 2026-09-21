@@ -56,12 +56,15 @@
     <span id="conn-dot" class="dot" title="connection to HueMux"></span>
   </div>
 
+  <main id="lights-grid" class="lights-grid"></main>
+
+  <!-- The zone-scenes strip sits below the room cards as a bottom presets
+       row: direct light control first, one-gesture-away scenes second.
+       Room-scoped scenes stay inside their room cards (see lights.js). -->
   <section id="scenes-section" class="scenes-section" hidden>
     <h2 data-i18n="lights.entertainmentScenes">Entertainment area scenes</h2>
     <div id="scenes-strip" class="scenes-strip"></div>
   </section>
-
-  <main id="lights-grid" class="lights-grid"></main>
 </div>
 
 <script src="/shared/theme.js"></script>

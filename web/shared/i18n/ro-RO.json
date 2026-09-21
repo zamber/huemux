@@ -144,7 +144,11 @@
     "sceneDynamic": "Dinamic",
     "empty": "Nu au fost găsite luminile pe această pasarelă.",
     "stopStreaming": "Opriți transmisia",
-    "closeColorPicker": "Închide selectorul de culori"
+    "closeColorPicker": "Închide selectorul de culori",
+    "chooseColorTemp": "Alege temperatura culorii",
+    "collapseRoom": "Restrânge camera",
+    "expandRoom": "Extinde camera",
+    "roomColors": "Culorile camerei"
   },
   "music": {
     "heading": "Reactivitate muzicală",
@@ -213,7 +217,13 @@
     "reconnecting": "Reconnecting to new address…",
     "shareLabel": "Share control on local network",
     "shareUrls": "Reachable at:",
-    "tokenSave": "Save token"
+    "tokenSave": "Save token",
+    "columns": "Coloane de lumini",
+    "columnsOne": "1 coloană",
+    "columnsTwo": "2 coloane",
+    "columnsThree": "3 coloane",
+    "columnsFour": "4 coloane",
+    "columnsHint": "Câte carduri de lumini încap pe un rând. Telefoanele foarte mici păstrează o coloană."
   },
   "auth": {
     "heading": "Enter your access token",

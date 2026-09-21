@@ -340,7 +340,12 @@ input[type=checkbox], input[type=radio] {
 .scenes-strip { display: flex; flex-wrap: wrap; gap: 0.5rem 0.6rem; }
 .scene-chip {
   display: flex; align-items: center;
-  background: var(--card); border: 1px solid var(--border);
+  /* --chip-tint/--chip-tint-strong are set inline by lights.js from the
+     scene's first swatch (sync.html sets neither, and gets the plain card) —
+     the chip's identity tint, faint enough that the swatches stay the real
+     colour source. */
+  background: var(--chip-tint, var(--card));
+  border: 1px solid var(--chip-tint-strong, var(--border));
   border-radius: 999px; color: var(--ink); font-size: 0.82rem;
 }
 .scene-chip:hover { border-color: var(--border-strong); }
@@ -431,6 +436,15 @@ html[data-simple] .light-card,
 html[data-simple] .light-card-gradient,
 html[data-simple] .scene-chip,
 html[data-simple] .icon-btn {
+  transition: none;
+}
+
+/* The room-card collapse is a transition too — under simple mode it must be
+   an instant show/hide (lights.js skips the accordion animation when the
+   attribute is set; this stops the chevron and body from animating on their
+   own). */
+html[data-simple] .room-card-body,
+html[data-simple] .room-card-chevron {
   transition: none;
 }
 

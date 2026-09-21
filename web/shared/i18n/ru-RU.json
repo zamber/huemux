@@ -144,7 +144,11 @@
     "sceneDynamic": "Динамическая",
     "empty": "На этом мосту не найдены огни.",
     "stopStreaming": "Остановить трансляцию",
-    "closeColorPicker": "Закрыть выбор цвета"
+    "closeColorPicker": "Закрыть выбор цвета",
+    "chooseColorTemp": "Выбрать цветовую температуру",
+    "collapseRoom": "Свернуть комнату",
+    "expandRoom": "Развернуть комнату",
+    "roomColors": "Цвета комнаты"
   },
   "music": {
     "heading": "Музыкальная реактивность",
@@ -213,7 +217,13 @@
     "reconnecting": "Reconnecting to new address…",
     "shareLabel": "Share control on local network",
     "shareUrls": "Reachable at:",
-    "tokenSave": "Save token"
+    "tokenSave": "Save token",
+    "columns": "Столбцы ламп",
+    "columnsOne": "1 столбец",
+    "columnsTwo": "2 столбца",
+    "columnsThree": "3 столбца",
+    "columnsFour": "4 столбца",
+    "columnsHint": "Сколько карточек ламп помещается в ряд. На очень маленьких телефонах остаётся один столбец."
   },
   "auth": {
     "heading": "Enter your access token",

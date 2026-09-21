@@ -144,7 +144,11 @@
     "sceneDynamic": "동적",
     "empty": "이 브리지에서 조명을 찾을 수 없습니다.",
     "stopStreaming": "스트리밍 중지",
-    "closeColorPicker": "색상 선택기 닫기"
+    "closeColorPicker": "색상 선택기 닫기",
+    "chooseColorTemp": "색온도 선택",
+    "collapseRoom": "방 접기",
+    "expandRoom": "방 펼치기",
+    "roomColors": "방 색상"
   },
   "music": {
     "heading": "음악 반응",
@@ -213,7 +217,13 @@
     "reconnecting": "Reconnecting to new address…",
     "shareLabel": "Share control on local network",
     "shareUrls": "Reachable at:",
-    "tokenSave": "Save token"
+    "tokenSave": "Save token",
+    "columns": "조명 열",
+    "columnsOne": "1열",
+    "columnsTwo": "2열",
+    "columnsThree": "3열",
+    "columnsFour": "4열",
+    "columnsHint": "한 줄에 들어가는 조명 카드 수입니다. 아주 작은 휴대폰은 한 열을 유지합니다."
   },
   "auth": {
     "heading": "Enter your access token",

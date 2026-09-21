@@ -144,7 +144,11 @@
     "sceneDynamic": "Dynamique",
     "empty": "Aucune lumière trouvée sur ce pont.",
     "stopStreaming": "Arrêter le flux",
-    "closeColorPicker": "Fermer le sélecteur de couleurs"
+    "closeColorPicker": "Fermer le sélecteur de couleurs",
+    "chooseColorTemp": "Choisir la température de couleur",
+    "collapseRoom": "Réduire la pièce",
+    "expandRoom": "Développer la pièce",
+    "roomColors": "Couleurs de la pièce"
   },
   "music": {
     "heading": "Réactivité musicale",
@@ -213,7 +217,13 @@
     "reconnecting": "Reconnecting to new address…",
     "shareLabel": "Share control on local network",
     "shareUrls": "Reachable at:",
-    "tokenSave": "Save token"
+    "tokenSave": "Save token",
+    "columns": "Colonnes de lampes",
+    "columnsOne": "1 colonne",
+    "columnsTwo": "2 colonnes",
+    "columnsThree": "3 colonnes",
+    "columnsFour": "4 colonnes",
+    "columnsHint": "Nombre de cartes de lampes par rangée. Les très petits téléphones gardent une colonne."
   },
   "auth": {
     "heading": "Enter your access token",

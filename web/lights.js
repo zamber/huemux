@@ -28,7 +28,43 @@ const ICONS = {
   powerOn: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><line x1="12" y1="3" x2="12" y2="9"/><circle cx="12" cy="14" r="2.3" fill="currentColor" stroke="none"/></svg>',
   powerOff: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><line x1="12" y1="3" x2="12" y2="9"/></svg>',
   lightbulb: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="9" r="6"/><line x1="12" y1="15" x2="12" y2="18"/><line x1="9" y1="18" x2="15" y2="18"/><line x1="10" y1="21" x2="14" y2="21"/></svg>',
+  chevronRight: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="9 6 15 12 9 18"/></svg>',
+  roomHome: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 11l9-7 9 7"/><path d="M5 9.5V20h14V9.5"/></svg>',
+  roomSofa: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 11V8a3 3 0 0 1 3-3h8a3 3 0 0 1 3 3v3"/><path d="M3 15a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v2a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><path d="M5 19v-2"/><path d="M19 19v-2"/></svg>',
+  roomBed: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 7v11"/><path d="M3 15h18v3"/><path d="M21 15v-4a2 2 0 0 0-2-2h-8v6"/></svg>',
+  roomKitchen: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 10h16v9a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2z"/><path d="M8 7V5a1 1 0 0 1 1-1h2v3"/><path d="M16 7V5a1 1 0 0 1 1-1h2v3"/><path d="M12 13v3"/></svg>',
+  roomDining: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 3v7a3 3 0 0 0 3 3v8"/><path d="M19 3v7a3 3 0 0 1-3 3v8"/><path d="M5 3c1.5 2 1.5 5 0 7"/><path d="M19 3c-1.5 2-1.5 5 0 7"/></svg>',
+  roomBath: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 12h16v3a4 4 0 0 1-4 4H8a4 4 0 0 1-4-4z"/><path d="M6 12V5a2 2 0 0 1 2-2h1.5"/><path d="M7 21l-1 1.5"/><path d="M17 21l1 1.5"/></svg>',
+  roomOffice: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="3" width="16" height="18" rx="1"/><path d="M9 3v4h6V3"/><path d="M9 11h6"/><path d="M9 15h6"/><path d="M12 3v18"/></svg>',
+  roomGym: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6.5 6.5v11M17.5 6.5v11M3 9v6M21 9v6M6.5 12h11"/></svg>',
+  roomPlant: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 21v-8"/><path d="M12 13c0-3-2-5-5-5 0 3 2 5 5 5z"/><path d="M12 11c0-3 2-5 5-5 0 3-2 5-5 5z"/><path d="M12 15c0-2-1.5-3.5-3.5-3.5 0 2 1.5 3.5 3.5 3.5z"/></svg>',
+  roomDoor: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 21V4a1 1 0 0 1 1-1h12a1 1 0 0 1 1 1v17"/><path d="M15 12h.01"/></svg>',
 };
+
+// Hue room archetypes (CLIP v2 metadata.archetype) mapped to the icon set
+// above. Unknown or absent archetypes fall back to roomHome — never an empty
+// icon, so a room header always has a shape to scan for.
+const ARCHETYPE_ICONS = {
+  home: 'roomHome', garage: 'roomHome', driveway: 'roomHome', carport: 'roomHome',
+  storage: 'roomHome', other: 'roomHome', zone: 'roomHome',
+  living_room: 'roomSofa', lounge: 'roomSofa', recreation: 'roomSofa',
+  man_cave: 'roomSofa', tv: 'roomSofa', music: 'roomSofa',
+  bedroom: 'roomBed', kids_bedroom: 'roomBed', guest_room: 'roomBed', nursery: 'roomBed',
+  kitchen: 'roomKitchen', barbecue: 'roomKitchen',
+  dining: 'roomDining',
+  bathroom: 'roomBath', toilet: 'roomBath', laundry_room: 'roomBath',
+  office: 'roomOffice', computer: 'roomOffice', studio: 'roomOffice',
+  reading: 'roomOffice', closet: 'roomOffice',
+  gym: 'roomGym',
+  garden: 'roomPlant', terrace: 'roomPlant', balcony: 'roomPlant',
+  porch: 'roomPlant', pool: 'roomPlant',
+  hallway: 'roomDoor', front_door: 'roomDoor', staircase: 'roomDoor',
+  downstairs: 'roomDoor', upstairs: 'roomDoor', top_floor: 'roomDoor', attic: 'roomDoor',
+};
+
+function iconForArchetype(archetype) {
+  return ICONS[ARCHETYPE_ICONS[archetype] || 'roomHome'];
+}
 
 const els = {
   connDot: document.getElementById('conn-dot'),
@@ -113,6 +149,53 @@ let filterExplicitFromURL = false; // true if the URL named a filter — otherwi
 // LightCard.svelte's isUserEditing guard.
 const editingIds = new Set();
 const brightnessTimers = {};
+
+// ---------- collapsible rooms + column count ----------
+//
+// Both are per-device presentation preferences, like the theme: localStorage,
+// synced across the shell's iframes via the native `storage` event (the
+// settings frame writes, this frame re-renders). Collapsed state is a JSON
+// array of room ids; the column count is one of "1".."4".
+
+const COLLAPSED_KEY = 'huemux.collapsedRooms';
+const collapsedRooms = new Set();
+
+function loadCollapsedRooms() {
+  collapsedRooms.clear();
+  try {
+    const raw = localStorage.getItem(COLLAPSED_KEY);
+    if (!raw) return;
+    const list = JSON.parse(raw);
+    if (!Array.isArray(list)) return;
+    for (const id of list) if (typeof id === 'string') collapsedRooms.add(id);
+  } catch (e) {
+    // Same policy as the offline cache: bad storage is not worth failing over.
+  }
+}
+
+function persistCollapsedRooms() {
+  try {
+    localStorage.setItem(COLLAPSED_KEY, JSON.stringify([...collapsedRooms]));
+  } catch (e) {}
+}
+
+const COLUMNS_KEY = 'huemux.lightsColumns';
+let lightsColumns = ''; // '' = responsive default (2); else "1".."4" user override
+
+function loadColumnsPref() {
+  try {
+    const v = localStorage.getItem(COLUMNS_KEY);
+    lightsColumns = ['1', '2', '3', '4'].indexOf(v) >= 0 ? v : '';
+  } catch (e) {
+    lightsColumns = '';
+  }
+}
+
+// Inline on each .lights-cards-grid when the user has overridden the count;
+// absent otherwise, so the responsive default in lights.css applies.
+function gridStyleAttr() {
+  return lightsColumns ? ` style="--light-cols:${lightsColumns}"` : '';
+}
 
 // ---------- transport ----------
 
@@ -221,7 +304,7 @@ function patchLightCard(l) {
   if (!card) return false;
 
   const brightnessPct = l.on ? Math.round(l.brightness) : 0;
-  const rgb = l.colorable ? xyToRgb(l.x, l.y, brightnessPct || 40) : null;
+  const rgb = cardRgbFor(l, brightnessPct);
 
   card.classList.toggle('off', !l.on);
   if (rgb) card.style.setProperty('--card-accent', `rgb(${rgb[0]},${rgb[1]},${rgb[2]})`);
@@ -267,6 +350,13 @@ function patchRoomTile(room) {
   if (slider && !editingIds.has(room.id) && document.activeElement !== slider) {
     slider.value = String(Math.round(room.brightness || 0));
   }
+  // The room's color-summary dots derive from its lights' states; a
+  // room-wide change (toggle-room, toggle-all) dims or brightens them.
+  const card = tile.closest('.room-card');
+  if (card) {
+    const dots = card.querySelector('.room-dots');
+    if (dots) dots.innerHTML = roomDotsFor(lights.filter((x) => x.room_id === room.id));
+  }
   return true;
 }
 
@@ -305,6 +395,9 @@ function patchAllLightsTile() {
       slider.value = String(Math.round(on.reduce((t, l) => t + l.brightness, 0) / on.length));
     }
   }
+
+  const dots = tile.querySelector('.room-dots');
+  if (dots) dots.innerHTML = roomDotsFor(lights);
   return true;
 }
 
@@ -314,9 +407,17 @@ function patchRoomTileFor(l) {
   if (!l || !l.room_id) return;
   const room = rooms.find((r) => r.id === l.room_id);
   if (!room) return;
+  const roomLights = lights.filter((x) => x.room_id === room.id);
+  // The room card's color dots derive from its lights, so every light event
+  // refreshes them — including in the Favorites view, where the bulk tile is
+  // not rendered and only the card chrome exists to update.
+  const card = els.grid.querySelector(`.room-card[data-room-id="${cssEscape(room.id)}"]`);
+  if (card) {
+    const dots = card.querySelector('.room-dots');
+    if (dots) dots.innerHTML = roomDotsFor(roomLights);
+  }
   const tile = els.grid.querySelector(`.all-lights-tile[data-room-id="${cssEscape(room.id)}"]`);
   if (!tile) return;
-  const roomLights = lights.filter((x) => x.room_id === room.id);
   // Use the room's grouped_light state when available — same logic as
   // renderRoomTile and patchRoomTile, so a grouped_light event reporting
   // off is not overridden by a subsequent per-light event's aggregate.
@@ -364,8 +465,15 @@ function mergeLightEvent(ev) {
     if (!l) return;
     if (ev.on !== undefined) l.on = ev.on;
     if (ev.brightness !== undefined) l.brightness = ev.brightness;
-    if (ev.x !== undefined) l.x = ev.x;
-    if (ev.y !== undefined) l.y = ev.y;
+    if (ev.x !== undefined) {
+      l.x = ev.x;
+      l.y = ev.y;
+      // An xy delta is an authoritative switch back to color mode; the
+      // server drops the mirek_valid:false companion events, so this is
+      // what actually clears a stale mirek on the client.
+      l.mirek = 0;
+    }
+    if (ev.mirek !== undefined) l.mirek = ev.mirek;
 
     // Patch just this card. A light_event cannot change the grid's structure
     // — no card appears, disappears or moves — so a full rebuild was always
@@ -523,6 +631,41 @@ function multiGradientStyle(list) {
   return `background: linear-gradient(120deg, ${stops.join(', ')});`;
 }
 
+// The one color a light card renders: mirek-preferred — a light in CT mode
+// reports its white point in mirek, and deriving a white from its (possibly
+// stale) xy would tint the card wrong. Falls back to xy for color lights and
+// to null for plain white bulbs.
+function cardRgbFor(l, brightnessPct) {
+  if (l.mirek) return kelvinToRgb(1e6 / l.mirek);
+  if (l.colorable) return xyToRgb(l.x, l.y, brightnessPct || 40);
+  return null;
+}
+
+// The room header's color-summary dots: up to 4 representative colors from
+// the room's lights, deduped by xy (or mirek for CT-mode lights). Off lights
+// keep their hue but render dimmed — the dot answers "what does this room
+// look like", and an off light is still part of the answer.
+function roomDotsFor(roomLights) {
+  const seen = new Set();
+  const dots = [];
+  for (const l of roomLights) {
+    if (dots.length >= 4) break;
+    let rgb = null;
+    let key = null;
+    if (l.colorable && (l.x || l.y)) {
+      rgb = xyToRgb(l.x, l.y, 60);
+      key = 'xy' + l.x.toFixed(3) + ',' + l.y.toFixed(3);
+    } else if (l.mirek) {
+      rgb = kelvinToRgb(1e6 / l.mirek);
+      key = 'ct' + l.mirek;
+    }
+    if (!rgb || seen.has(key)) continue;
+    seen.add(key);
+    dots.push(`<span class="room-dot ${l.on ? '' : 'room-dot-off'}" style="background: rgb(${rgb[0]},${rgb[1]},${rgb[2]})"></span>`);
+  }
+  return dots.join('');
+}
+
 // ---------- rendering ----------
 
 function escapeHtml(s) {
@@ -554,45 +697,38 @@ function renderGrid() {
   // access from that tab.
   const showAllTile = filter === 'all' || (filter === 'favorites' && !!favoritesRaw.all);
   let html = '';
-  // Wrapped in .room-group (not just .lights-cards-grid) so its bottom
-  // margin matches every room block that follows — previously this and the
-  // first room-group butted up against each other with no gap.
-  if (showAllTile) html += `<div class="room-group"><div class="lights-cards-grid">${renderAllLightsTile()}</div></div>`;
+  // The all-lights tile sits above the room cards, outside any of them —
+  // the global control is deliberately not a room.
+  if (showAllTile) html += `<div class="lights-cards-grid"${gridStyleAttr()}>${renderAllLightsTile()}</div>`;
 
   if (filter === 'room') {
-    // Already scoped to one room by the filter itself — a header repeating
-    // that room's name would be redundant. Still gets its own room-scoped
-    // all-lights tile and its own (room, not zone) scenes, merged into the
-    // same block, same as each room gets in the 'all'/'favorites' case
-    // below.
+    // Already scoped to one room by the filter itself. The card's header
+    // repeats the room name, but that is the point: this filter is an
+    // explicit navigation into the room, so it always renders expanded and
+    // ignores the persisted collapsed state.
     const room = rooms.find((r) => r.id === filterRoomId);
-    const tile = (room && list.length) ? renderRoomTile(room, list) : '';
-    const sceneList = sortScenesFavoriteFirst(filteredScenes());
-    html += `
-      <div class="room-group">
-        <div class="lights-cards-grid">${tile}${list.map(renderLightCard).join('')}</div>
-        ${sceneList.length ? `<div class="scenes-strip">${sceneList.map(renderSceneChip).join('')}</div>` : ''}
-      </div>`;
+    if (room || list.length) {
+      const sceneList = sortScenesFavoriteFirst(filteredScenes());
+      html += renderRoomCard(room, list, sceneList, { forceExpanded: true });
+    }
   } else {
-    // 'all' / 'favorites': one merged block per room — header, a
-    // room-scoped all-lights tile, that room's lights, and that room's own
-    // scenes, all together (entertainment-zone scenes aren't tied to one
-    // room and get their own separate section instead — see
-    // renderZoneScenes). No room tile in the Favorites view: bulk
-    // room-wide control doesn't fit "quick access to what I favorited."
+    // 'all' / 'favorites': one card per room — the room's bulk tile, its
+    // lights, and its own scenes, all inside one collapsible surface
+    // (entertainment-zone scenes aren't tied to one room and get their own
+    // strip at the bottom instead — see renderZoneScenes).
     const byRoomId = new Map();
     for (const l of list) {
       const key = l.room_id || '';
-      if (!byRoomId.has(key)) byRoomId.set(key, { name: l.room_name || '—', lights: [] });
-      byRoomId.get(key).lights.push(l);
+      if (!byRoomId.has(key)) byRoomId.set(key, []);
+      byRoomId.get(key).push(l);
     }
     // A room favourited via its bulk tile has to appear in the Favorites view
     // even when none of its individual lights are favourited — otherwise
     // favouriting a room is a control that does nothing observable. Seed an
-    // empty group so the loop below emits its tile.
+    // empty group so the loop below emits its card.
     if (filter === 'favorites') {
       for (const r of favoritedRooms()) {
-        if (!byRoomId.has(r.id)) byRoomId.set(r.id, { name: r.name || '—', lights: [] });
+        if (!byRoomId.has(r.id)) byRoomId.set(r.id, []);
       }
     }
     const { roomScenes } = splitScenesByRoomVsZone(filteredScenes());
@@ -602,22 +738,10 @@ function renderGrid() {
       scenesByRoomId.get(sc.group_id).push(sc);
     }
 
-    html += [...byRoomId.entries()].map(([roomId, entry]) => {
+    html += [...byRoomId.entries()].map(([roomId, roomLights]) => {
       const room = rooms.find((r) => r.id === roomId);
-      // Normally no bulk tile in Favorites — "quick access to what I
-      // favourited" is not the same as room-wide control. The exception is a
-      // room whose tile is itself the favourite, which is the whole point of
-      // having favourited it.
-      const roomIsFav = room && !!favoritesRaw['room:' + room.id];
-      const tile = (room && (filter !== 'favorites' || roomIsFav))
-        ? renderRoomTile(room, entry.lights) : '';
       const sceneList = sortScenesFavoriteFirst(scenesByRoomId.get(roomId) || []);
-      return `
-        <div class="room-group">
-          <h3 class="room-header">${escapeHtml(entry.name)}</h3>
-          <div class="lights-cards-grid">${tile}${entry.lights.map(renderLightCard).join('')}</div>
-          ${sceneList.length ? `<div class="scenes-strip">${sceneList.map(renderSceneChip).join('')}</div>` : ''}
-        </div>`;
+      return renderRoomCard(room, roomLights, sceneList);
     }).join('');
   }
 
@@ -649,7 +773,7 @@ function splitScenesByRoomVsZone(list) {
 function renderLightCard(l) {
   const off = !l.on;
   const brightnessPct = l.on ? Math.round(l.brightness) : 0;
-  const rgb = l.colorable ? xyToRgb(l.x, l.y, brightnessPct || 40) : null;
+  const rgb = cardRgbFor(l, brightnessPct);
   const gradient = rgb ? gradientStyleFor(rgb, brightnessPct || 40) : '';
   // The light's own colour, exposed as a custom property on the card. The
   // blurred gradient layer conveys it in the full themes; the simple themes
@@ -668,10 +792,10 @@ function renderLightCard(l) {
     <div class="light-card ${off ? 'off' : ''}" data-id="${escapeHtml(l.id)}" style="${accent}">
       ${gradient ? `<div class="light-card-gradient" style="${gradient}"></div>` : ''}
       <div class="light-card-head">
-        <h3 title="${escapeHtml(l.name)}"><span>${escapeHtml(l.name)}</span></h3>
+        <h3 title="${escapeHtml(l.name)}">${ICONS.lightbulb}<span>${escapeHtml(l.name)}</span></h3>
         <div class="light-card-actions">
           ${showFavBtn ? `<button type="button" class="icon-btn ${l.favorite ? 'active' : ''}" data-action="favorite" data-id="${escapeHtml(l.id)}" title="${escapeHtml(HueMuxI18n.t('lights.toggleFavorite'))}">${l.favorite ? ICONS.star : ICONS.starOutline}</button>` : ''}
-          ${l.colorable ? `<button type="button" class="icon-btn" data-action="color" data-id="${escapeHtml(l.id)}" title="${escapeHtml(HueMuxI18n.t('lights.chooseColor'))}">${ICONS.palette}</button>` : ''}
+          ${l.colorable || l.ct_capable ? `<button type="button" class="icon-btn" data-action="color" data-id="${escapeHtml(l.id)}" title="${escapeHtml(HueMuxI18n.t(l.colorable ? 'lights.chooseColor' : 'lights.chooseColorTemp'))}">${ICONS.palette}</button>` : ''}
           <button type="button" class="icon-btn ${l.on ? 'active' : ''}" data-action="toggle" data-id="${escapeHtml(l.id)}" title="${escapeHtml(HueMuxI18n.t(l.on ? 'lights.turnOff' : 'lights.turnOn'))}">${l.on ? ICONS.powerOn : ICONS.powerOff}</button>
         </div>
       </div>
@@ -682,7 +806,7 @@ function renderLightCard(l) {
 function renderAllLightsTile() {
   const anyOn = lights.some((l) => l.on);
   const hasBrightness = lights.some((l) => l.dimmable);
-  const hasColor = lights.some((l) => l.colorable);
+  const hasColor = lights.some((l) => l.colorable || l.ct_capable);
   const onLights = lights.filter((l) => l.on && l.dimmable);
   const avgBrightness = onLights.length
     ? Math.round(onLights.reduce((sum, l) => sum + l.brightness, 0) / onLights.length)
@@ -695,6 +819,7 @@ function renderAllLightsTile() {
       ${allGradient ? `<div class="light-card-gradient" style="${allGradient}"></div>` : ''}
       <div class="light-card-head">
         <h3>${ICONS.lightbulb}<span>${escapeHtml(HueMuxI18n.t('lights.allLights'))}</span></h3>
+        <span class="room-dots" title="${escapeHtml(HueMuxI18n.t('lights.roomColors'))}">${roomDotsFor(lights)}</span>
         <div class="light-card-actions">
           ${showFavBtn ? `<button type="button" class="icon-btn ${allFav ? 'active' : ''}" data-action="favorite" data-id="all" title="${escapeHtml(HueMuxI18n.t('lights.toggleFavorite'))}">${allFav ? ICONS.star : ICONS.starOutline}</button>` : ''}
           ${hasColor ? `<button type="button" class="icon-btn" data-action="color-all" title="${escapeHtml(HueMuxI18n.t('lights.chooseColorAll'))}">${ICONS.palette}</button>` : ''}
@@ -728,7 +853,7 @@ function renderRoomTile(room, roomLights) {
   // where it would sit under the thumb inviting an accidental unfavourite.
   const showFavBtn = filter !== 'favorites';
   const hasBrightness = roomLights.some((l) => l.dimmable);
-  const hasColor = roomLights.some((l) => l.colorable);
+  const hasColor = roomLights.some((l) => l.colorable || l.ct_capable);
   // Prefer the grouped_light's own brightness; fall back to per-light
   // average only when the field is absent (stale cache).
   const roomBrightness = room.brightness !== undefined
@@ -741,6 +866,7 @@ function renderRoomTile(room, roomLights) {
       ${roomGradient ? `<div class="light-card-gradient" style="${roomGradient}"></div>` : ''}
       <div class="light-card-head">
         <h3>${ICONS.lightbulb}<span>${escapeHtml(HueMuxI18n.t('lights.allInRoom'))}</span></h3>
+        <span class="room-dots" title="${escapeHtml(HueMuxI18n.t('lights.roomColors'))}">${roomDotsFor(roomLights)}</span>
         <div class="light-card-actions">
           ${showFavBtn ? `<button type="button" class="icon-btn ${roomFav ? 'active' : ''}" data-action="favorite" data-id="room:${escapeHtml(room.id)}" title="${escapeHtml(HueMuxI18n.t('lights.toggleFavorite'))}">${roomFav ? ICONS.star : ICONS.starOutline}</button>` : ''}
           ${hasColor ? `<button type="button" class="icon-btn" data-action="color-room" data-room-id="${escapeHtml(room.id)}" title="${escapeHtml(HueMuxI18n.t('lights.chooseColorAll'))}">${ICONS.palette}</button>` : ''}
@@ -749,6 +875,75 @@ function renderRoomTile(room, roomLights) {
       </div>
       ${hasBrightness ? `<input type="range" class="brightness-slider" min="0" max="100" value="${roomBrightness}" data-action="brightness-room" data-id="room:${escapeHtml(room.grouped_light_id)}">` : ''}
     </div>`;
+}
+
+// The collapsible card every room renders as: a header of pure chrome (icon,
+// name, count, color dots, chevron) around a body holding the room's bulk
+// tile, its light cards, and its own scenes. Bulk controls deliberately stay
+// in the tile inside the body rather than moving to the header — that keeps
+// patchRoomTile/patchRoomTileFor working unchanged, which is what keeps
+// per-light events O(1) instead of full-grid rebuilds.
+function renderRoomCard(room, roomLights, sceneList, opts) {
+  const roomId = room ? room.id : '';
+  const collapsed = !(opts && opts.forceExpanded) && collapsedRooms.has(roomId);
+  const name = room ? room.name : ((roomLights[0] && roomLights[0].room_name) || '—');
+  const collapseLabel = HueMuxI18n.t(collapsed ? 'lights.expandRoom' : 'lights.collapseRoom');
+  // Normally no bulk tile in Favorites — "quick access to what I favourited"
+  // is not the same as room-wide control. The exception is a room whose tile
+  // is itself the favourite, which is the whole point of having favourited it.
+  const roomIsFav = room && !!favoritesRaw['room:' + room.id];
+  const tile = (room && (filter !== 'favorites' || roomIsFav))
+    ? renderRoomTile(room, roomLights) : '';
+  return `
+    <section class="room-card ${collapsed ? 'collapsed' : ''}" data-room-id="${escapeHtml(roomId)}">
+      <button type="button" class="room-card-head" data-action="room-collapse"
+              data-room-id="${escapeHtml(roomId)}" aria-expanded="${collapsed ? 'false' : 'true'}"
+              title="${escapeHtml(collapseLabel)}">
+        <span class="room-icon">${iconForArchetype(room ? room.archetype : '')}</span>
+        <span class="room-title">${escapeHtml(name)}</span>
+        <span class="room-count">${roomLights.length}</span>
+        <span class="room-dots" title="${escapeHtml(HueMuxI18n.t('lights.roomColors'))}">${roomDotsFor(roomLights)}</span>
+        <span class="room-card-chevron">${ICONS.chevronRight}</span>
+      </button>
+      <div class="room-card-body"><div class="room-card-body-inner">
+        <div class="lights-cards-grid"${gridStyleAttr()}>${tile}${roomLights.map(renderLightCard).join('')}</div>
+        ${sceneList.length ? `<div class="scenes-strip">${sceneList.map(renderSceneChip).join('')}</div>` : ''}
+      </div></div>
+    </section>`;
+}
+
+// Max-height accordion — the collapse animation Chromium 83 can actually run
+// (grid-template-rows transitions need Chromium 107+). Under data-simple the
+// class toggles instantly with no transition at all.
+function toggleRoomCollapsed(roomId) {
+  const willCollapse = !collapsedRooms.has(roomId);
+  if (willCollapse) collapsedRooms.add(roomId);
+  else collapsedRooms.delete(roomId);
+  // The pseudo-room (lights with no room_id) collapses visually but is not
+  // persisted — it has no id to remember it by.
+  if (roomId) persistCollapsedRooms();
+
+  const card = els.grid.querySelector(`.room-card[data-room-id="${cssEscape(roomId)}"]`);
+  if (!card) return;
+  card.classList.toggle('collapsed', willCollapse);
+  const head = card.querySelector('.room-card-head');
+  head.setAttribute('aria-expanded', String(!willCollapse));
+  head.title = HueMuxI18n.t(willCollapse ? 'lights.expandRoom' : 'lights.collapseRoom');
+
+  const body = card.querySelector('.room-card-body');
+  if (document.documentElement.hasAttribute('data-simple')) return; // instant, class-driven
+  if (willCollapse) {
+    body.style.maxHeight = body.scrollHeight + 'px';
+    void body.offsetHeight; // force reflow so the transition runs
+    body.style.maxHeight = '0px';
+  } else {
+    body.style.maxHeight = body.scrollHeight + 'px';
+    const done = () => {
+      body.style.maxHeight = ''; // back to auto so later content growth isn't clipped
+      body.removeEventListener('transitionend', done);
+    };
+    body.addEventListener('transitionend', done);
+  }
 }
 
 // Scenes are tied to a room/zone (group_id) — filtered to match whatever
@@ -778,11 +973,19 @@ function renderSceneChip(sc) {
     const [r, g, b] = xyToRgb(sw.x, sw.y);
     return `<span class="scene-swatch" style="background: rgb(${r},${g},${b})"></span>`;
   }).join('');
+  // The first swatch doubles as the chip's identity tint — a faint wash of
+  // it on the border and background so a preset reads as "the warm one"
+  // before its name does. Inline rgba rather than color-mix(): the wall
+  // panel's Chromium 83 predates it.
+  const first = sc.swatches[0] ? xyToRgb(sc.swatches[0].x, sc.swatches[0].y) : null;
+  const tint = first
+    ? `--chip-tint:rgba(${first[0]},${first[1]},${first[2]},0.10);--chip-tint-strong:rgba(${first[0]},${first[1]},${first[2]},0.35);`
+    : '';
   const title = sc.group_name ? `${sc.name} — ${sc.group_name}` : sc.name;
   const fav = !!favoritesRaw[sc.id];
   const showFavBtn = filter !== 'favorites';
   return `
-    <div class="scene-chip" title="${escapeHtml(title)}">
+    <div class="scene-chip" title="${escapeHtml(title)}" style="${tint}">
       <span class="scene-chip-main" data-action="recall" data-scene-id="${escapeHtml(sc.id)}">
         <span class="scene-swatches">${swatches}</span>
         <span class="scene-name">${escapeHtml(sc.name)}</span>
@@ -862,11 +1065,30 @@ function actionToggleAll() {
   // event per light. Reflect all of them immediately.
   for (const l of lights) { l.on = target; patchLightCard(l); }
   for (const r of rooms) { r.on = target; patchRoomTile(r); }
+  // Room color dots derive from light state; refresh them per room too
+  // (patchRoomTile covers the tile-present case; this covers tiles absent).
+  for (const r of rooms) {
+    const first = lights.find((l) => l.room_id === r.id);
+    if (first) patchRoomTileFor(first);
+  }
   patchAllLightsTile();
 }
 
 function actionColorAll(r, g, b) {
   lights.filter((l) => l.colorable).forEach((l) => send({ type: 'light_color', rid: l.id, r, g, b }));
+}
+
+// White-temperature fan-out, mirroring actionColorAll: mirek goes straight
+// to the bridge (CLIP v2 accepts it natively — no xy conversion).
+function sendColorTemp(targetId, mirek) {
+  if (targetId && targetId.indexOf('room:') === 0) {
+    const roomId = targetId.slice(5);
+    lights.filter((l) => l.room_id === roomId && l.ct_capable).forEach((l) => send({ type: 'light_color_temp', rid: l.id, mirek }));
+  } else if (targetId) {
+    send({ type: 'light_color_temp', rid: targetId, mirek });
+  } else {
+    lights.filter((l) => l.ct_capable).forEach((l) => send({ type: 'light_color_temp', rid: l.id, mirek }));
+  }
 }
 
 // id is either a light id, the sentinel "__all__", or "room:<grouped_light_id>"
@@ -1032,9 +1254,11 @@ function scheduleBrightness(id, pct) {
 
 // ---------- color picker ----------
 
-// targetId is a light id, "room:<roomId>" (fans out to that room's
-// colorable lights — CLIP v2 has no room-level color PUT), or null (every
-// colorable light on the bridge).
+// targetId is a light id, "room:<roomId>" (fans out to that room's lights —
+// CLIP v2 has no room-level color or temperature PUT), or null (every light
+// on the bridge). Color-capable targets get the full HSV surface plus a
+// white-temperature strip on its right edge; white-ambiance-only targets get
+// a full-canvas temperature picker.
 function openColorPicker(targetId) {
   const overlay = document.createElement('div');
   overlay.className = 'color-picker-overlay';
@@ -1069,25 +1293,47 @@ function openColorPicker(targetId) {
   let sat = 0;
   let cursorEl = null;
   let pendingColor = null;
+  let pendingTemp = null; // mirek, set while dragging in the temperature strip
   let rafScheduled = false;
   let active = false;
 
+  // The lights this picker will actually touch, to decide whether the HSV
+  // surface exists at all: a white-ambiance-only bulb gets temperature only.
+  const relevantLights = targetId && targetId.indexOf('room:') === 0
+    ? lights.filter((l) => l.room_id === targetId.slice(5))
+    : (targetId ? lights.filter((l) => l.id === targetId) : lights);
+  const split = relevantLights.some((l) => l.colorable) ? 0.78 : 0;
+
+  // split is the fraction of canvas width that stays HSV; the remainder is
+  // the white-temperature strip (top 6500 K, bottom 2000 K — mirek 154..500).
+  // split 0 means the whole canvas is temperature.
   function renderGradient() {
     const w = canvas.width;
     const h = canvas.height;
     if (w <= 0 || h <= 0) return;
     const img = ctx.createImageData(w, h);
     const data = img.data;
+    const hsvW = split > 0 ? Math.max(0, Math.floor(split * w)) : 0;
     for (let py = 0; py < h; py++) {
       const s = 100 - (py / h) * 100;
-      for (let px = 0; px < w; px++) {
-        const hh = (px / w) * 360;
+      for (let px = 0; px < hsvW; px++) {
+        const hh = (px / hsvW) * 360;
         const [r, g, b] = hsvToRgb(hh, s, 100);
+        const i = (py * w + px) * 4;
+        data[i] = r; data[i + 1] = g; data[i + 2] = b; data[i + 3] = 255;
+      }
+      // One Kelvin color per row — the strip varies with height only.
+      const [r, g, b] = kelvinToRgb(6500 - (py / h) * 4500);
+      for (let px = hsvW; px < w; px++) {
         const i = (py * w + px) * 4;
         data[i] = r; data[i + 1] = g; data[i + 2] = b; data[i + 3] = 255;
       }
     }
     ctx.putImageData(img, 0, 0);
+    if (split > 0 && split < 1) {
+      ctx.fillStyle = 'rgba(255,255,255,0.25)';
+      ctx.fillRect(hsvW - 1, 0, 2, h);
+    }
   }
 
   function resize() {
@@ -1104,6 +1350,12 @@ function openColorPicker(targetId) {
 
   function flush() {
     rafScheduled = false;
+    if (pendingTemp !== null) {
+      const mirek = pendingTemp;
+      pendingTemp = null;
+      sendColorTemp(targetId, mirek);
+      return;
+    }
     if (!pendingColor) return;
     const { r, g, b } = pendingColor;
     pendingColor = null;
@@ -1121,14 +1373,29 @@ function openColorPicker(targetId) {
     const rect = canvas.getBoundingClientRect();
     const x = Math.max(0, Math.min(e.clientX - rect.left, rect.width));
     const y = Math.max(0, Math.min(e.clientY - rect.top, rect.height));
-    hue = Math.round((x / rect.width) * 360);
-    sat = Math.round(100 - (y / rect.height) * 100);
 
-    const [r, g, b] = hsvToRgb(hue, sat, 100);
-    swatch.style.backgroundColor = `rgb(${r}, ${g}, ${b})`;
-    readout.textContent = `H: ${hue}° S: ${sat}%`;
+    if (split > 0 && x >= split * rect.width) {
+      // White-temperature strip: height maps to Kelvin, which maps to mirek.
+      const kelvin = 6500 - (y / rect.height) * 4500;
+      const mirek = Math.max(153, Math.min(500, Math.round(1e6 / kelvin)));
+      const [r, g, b] = kelvinToRgb(kelvin);
+      swatch.style.backgroundColor = `rgb(${r}, ${g}, ${b})`;
+      // Unit notation, untranslated — same policy as the H/S readout below.
+      readout.textContent = `${Math.round(kelvin)} K`;
+      pendingColor = null;
+      pendingTemp = mirek;
+    } else {
+      const w = split > 0 ? split * rect.width : rect.width;
+      hue = Math.round((x / w) * 360);
+      sat = Math.round(100 - (y / rect.height) * 100);
 
-    pendingColor = { r, g, b };
+      const [r, g, b] = hsvToRgb(hue, sat, 100);
+      swatch.style.backgroundColor = `rgb(${r}, ${g}, ${b})`;
+      readout.textContent = `H: ${hue}° S: ${sat}%`;
+
+      pendingColor = { r, g, b };
+      pendingTemp = null;
+    }
     if (!rafScheduled) {
       rafScheduled = true;
       requestAnimationFrame(flush);
@@ -1251,9 +1518,16 @@ els.grid.addEventListener('click', (e) => {
       for (const l of lights) {
         if (l.room_id === roomId) { l.on = next; patchLightCard(l); }
       }
+      // Refresh the card's color dots too — patchRoomTile covers the
+      // tile-present case; this covers a Favorites view with no tile.
+      const firstRoomLight = lights.find((l) => l.room_id === roomId);
+      if (firstRoomLight) patchRoomTileFor(firstRoomLight);
       patchAllLightsTile();
       break;
     }
+    case 'room-collapse':
+      toggleRoomCollapsed(btn.dataset.roomId);
+      break;
     case 'color-room':
       openColorPicker('room:' + btn.dataset.roomId);
       break;
@@ -1344,7 +1618,24 @@ function restoreFilterFromURL() {
 // ---------- init ----------
 
 restoreFilterFromURL();
+loadCollapsedRooms();
+loadColumnsPref();
 HueMuxFeatures.load();
+
+// The shell embeds this page in its own iframe — separate browsing contexts
+// that don't see each other's DOM events. The native `storage` event fires on
+// every other same-origin window when localStorage changes, which is how a
+// collapsed-room or column-count change made in another frame (Settings)
+// reaches this one. It never fires in the frame that wrote the value.
+window.addEventListener('storage', (e) => {
+  if (e.key === COLLAPSED_KEY) {
+    loadCollapsedRooms();
+    scheduleRender();
+  } else if (e.key === COLUMNS_KEY) {
+    loadColumnsPref();
+    scheduleRender();
+  }
+});
 
 // Paint the last known state before anything asynchronous starts. Revealing
 // #app here is deliberate: it is normally gated on the server confirming a

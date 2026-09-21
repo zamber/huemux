@@ -144,7 +144,11 @@
     "sceneDynamic": "Dynamisk",
     "empty": "Inga ljus hittades på denna brygga.",
     "stopStreaming": "Stoppa direktuppspelning",
-    "closeColorPicker": "Stäng färgväljaren"
+    "closeColorPicker": "Stäng färgväljaren",
+    "chooseColorTemp": "Välj färgtemperatur",
+    "collapseRoom": "Fäll ihop rum",
+    "expandRoom": "Expandera rum",
+    "roomColors": "Rummets färger"
   },
   "music": {
     "heading": "Musikreaktivitet",
@@ -213,7 +217,13 @@
     "reconnecting": "Reconnecting to new address…",
     "shareLabel": "Share control on local network",
     "shareUrls": "Reachable at:",
-    "tokenSave": "Save token"
+    "tokenSave": "Save token",
+    "columns": "Lampkolumner",
+    "columnsOne": "1 kolumn",
+    "columnsTwo": "2 kolumner",
+    "columnsThree": "3 kolumner",
+    "columnsFour": "4 kolumner",
+    "columnsHint": "Hur många lampkort som får plats i en rad. Mycket små telefoner behåller en kolumn."
   },
   "auth": {
     "heading": "Enter your access token",

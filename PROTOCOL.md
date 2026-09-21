@@ -292,6 +292,7 @@ approach lights-ui uses, connecting directly to the bridge's own
 {"type": "light_toggle",     "rid": "<light id>",         "on": true}
 {"type": "light_brightness", "rid": "<light id>",         "brightness": 42}
 {"type": "light_color",      "rid": "<light id>",         "r": 255, "g": 128, "b": 0}
+{"type": "light_color_temp", "rid": "<light id>",         "mirek": 300}
 {"type": "light_favorite",   "rid": "<light id or room:<room id>>"}
 {"type": "room_toggle",      "rid": "<grouped_light id>", "on": true}
 {"type": "room_brightness",  "rid": "<grouped_light id>", "brightness": 42}
@@ -314,6 +315,13 @@ CLIP v2's `color` resource only ever accepts `xy`, never RGB or HSV directly.
 `room_toggle`/`room_brightness` target a room or zone's `grouped_light`
 resource id specifically (`Room.GroupedLightID` in the `/api/rooms` response)
 — not the room's own id, which only names the group.
+
+`light_color_temp` likewise addresses one light and is sent as mirek directly
+(153 = 6500 K, 500 = 2000 K — CLIP v2's `color_temperature` accepts mirek
+natively, so there is no conversion step, unlike `light_color`). Room/all
+temperature fan-out is client-side, same as `light_color`. Inbound deltas
+reach the browser as `light_event` with a `mirek` field, emitted only when the
+bridge reports `mirek_valid: true`.
 
 ### State: service → browser (JSON text)
 
