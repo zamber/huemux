@@ -101,13 +101,29 @@ normal — nothing creates one for you.
   "profile": "full",                 // full | lights | sync
   "listen":  { "host": "127.0.0.1", "port": 7654 },
   "auth":    { "mode": "none" },     // none | token
-  "tls":     { "mode": "off" }       // off | selfsigned | files
+  "tls":     { "mode": "off" },      // off | selfsigned | files
+  "allowed_hosts": []                // extra names the UI may be served under
 }
 ```
 
 Or edit them in the browser at `/settings.html`. Changes are only accepted
 from the machine HueMux runs on — rewriting the listen address or turning
 authentication off should not be reachable from the network it governs.
+
+Every setting has a flag, for a one-off run or a service unit that would
+rather not read a file. A flag that is not passed leaves the file's value
+alone:
+
+| Flag | Setting |
+|---|---|
+| `--profile=full\|lights\|sync` | `profile` |
+| `--listen-host=ADDR` | `listen.host` |
+| `--listen-port=N` | `listen.port` |
+| `--auth=none\|token` | `auth.mode` |
+| `--token=SECRET` | `auth.token` (implies `--auth=token`) |
+| `--tls=off\|selfsigned\|files` | `tls.mode` |
+| `--tls-cert=PATH` / `--tls-key=PATH` | `tls.cert_file` / `tls.key_file` |
+| `--allowed-hosts=A,B` | `allowed_hosts` |
 
 ### Exposing HueMux beyond this machine
 
@@ -126,11 +142,11 @@ setting with real consequences, so it comes with two others.
 
 - **`auth.mode: "token"`** requires a token on every API call and WebSocket
   upgrade, as `Authorization: Bearer <token>` or `?token=<token>` (a browser's
-  WebSocket cannot set headers, hence the query form). Connections from the
-  machine itself are exempt, so nothing about local use changes and you can
-  never lock yourself out. Failed attempts are rate limited — the token is
-  short and memorable by design, which is only defensible with a limiter in
-  front of it. Generate one from the settings page.
+  WebSocket cannot set headers, hence the query form). Failed attempts are
+  rate limited — the token is short and memorable by design, which is only
+  defensible with a limiter in front of it. Generate one from the settings
+  page. Set `auth.allow_loopback_unauthenticated: true` if you want connections
+  from the machine itself exempt.
 - **`tls.mode`** — `selfsigned` generates and reuses a certificate (browsers
   will warn; it covers both loopback and your LAN address). `files` uses a
   real certificate you already have. HueMux obtains nothing itself, which
@@ -140,6 +156,32 @@ setting with real consequences, so it comes with two others.
 
 A token over plain HTTP crosses the network in cleartext, and HueMux says so
 at startup rather than letting you find out later.
+
+### Serving the UI under a name
+
+The WebSocket that carries light state is only accepted from an Origin HueMux
+recognises. It works out most of them for itself: loopback, the address it is
+bound to, every address this machine holds, and this machine's hostname. So
+`http://192.168.1.20:7654` and `http://huemux-box:7654` both work with no
+configuration, and they keep working at the same time — a phone that resolves
+one and a laptop that resolves the other do not have to agree.
+
+A name it cannot possibly derive — a reverse proxy's vhost, a Tailscale
+MagicDNS name — has to be listed, because a browser reaches the server by the
+name it typed and that name never appears in the socket the request arrived
+on:
+
+```jsonc
+{
+  "listen": { "host": "127.0.0.1", "port": 7654 },
+  "allowed_hosts": ["huemux.lan"]
+}
+```
+
+Entries are bare hostnames or IPs. A pasted URL is accepted too and reduced to
+its host, so `"https://huemux.lan:7654/"` is the same entry. The list is not a
+wildcard: an entry admits exactly one name, and a page from anywhere else is
+still refused. `--allowed-hosts=huemux.lan,other.lan` sets it for one run.
 
 ## Running
 

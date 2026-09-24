@@ -13,6 +13,8 @@ import (
 	"net/url"
 	"strings"
 	"sync"
+
+	"github.com/zamber/huemux/internal/appconfig"
 )
 
 // A hand-rolled WebSocket server. The only client is our own page on
@@ -54,8 +56,20 @@ type Conn struct {
 // opening a WebSocket to this port and driving their lights. It is the single
 // most load-bearing security check in the program.
 //
-// allowedHost widens the allowlist by exactly one name — the host the server
-// was configured to listen on — so a LAN deployment can serve its own UI.
+// The allowlist is every name this server can legitimately be reached by:
+//
+//   - localhost, any loopback address, and this machine's own addresses —
+//     derived, never configured, and safe by construction. A hostile page can
+//     present a foreign *name*, because names are just whatever its author
+//     registered; it can never make the browser write an address literal that
+//     this machine holds into the Origin header. Accepting the machine's own
+//     addresses is therefore not a widening of trust at all.
+//   - allowedHost, the host the server was configured to listen on.
+//   - extraHosts, the operator's allowed_hosts list. A name a browser reaches
+//     the server by — a reverse proxy's vhost, a Tailscale MagicDNS name —
+//     cannot be derived from the socket, so it has to be stated, once, by the
+//     person who set the proxy up.
+//
 // Deliberately not a wildcard, and deliberately not "skip the check when a
 // token is present": an attacker's page would happily send a token it had
 // obtained, and the whole point of this check is that it holds even when
@@ -64,7 +78,7 @@ type Conn struct {
 // Note the port is ignored. An attacker who can bind another port on the same
 // host has already lost you the machine, so distinguishing ports buys nothing
 // while breaking legitimate access on the auto-selected fallback port.
-func checkOrigin(r *http.Request, allowedHost string) bool {
+func checkOrigin(r *http.Request, allowedHost string, extraHosts []string) bool {
 	origin := r.Header.Get("Origin")
 	if origin == "" {
 		// A browser always sends Origin on a WebSocket handshake, so an
@@ -79,34 +93,45 @@ func checkOrigin(r *http.Request, allowedHost string) bool {
 	// Hostname() strips brackets from an IPv6 literal, so comparing against
 	// "[::1]" here could never match — that branch was dead code. Parse the
 	// address instead, which also covers the rest of 127.0.0.0/8.
-	host := u.Hostname()
-	if strings.EqualFold(host, "localhost") {
-		return true
-	}
-	if ip := net.ParseIP(host); ip != nil && ip.IsLoopback() {
-		return true
-	}
-	if allowedHost != "" && strings.EqualFold(host, allowedHost) {
-		return true
-	}
-
-	// A wildcard bind needs special handling, and missing it broke LAN access
-	// entirely: with listen.host set to "0.0.0.0" a browser still connects to
-	// a concrete address, so its Origin is "192.168.1.x" and can never equal
-	// "0.0.0.0". Every upgrade was rejected while static assets kept loading,
-	// so the page rendered its header and then sat empty — found only by
-	// opening it on a real device.
 	//
-	// Still not a wildcard: the Origin must name an address this machine
-	// actually holds. Same bounded set the self-signed certificate is issued
-	// for, and for the same reason.
-	if isWildcardHost(allowedHost) {
-		if ip := net.ParseIP(host); ip != nil {
-			for _, own := range LocalAddresses() {
-				if own.Equal(ip) {
-					return true
-				}
-			}
+	// Both sides go through the same normalizer, so an allowed_hosts entry
+	// written as "https://lights.example:7654/" matches the bare
+	// "lights.example" a browser puts in Origin. Normalizing only one side
+	// would make the friendly spelling in app.json silently ineffective.
+	host := appconfig.NormalizeHost(u.Hostname())
+	if host == "" {
+		return false
+	}
+	if host == "localhost" {
+		return true
+	}
+	// An address literal this machine holds is accepted unconditionally —
+	// not only under a wildcard bind. Requiring the wildcard made the two
+	// ways of reaching huemux mutually exclusive: binding the listen host to
+	// a name (so the vhost's Origin matched) rejected the IP, and binding it
+	// to the IP rejected the name. LAN and Tailscale clients use whichever of
+	// the two their own DNS gives them, so both have to work at once.
+	if ip := net.ParseIP(host); ip != nil && (ip.IsLoopback() || isOwnAddress(ip)) {
+		return true
+	}
+	if allowedHost != "" && host == appconfig.NormalizeHost(allowedHost) {
+		return true
+	}
+	for _, extra := range extraHosts {
+		if n := appconfig.NormalizeHost(extra); n != "" && n == host {
+			return true
+		}
+	}
+	return false
+}
+
+// isOwnAddress reports whether ip is an address bound to one of this machine's
+// interfaces. Same bounded set the self-signed certificate is issued for, and
+// for the same reason.
+func isOwnAddress(ip net.IP) bool {
+	for _, own := range LocalAddresses() {
+		if own.Equal(ip) {
+			return true
 		}
 	}
 	return false
@@ -118,9 +143,10 @@ func isWildcardHost(host string) bool {
 }
 
 // Upgrade performs the HTTP -> WebSocket handshake and hijacks the
-// underlying connection.
-func Upgrade(w http.ResponseWriter, r *http.Request, allowedHost string) (*Conn, error) {
-	if !checkOrigin(r, allowedHost) {
+// underlying connection. allowedHost and extraHosts are the same two
+// allowlist inputs checkOrigin documents.
+func Upgrade(w http.ResponseWriter, r *http.Request, allowedHost string, extraHosts []string) (*Conn, error) {
+	if !checkOrigin(r, allowedHost, extraHosts) {
 		http.Error(w, "origin not allowed", http.StatusForbidden)
 		return nil, fmt.Errorf("rejected websocket upgrade from origin %q", r.Header.Get("Origin"))
 	}

@@ -31,6 +31,12 @@ type configWire struct {
 		Port int    `json:"port"`
 	} `json:"listen"`
 
+	// AllowedHosts is the extra Origin allowlist, echoed back so the settings
+	// screen can show it. Unlike the derived fields above it is a plain copy
+	// of the stored setting: it is what the operator typed, not a decision the
+	// server made about it.
+	AllowedHosts []string `json:"allowed_hosts,omitempty"`
+
 	Auth struct {
 		Mode string `json:"mode"`
 		// HasToken rather than the token itself. Whether one is configured is
@@ -78,6 +84,7 @@ func (s *Server) writeConfig(w http.ResponseWriter, r *http.Request) {
 	out.Presets = cfg.ShowsPresetsTab()
 	out.Listen.Host = displayHost(cfg.Listen.Host)
 	out.Listen.Port = listenPort(s.Addr)
+	out.AllowedHosts = cfg.AllowedHosts
 	out.Auth.Mode = string(cfg.Auth.Mode)
 	out.Auth.HasToken = strings.TrimSpace(cfg.Auth.Token) != ""
 	out.TLS.Mode = string(cfg.TLS.Mode)

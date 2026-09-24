@@ -135,6 +135,69 @@ func TestConfigPatchValidatesAndPartiallyUpdates(t *testing.T) {
 	}
 }
 
+// allowed_hosts is what makes a vhost name and this machine's own address
+// work at the same time, so it has to survive the round trip through the API.
+func TestConfigAPIAllowedHosts(t *testing.T) {
+	dir := t.TempDir()
+	withConfigDir(t, dir)
+
+	start := appconfig.Default()
+	start.AllowedHosts = []string{"lights.example"}
+	s := New(start, nil, nil, nil, nil)
+
+	get := func() configWire {
+		rec := httptest.NewRecorder()
+		req := httptest.NewRequest(http.MethodGet, "/api/config", nil)
+		req.RemoteAddr = "127.0.0.1:5555"
+		s.mux.ServeHTTP(rec, req)
+		var got configWire
+		if err := json.NewDecoder(rec.Body).Decode(&got); err != nil {
+			t.Fatal(err)
+		}
+		return got
+	}
+
+	if got := get(); len(got.AllowedHosts) != 1 || got.AllowedHosts[0] != "lights.example" {
+		t.Errorf("allowed_hosts = %v, want the stored entry", got.AllowedHosts)
+	}
+
+	rec := httptest.NewRecorder()
+	req := httptest.NewRequest(http.MethodPatch, "/api/config",
+		strings.NewReader(`{"allowed_hosts":["a.example","b.example"]}`))
+	req.RemoteAddr = "127.0.0.1:5555"
+	s.mux.ServeHTTP(rec, req)
+	if rec.Code != http.StatusOK {
+		t.Fatalf("patch failed: %d %s", rec.Code, rec.Body.String())
+	}
+	if got := s.Config().AllowedHosts; len(got) != 2 || got[0] != "a.example" {
+		t.Errorf("AllowedHosts = %v, want the patched list", got)
+	}
+
+	// A patch that names no hosts must not clear the list — the same
+	// "omitted means unchanged" rule the other fields follow.
+	rec = httptest.NewRecorder()
+	req = httptest.NewRequest(http.MethodPatch, "/api/config",
+		strings.NewReader(`{"profile":"lights"}`))
+	req.RemoteAddr = "127.0.0.1:5555"
+	s.mux.ServeHTTP(rec, req)
+	if rec.Code != http.StatusOK {
+		t.Fatalf("patch failed: %d %s", rec.Code, rec.Body.String())
+	}
+	if got := s.Config().AllowedHosts; len(got) != 2 {
+		t.Errorf("AllowedHosts = %v, want the list preserved by an unrelated patch", got)
+	}
+
+	// A typo must be refused here too, not stored and then silently ignored.
+	rec = httptest.NewRecorder()
+	req = httptest.NewRequest(http.MethodPatch, "/api/config",
+		strings.NewReader(`{"allowed_hosts":["not a host"]}`))
+	req.RemoteAddr = "127.0.0.1:5555"
+	s.mux.ServeHTTP(rec, req)
+	if rec.Code != http.StatusBadRequest {
+		t.Errorf("status %d, want 400 for an unusable allowed_hosts entry", rec.Code)
+	}
+}
+
 // Listen-address changes are now live-applied via RestartListener. The
 // response includes new_url so the frontend can navigate to the new address.
 // Auth-only changes don't change the URL and must not include new_url.

@@ -59,6 +59,24 @@ type Config struct {
 	Listen  Listen  `json:"listen"`
 	Auth    Auth    `json:"auth"`
 	TLS     TLS     `json:"tls"`
+
+	// AllowedHosts names extra hosts that may serve the UI, over and above
+	// the ones huemux works out for itself: the listen host, this machine's
+	// own addresses, and its hostname.
+	//
+	// The WebSocket origin check compares hostnames, not addresses, so a name
+	// a browser reaches the server by — a reverse proxy's vhost, a Tailscale
+	// MagicDNS name, a second alias — cannot be derived from the socket the
+	// request arrived on. Without this list, serving the UI under a name has
+	// meant giving up access by IP, and the other way round.
+	//
+	// Entries are bare hostnames or IP addresses. A pasted URL is accepted
+	// and reduced to its host, so "https://lights.example:7654/" works.
+	//
+	// This list is not a wildcard and must not become one: an entry only ever
+	// admits one name, and a foreign Origin is still rejected whether or not
+	// entries are present.
+	AllowedHosts []string `json:"allowed_hosts,omitempty"`
 }
 
 // Listen is the bind address. The default is loopback, and moving off it is
@@ -172,6 +190,54 @@ func IsLoopbackHost(host string) bool {
 	return false
 }
 
+// NormalizeHost reduces a host written in any of the forms a person might
+// paste or type — "http://lights.example:7654/", "LIGHTS.example", "[::1]" —
+// to the bare, lowercased hostname the origin comparison uses. It returns ""
+// when the input names no host at all.
+//
+// Both sides of that comparison go through here, which is what lets a
+// configured "https://lights.example/" match the "lights.example" a browser
+// puts in its Origin header. Normalizing only the request would make the
+// friendly forms in app.json silently ineffective.
+func NormalizeHost(host string) string {
+	s := strings.TrimSpace(host)
+	if s == "" {
+		return ""
+	}
+	if i := strings.Index(s, "://"); i >= 0 {
+		s = s[i+len("://"):]
+	}
+	// A trailing path, query or fragment is never part of the host. Credentials
+	// ("user@host") are stripped with everything before the last '@' below.
+	if i := strings.IndexAny(s, "/?#"); i >= 0 {
+		s = s[:i]
+	}
+	if i := strings.LastIndex(s, "@"); i >= 0 {
+		s = s[i+1:]
+	}
+	// SplitHostPort only recognizes a port when there is one, and rejects a
+	// bare IPv6 literal without brackets — which is exactly the distinction
+	// wanted here, so its error is a valid answer rather than a failure.
+	if h, _, err := net.SplitHostPort(s); err == nil {
+		s = h
+	}
+	return strings.ToLower(strings.Trim(s, "[]"))
+}
+
+// SplitHosts parses a comma-separated host list — the form the
+// --allowed-hosts flag takes — dropping blanks so that "a,,b," is two hosts
+// rather than four. Entries are not validated here; Validate does that, so a
+// typo is an error at startup rather than a silently ignored entry.
+func SplitHosts(list string) []string {
+	var out []string
+	for _, part := range strings.Split(list, ",") {
+		if h := strings.TrimSpace(part); h != "" {
+			out = append(out, h)
+		}
+	}
+	return out
+}
+
 // Validate reports the first problem with c, or nil. Unknown enum values are
 // errors rather than silently falling back to a default: a typo'd profile
 // should stop the process, not quietly run the wrong half of the app.
@@ -193,6 +259,20 @@ func (c Config) Validate() error {
 	}
 	if c.Listen.Port < 0 || c.Listen.Port > 65535 {
 		return fmt.Errorf("listen port %d out of range 0-65535 (0 means auto-select)", c.Listen.Port)
+	}
+
+	// An entry that reduces to nothing, or to something that is neither an IP
+	// nor a hostname, is a typo. It would also be invisible: the entry simply
+	// never matches an Origin, so the page the operator is trying to reach
+	// stays empty with no clue why.
+	for _, h := range c.AllowedHosts {
+		n := NormalizeHost(h)
+		if n == "" {
+			return fmt.Errorf("allowed_hosts contains an empty entry")
+		}
+		if net.ParseIP(n) == nil && !plausibleHostname(n) {
+			return fmt.Errorf("allowed_hosts entry %q is neither an IP address nor a valid hostname", h)
+		}
 	}
 
 	switch c.Auth.Mode {

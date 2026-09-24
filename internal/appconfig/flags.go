@@ -17,27 +17,29 @@ import (
 type Flags struct {
 	fs *flag.FlagSet
 
-	profile  string
-	host     string
-	port     int
-	authMode string
-	token    string
-	tlsMode  string
-	certFile string
-	keyFile  string
+	profile      string
+	host         string
+	port         int
+	authMode     string
+	token        string
+	tlsMode      string
+	certFile     string
+	keyFile      string
+	allowedHosts string
 }
 
 // Flag names, exported so callers can reference them in help text and tests
 // without restating string literals.
 const (
-	FlagProfile  = "profile"
-	FlagHost     = "listen-host"
-	FlagPort     = "listen-port"
-	FlagAuthMode = "auth"
-	FlagToken    = "token"
-	FlagTLSMode  = "tls"
-	FlagCertFile = "tls-cert"
-	FlagKeyFile  = "tls-key"
+	FlagProfile      = "profile"
+	FlagHost         = "listen-host"
+	FlagPort         = "listen-port"
+	FlagAuthMode     = "auth"
+	FlagToken        = "token"
+	FlagTLSMode      = "tls"
+	FlagCertFile     = "tls-cert"
+	FlagKeyFile      = "tls-key"
+	FlagAllowedHosts = "allowed-hosts"
 )
 
 // RegisterFlags adds huemux's configuration flags to fs and returns the
@@ -57,6 +59,8 @@ func RegisterFlags(fs *flag.FlagSet) *Flags {
 	fs.StringVar(&f.tlsMode, FlagTLSMode, "", "TLS: off, selfsigned, or files")
 	fs.StringVar(&f.certFile, FlagCertFile, "", "certificate path (tls=files)")
 	fs.StringVar(&f.keyFile, FlagKeyFile, "", "private key path (tls=files)")
+	fs.StringVar(&f.allowedHosts, FlagAllowedHosts, "",
+		"extra hosts that may serve the UI, comma-separated (a proxy vhost or a Tailscale name; IPs and this machine's hostname are already allowed)")
 	return f
 }
 
@@ -98,6 +102,9 @@ func (f *Flags) Apply(cfg Config) Config {
 	}
 	if set[FlagKeyFile] {
 		cfg.TLS.KeyFile = f.keyFile
+	}
+	if set[FlagAllowedHosts] {
+		cfg.AllowedHosts = SplitHosts(f.allowedHosts)
 	}
 	return cfg
 }

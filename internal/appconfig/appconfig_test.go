@@ -4,6 +4,7 @@ import (
 	"flag"
 	"os"
 	"path/filepath"
+	"reflect"
 	"regexp"
 	"strings"
 	"testing"
@@ -90,6 +91,22 @@ func TestValidate(t *testing.T) {
 			c.TLS.CertFile = "/c"
 			c.TLS.KeyFile = "/k"
 		}, ""},
+		{"allowed host by name", func(c *Config) { c.AllowedHosts = []string{"lights.example"} }, ""},
+		{"allowed host by ip", func(c *Config) { c.AllowedHosts = []string{"192.0.2.10"} }, ""},
+		{"allowed host as a pasted url", func(c *Config) {
+			c.AllowedHosts = []string{"https://lights.example:7654/"}
+		}, ""},
+		// An entry that reduces to nothing would be invisible: it never
+		// matches an Origin, so the page the operator is trying to reach stays
+		// empty with no clue why.
+		{"allowed host empty entry", func(c *Config) { c.AllowedHosts = []string{""} }, "empty entry"},
+		{"allowed host whitespace entry", func(c *Config) { c.AllowedHosts = []string{"   "} }, "empty entry"},
+		// A bare host:port is the other thing an operator copies out of a
+		// browser; the port is dropped, which matches the Origin check
+		// ignoring ports anyway.
+		{"allowed host with port", func(c *Config) { c.AllowedHosts = []string{"lights.example:7654"} }, ""},
+		{"allowed host typo", func(c *Config) { c.AllowedHosts = []string{"lights example"} }, "neither an IP address nor a valid hostname"},
+		{"allowed host with scheme only", func(c *Config) { c.AllowedHosts = []string{"http://"} }, "empty entry"},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -117,6 +134,68 @@ func TestIsLoopbackHost(t *testing.T) {
 	for _, h := range []string{"0.0.0.0", "192.0.2.10", "lights.example", "", "::"} {
 		if IsLoopbackHost(h) {
 			t.Errorf("IsLoopbackHost(%q) = true, want false", h)
+		}
+	}
+}
+
+// Both sides of the Origin comparison go through NormalizeHost, so this table
+// is also the statement of which spellings an allowed_hosts entry may take.
+func TestNormalizeHost(t *testing.T) {
+	tests := []struct{ in, want string }{
+		{"lights.example", "lights.example"},
+		{"LIGHTS.example", "lights.example"},
+		{"  lights.example  ", "lights.example"},
+		{"https://lights.example", "lights.example"},
+		{"https://lights.example:7654/", "lights.example"},
+		{"http://lights.example/path?q=1#frag", "lights.example"},
+		{"lights.example:7654", "lights.example"},
+		// Credentials are not part of the host.
+		{"https://user:pw@lights.example", "lights.example"},
+		// IPv6 literals keep their brackets off and their colons intact.
+		{"[::1]", "::1"},
+		{"http://[2001:db8::1]:7654", "2001:db8::1"},
+		// A bare IPv6 literal has no port to split, so SplitHostPort's error
+		// is the right answer rather than a failure.
+		{"2001:db8::1", "2001:db8::1"},
+		{"192.0.2.10:7654", "192.0.2.10"},
+		// Nothing that names a host.
+		{"", ""},
+		{"   ", ""},
+		{"https://", ""},
+		{"/just/a/path", ""},
+	}
+	for _, tt := range tests {
+		if got := NormalizeHost(tt.in); got != tt.want {
+			t.Errorf("NormalizeHost(%q) = %q, want %q", tt.in, got, tt.want)
+		}
+	}
+}
+
+func TestSplitHosts(t *testing.T) {
+	tests := []struct {
+		in   string
+		want []string
+	}{
+		{"", nil},
+		{"lights.example", []string{"lights.example"}},
+		{"a.example,b.example", []string{"a.example", "b.example"}},
+		// Blanks are dropped, not carried through as empty entries that would
+		// fail Validate and refuse to start.
+		{"a.example,,b.example,", []string{"a.example", "b.example"}},
+		{" a.example , b.example ", []string{"a.example", "b.example"}},
+		{",", nil},
+	}
+	for _, tt := range tests {
+		got := SplitHosts(tt.in)
+		if len(got) != len(tt.want) {
+			t.Errorf("SplitHosts(%q) = %v, want %v", tt.in, got, tt.want)
+			continue
+		}
+		for i := range got {
+			if got[i] != tt.want[i] {
+				t.Errorf("SplitHosts(%q) = %v, want %v", tt.in, got, tt.want)
+				break
+			}
 		}
 	}
 }
@@ -150,7 +229,9 @@ func TestLoadMissingFileYieldsDefaults(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Load on empty dir: %v", err)
 	}
-	if cfg != Default() {
+	// reflect.DeepEqual, not ==: Config gained a slice (AllowedHosts), so it
+	// is no longer comparable.
+	if !reflect.DeepEqual(cfg, Default()) {
 		t.Errorf("Load on empty dir = %+v, want Default()", cfg)
 	}
 	// Loading must not create the file — a fresh install should not sprout
@@ -167,6 +248,9 @@ func TestSaveLoadRoundTrip(t *testing.T) {
 		Listen:  Listen{Host: "0.0.0.0", Port: 9000},
 		Auth:    Auth{Mode: AuthToken, Token: "otter.beacon.willow", AllowLoopbackUnauthenticated: true},
 		TLS:     TLS{Mode: TLSFiles, CertFile: "/c.pem", KeyFile: "/k.pem"},
+		// Included so the one list-valued setting is actually exercised by the
+		// round trip rather than assumed to encode.
+		AllowedHosts: []string{"lights.example", "192.0.2.10"},
 	}
 	if err := Save(dir, want); err != nil {
 		t.Fatalf("Save: %v", err)
@@ -175,7 +259,8 @@ func TestSaveLoadRoundTrip(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Load: %v", err)
 	}
-	if got != want {
+	// DeepEqual, not ==: Config contains a slice and is no longer comparable.
+	if !reflect.DeepEqual(got, want) {
 		t.Errorf("round trip mismatch:\n got %+v\nwant %+v", got, want)
 	}
 }
@@ -318,6 +403,45 @@ func TestTokenFlagImpliesTokenAuth(t *testing.T) {
 	}
 	if err := cfg.Validate(); err != nil {
 		t.Errorf("config should be valid, got %v", err)
+	}
+}
+
+func TestAllowedHostsFlagAndFile(t *testing.T) {
+	dir := t.TempDir()
+	onDisk := Default()
+	onDisk.AllowedHosts = []string{"from-file.example"}
+	if err := Save(dir, onDisk); err != nil {
+		t.Fatal(err)
+	}
+
+	// Unset must not clobber the file's list with nil — the same
+	// Visit-based precedence the port relies on.
+	fs := flag.NewFlagSet("t", flag.ContinueOnError)
+	f := RegisterFlags(fs)
+	if err := fs.Parse(nil); err != nil {
+		t.Fatal(err)
+	}
+	cfg, err := Resolve(dir, f)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(cfg.AllowedHosts) != 1 || cfg.AllowedHosts[0] != "from-file.example" {
+		t.Errorf("AllowedHosts = %v, want the file's entry", cfg.AllowedHosts)
+	}
+
+	// An explicit flag replaces the list, and survives validation in the
+	// comma-separated form the operator actually types.
+	fs = flag.NewFlagSet("t", flag.ContinueOnError)
+	f = RegisterFlags(fs)
+	if err := fs.Parse([]string{"--" + FlagAllowedHosts + "=a.example, b.example"}); err != nil {
+		t.Fatal(err)
+	}
+	cfg, err = Resolve(dir, f)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(cfg.AllowedHosts) != 2 || cfg.AllowedHosts[0] != "a.example" || cfg.AllowedHosts[1] != "b.example" {
+		t.Errorf("AllowedHosts = %v, want the two flag entries", cfg.AllowedHosts)
 	}
 }
 

@@ -803,8 +803,28 @@ type controlMessage struct {
 	Preset string `json:"preset"`
 }
 
+// originAllowlist is the set of hosts checkOrigin accepts on top of the ones
+// it derives for itself: the operator's allowed_hosts entries, plus this
+// machine's own hostname.
+//
+// The hostname needs no configuration because huemux already treats it as its
+// own name elsewhere — it names the pairing client, and it goes into the
+// self-signed certificate's SANs — so a deployment reached by the machine's
+// name should not require restating it in app.json.
+func (s *Server) originAllowlist() []string {
+	extra := s.Config().AllowedHosts
+	h, err := os.Hostname()
+	if err != nil || h == "" {
+		return extra
+	}
+	// Copy before appending: AllowedHosts is shared with the config the
+	// runtime API hands out, and appending in place could write past its
+	// length into the backing array.
+	return append(append([]string(nil), extra...), h)
+}
+
 func (s *Server) handleWS(w http.ResponseWriter, r *http.Request) {
-	conn, err := Upgrade(w, r, s.Config().Listen.Host)
+	conn, err := Upgrade(w, r, s.Config().Listen.Host, s.originAllowlist())
 	if err != nil {
 		log.Printf("huemux: websocket upgrade: %v", err)
 		return

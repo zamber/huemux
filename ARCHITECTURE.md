@@ -228,6 +228,12 @@ wall panel runs simple.
 - Status is pushed at 1 Hz to every socket regardless of activity. It is small,
   but it is per-socket, and the shell holds two.
 - Origin checking is the load-bearing security control for `/ws`. It accepts
-  loopback, the configured listen host, and — when bound to a wildcard — any
-  address this machine actually holds. Never widen it further; see
-  `internal/server/ws.go`.
+  loopback, any address this machine actually holds, the configured listen
+  host, this machine's hostname, and the operator's `allowed_hosts` entries —
+  each normalized to a bare hostname, so a pasted URL still matches. Never
+  widen it further; see `internal/server/ws.go`.
+- Accepting this machine's own addresses is not part of that trust: a hostile
+  page can put a foreign *name* in `Origin`, because names are whatever its
+  author registered, but it cannot make the browser write an address literal
+  this machine holds. The names it *can* put there are exactly what
+  `allowed_hosts` exists to enumerate.
