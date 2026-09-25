@@ -138,7 +138,7 @@ body { margin: 0; }
      tiles drop the border entirely (see .all-lights-tile below). */
   border-inline-start-width: 6px;
   border-inline-start-color: var(--card-accent, var(--border));
-  transition: transform 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease, opacity 0.3s ease;
+  transition: border-color 0.2s ease, opacity 0.3s ease;
 }
 /* ON: the ring carries a faint wash of the light's colour, like a preset
    pill (the 6px strip stays full-strength). OFF: grey all round — the
@@ -151,26 +151,17 @@ body { margin: 0; }
   border-color: var(--border);
   border-inline-start-color: var(--border);
 }
-.light-card:hover {
-  transform: translateY(-2px);
-  border-color: var(--card-accent-soft, var(--border-strong));
-  /* The 6px inline-start border IS the light's colour — the hover
-     border-color above must not wipe it. */
-  border-inline-start-color: var(--card-accent, var(--border));
-  box-shadow: 0 6px 18px var(--shadow);
-}
+/* No hover styling on a card at all. There was a raise — a 2px lift, a
+   deeper shadow and a brighter ring — and it misfired in both directions: a
+   tap on a phone leaves :hover stuck, so a card stayed lifted and brighter
+   after being touched, and on a desktop it announced a card that is a
+   container rather than one control (the lamp's own buttons carry their hover
+   states). The card is not a hit target, so it has nothing to signal. */
 .light-card.off { opacity: 0.6; }
-.light-card.off:hover {
-  opacity: 0.8;
-  border-color: var(--border-strong);
-  border-inline-start-color: var(--border);
-}
 /* Both aggregate tiles are borderless summary rows — the ink outline used
    to compete with the lamps, which are the actual controls. They keep their
-   colour wash (multiGradientStyle) as identity and are hover-inert like the
-   room tile. */
+   colour wash (multiGradientStyle) as identity. */
 .light-card.all-lights-tile { border: 0; background: transparent; }
-.light-card.all-lights-tile:hover { transform: none; box-shadow: none; }
 /* The all-lights tile's own wrapper is a direct child of #lights-grid —
    spacing it like a room card, which carries the margin-bottom. */
 #lights-grid > .lights-cards-grid { margin: 0.6rem 0 1.2rem; }

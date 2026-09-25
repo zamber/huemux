@@ -1313,23 +1313,22 @@ function noteColorEvent(lightId) {
 // (the room tile's slider — prefixed since, unlike a light id, it isn't
 // self-describing on its own).
 //
-// Brightness transitions follow an intentionally odd rule set (the user is
-// still experimenting with this UX):
-//   - dragging from 0 (or off) to a positive value turns the light ON — a
-//     bare light_brightness only dims, so a physically-off bulb silently
-//     stayed dark while the UI claimed it was on;
-//   - dragging from a positive value to 0 dims to the floor but stays ON;
-//   - a repeat 0 → 0 touch (the light is already at the floor, or off) is an
-//     explicit turn-OFF.
+// Brightness moves a light in both directions:
+//   - dragging from 0 (or off) to a positive value turns it ON — a bare
+//     light_brightness only dims, so a physically-off bulb silently stayed
+//     dark while the UI claimed it was on;
+//   - dragging from a positive value to 0 turns it OFF. It used to dim to the
+//     floor and stay on, which left a bulb burning at its minimum for no
+//     reason and needed a second touch in the same spot to finish the job.
 // The "previous" value is what the user last committed via a slider
-// (lastBrightnessPct), falling back to the live model on first touch, so the
-// turn-off rule survives the bridge reporting the dimming floor as 1 rather
-// than 0.
+// (lastBrightnessPct), falling back to the live model on first touch, so a
+// light the bridge reports at its dimming floor still reads as 0 here.
 const lastBrightnessPct = {};
 const brightnessGestures = {};
 
-// A light that is on at the dimming floor reads as 0 for the 0→0 turn-off
-// rule even when the bridge reports the clamped minimum as 1.
+// A light that is on at the dimming floor reads as 0 even when the bridge
+// reports the clamped minimum as 1, so the next move to 0 still turns it off
+// rather than dimming it to the same place again.
 function lightUserPrev(l) {
   if (!l) return 0;
   const model = l.on ? l.brightness : 0;
@@ -1361,11 +1360,12 @@ function userPrevFor(id) {
   return lightUserPrev(lights.find((x) => x.id === id));
 }
 
+// Three outcomes for a slider: turn on at this level, set this level, or turn
+// off. Which one it is depends only on where the level started and where it
+// ended, never on how the finger got there.
 function brightnessTransition(prev, pct) {
-  if (pct > 0 && prev <= 0) return 'on';
-  if (pct === 0 && prev > 0) return 'dim';
-  if (pct === 0 && prev <= 0) return 'off';
-  return 'set';
+  if (pct === 0) return 'off';
+  return prev <= 0 ? 'on' : 'set';
 }
 
 function scheduleBrightness(id, pct) {
@@ -1393,8 +1393,6 @@ function scheduleBrightness(id, pct) {
           send({ type: 'light_brightness', rid: l.id, brightness: pct });
         } else if (t === 'off') {
           send({ type: 'light_toggle', rid: l.id, on: false });
-        } else if (t === 'dim') {
-          send({ type: 'light_brightness', rid: l.id, brightness: 0 });
         } else {
           send({ type: 'light_brightness', rid: l.id, brightness: pct });
         }
@@ -1407,8 +1405,6 @@ function scheduleBrightness(id, pct) {
         send({ type: 'room_brightness', rid, brightness: pct });
       } else if (t === 'off') {
         send({ type: 'room_toggle', rid, on: false });
-      } else if (t === 'dim') {
-        send({ type: 'room_brightness', rid, brightness: 0 });
       } else {
         send({ type: 'room_brightness', rid, brightness: pct });
       }
@@ -1419,8 +1415,6 @@ function scheduleBrightness(id, pct) {
         send({ type: 'light_brightness', rid: id, brightness: pct });
       } else if (t === 'off') {
         send({ type: 'light_toggle', rid: id, on: false });
-      } else if (t === 'dim') {
-        send({ type: 'light_brightness', rid: id, brightness: 0 });
       } else {
         send({ type: 'light_brightness', rid: id, brightness: pct });
       }

@@ -253,7 +253,9 @@ p, pre, code, .hint, .warning, #diag-text {
 }
 .light-card { position: relative; }
 .light-card > *:not(.light-card-gradient) { position: relative; z-index: 1; }
-.light-card:hover .light-card-gradient { opacity: 0.44; }
+/* The wash is the light's colour, not a hover state: it no longer brightens
+   under the pointer, because a tap leaves :hover stuck on a phone and the
+   card then sat there glowing brighter than every other one. */
 .light-card.off .light-card-gradient { opacity: 0.12; }
 
 /* Themed for every range slider in the app, not just lights.html's cards —
@@ -435,11 +437,6 @@ html[data-simple] .light-card-gradient {
 html[data-simple] .light-card {
   transition: none;
 }
-html[data-simple] .light-card:hover {
-  transform: none;
-  box-shadow: none;
-}
-html[data-simple] .light-card:hover .light-card-gradient { opacity: 0; }
 
 /* Shadows are the other per-element paint cost worth dropping. */
 html[data-simple] .light-card,

@@ -154,6 +154,31 @@ A `{ cache: 'reload' }` fetch followed by reloading the frame is enough to
 recover. Prefer checking for a string only the *new* version contains, since
 that fails loudly rather than silently agreeing with you.
 
+## Deploy after every build — the instance at lights.lan
+
+A HueMux instance runs permanently on this host as the systemd user unit
+`huemux.service`, serving `http://lights.lan:7654` with `--profile=lights`. It
+runs `./huemux` out of this working tree, so **it is only ever as new as the
+last `make dev` here**, and it is the instance the household actually uses,
+from phones and desktops, every day.
+
+Deploy as part of building a version, not as a separate favor afterwards:
+
+```bash
+cd /home/luna/projects/huemux
+make dev                                  # rebuild ./huemux — see the section above
+systemctl --user restart huemux.service   # the live instance picks it up
+```
+
+A tagged, released and undeployed version leaves the daily user on old code,
+and the symptom is the worst possible one: a fixed bug that is still happening.
+Deploy before saying a change is done.
+
+The restart sends no light commands, so it cannot change what any lamp is
+doing; it does drop the open WebSockets, which the open pages reconnect by
+themselves. Confirm the new build is what the server is serving with the
+`curl` check above rather than by assuming the restart was enough.
+
 ## Verifying behavior
 
 The Go side has unit tests; the parts most likely to break do not, so drive
