@@ -263,6 +263,40 @@ so its UI can stop local capture and reset the preview instead of leaving
 it frozen on the last frame, which otherwise looks exactly like it's still
 streaming when it no longer is.
 
+### Liveness
+
+A WebSocket can die without closing. When the peer's machine sleeps, changes
+network, or the process is killed, no FIN is sent: the socket still reads as
+open on both sides, nothing raises `close` or `error`, writes succeed into a
+kernel buffer nobody will read, and every push after that moment is lost. The
+page then renders stale state forever with a healthy-looking connection
+indicator — the failure is invisible to the user, who sees only that lights
+stopped tracking.
+
+Because no API answers "is this socket still working?", both directions assume
+instead that a silent channel is a dead one:
+
+- **Service → browser.** The 1 Hz `status` push above is the heartbeat, and it
+  is therefore load-bearing — a client may treat a long silence as proof of
+  death and reconnect. The service also sends an `opPing` frame every 10 s (a
+  browser answers one by itself, with no page code involved, so an idle tab
+  still proves it is alive) and closes a connection that has sent nothing at
+  all for 35 s. That close is what reaps a silent peer's goroutine and removes
+  it from the broadcast set, and it gives an already-deployed client that predates
+  this section a real `close` event to react to.
+- **Browser → service.** Every page running over `/ws` watches the socket with
+  `web/shared/ws-liveness.js`: 15 s without an inbound frame — fifteen missed
+  status pushes — is a dead socket, and the page closes it and reconnects on
+  its own. The server pushes a full snapshot to every client on connect, so the
+  reconnect is also the resync. Returning to a tab (`visibilitychange`) re-checks
+  the same clock, which is what covers a laptop that slept with the tab open.
+
+A connection that has gone silent is not a usable one. Neither side should keep
+sending control messages down it or treat its state as current: the service
+closes it, and the page reconnects and takes the fresh snapshot that arrives on
+connect. The symptom to recognise is a panel that keeps rendering the state it
+last knew — a scene recall moves the lamps and the page does not follow.
+
 ### HTTP
 
 | Route | Purpose |

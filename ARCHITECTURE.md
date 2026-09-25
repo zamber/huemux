@@ -23,6 +23,15 @@ LAN-hosted HueMux) because the perceived latency there — up to several seconds
 to `/ws`; the shell (`app.html`) hosts both in iframes, so a full deployment
 holds two. Every connected socket also receives a status push once per second.
 
+That once-per-second push is the connection's heartbeat, not just a UI
+convenience. A WebSocket whose peer slept, changed network, or was killed dies
+without a close frame, and both sides go on believing it is open; silence is the
+only evidence either has, so both act on it. The server pings every 10 s and
+closes a silent connection after 35 s (`pushStatusLoop` in
+`internal/server/http.go`), and every page watches the same clock through
+`web/shared/ws-liveness.js`, reconnecting on its own after 15 s. See
+PROTOCOL.md §2 "Liveness" for the contract.
+
 **Two independent halves.** `internal/engine` owns screen sync (DTLS, capture
 intake, the output clock). `internal/lightctl` owns day-to-day light control
 (CLIP v2 REST plus the bridge's eventstream). They share nothing but the paired
@@ -67,7 +76,7 @@ engine entirely.
 - **`web/`** — the embedded frontend. `app.html` is the shell; the tab pages
   (`lights.html`, `sync.html`, `settings.html`…) live in iframes, each opening
   its own `/ws`. `shared/` holds the cross-page pieces (theme, i18n, dropdowns,
-  auth, slider-touch, header).
+  auth, slider-touch, header, ws-liveness).
 - **`mobile/` + `android/`** — the gomobile facade and Android wrapper: a
   WebView around the same embedded UI, pointed at the loopback server.
 
@@ -226,7 +235,13 @@ wall panel runs simple.
   `:hover` styles fire on tap and stick. Gate touch behaviour on
   `pointer: coarse`, which that device reports correctly.
 - Status is pushed at 1 Hz to every socket regardless of activity. It is small,
-  but it is per-socket, and the shell holds two.
+  but it is per-socket, and the shell holds two. Do not slow that push down or
+  make it conditional without also reworking the liveness contract above: it is
+  the heartbeat, and a client is entitled to treat its absence as a dead socket.
+- A WebSocket that dies without a close frame stays "open" to both sides, and
+  nothing recovers by itself. Any new page that opens `/ws` must register
+  `web/shared/ws-liveness.js` on it, or it will silently render stale state
+  forever after a sleep or a network change — with a green connection dot.
 - Origin checking is the load-bearing security control for `/ws`. It accepts
   loopback, any address this machine actually holds, the configured listen
   host, this machine's hostname, and the operator's `allowed_hosts` entries —

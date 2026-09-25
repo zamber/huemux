@@ -35,6 +35,8 @@ sync pipeline: `internal/music` (audio-frame transport), `internal/preset`
 - `cmd/huemux-desktop` — Electron wrapper around the same core.
 - `internal/server` — loopback HTTP+WS front end: embedded UI, JSON API
   (`/api/*`), `/ws`, auth, profiles. Talks to `lightctl`, never `hue` directly.
+  `pushStatusLoop` is also the WS keepalive — it pings and drops silent peers;
+  see the "Silent sockets" note below before touching it.
 - `internal/lightctl` — light control: CLIP v2 REST + eventstream →
   `light_event` broadcasts.
 - `internal/hue` — CLIP v2 client: discovery, REST, eventstream, DTLS stream.
@@ -154,6 +156,12 @@ A `{ cache: 'reload' }` fetch followed by reloading the frame is enough to
 recover. Prefer checking for a string only the *new* version contains, since
 that fails loudly rather than silently agreeing with you.
 
+The Android app has the same property for the same reason: it is a WebView
+around the embedded UI, so **a `web/` fix reaches the phone only in a new APK**.
+A server-side fix is picked up immediately by an installed app; a frontend fix
+is not, and the phone will keep showing the old behaviour until it is updated.
+Say which half a release carries when telling the user to update.
+
 ## Deploy after every build — the instance at lights.lan
 
 A HueMux instance runs permanently on this host as the systemd user unit
@@ -195,6 +203,42 @@ them.
   fail in use: language switching (dynamic strings set from JS do not move when
   only `data-i18n` attributes are re-applied) and anything depending on the
   server's own state pushes.
+
+### Silent sockets
+
+A WebSocket whose peer slept, changed network, or was killed dies without a
+close frame. Both sides keep reporting it as open — `readyState === 1`, no
+`close` event, writes succeed — so the page goes on rendering the last state it
+knew and its connection dot stays green. Nothing recovers on its own, and the
+user sees only that the panel stopped following the lamps: recall a scene, the
+lamps change, the page does not.
+
+This is fixed on both sides and the fix is load-bearing, not cosmetic:
+
+- **Server** — `pushStatusLoop` (`internal/server/http.go`) pings every 10 s and
+  closes a connection that has sent nothing for 35 s. `Conn.LastRecv()`
+  (`internal/server/ws.go`) is the clock it reads; any frame counts, a pong
+  included. `internal/server/ws_keepalive_test.go` covers all three cases
+  (silent peer dropped, reading peer kept, chatty peer kept) against a fake
+  bridge on a real loopback listener.
+- **Client** — `web/shared/ws-liveness.js`. Fifteen seconds without an inbound
+  frame is a dead socket, and the page closes it and reconnects itself; the
+  server's snapshot on connect is the resync. **Every page that opens `/ws`
+  must register this on its socket.** `lights.js`, `app.js` and
+  `node-editor.js` show the pattern: keep the returned handle, pass
+  `onStale: <reconnect>`, and drop it whenever the socket is thrown away.
+
+The server's half is worth having even for clients that predate it: it turns a
+zombie connection into an ordinary close, which an unmodified page already
+reconnects from.
+
+Reproduce it without a bridge, using the mocked socket the report was verified
+with (working notes under `~/.claude/tmp/`, not in the repo): a page is served
+from the working tree by a small static server, `/api/**` and `/ws` are mocked
+in Playwright, and the first mocked socket goes silent three seconds in — open,
+no frames, no close. A page without the watchdog stays on that one socket
+forever; with it, a second connection appears ~17 s later. Run it against a
+`git archive HEAD` tree to see the old behaviour.
 
 When testing against a real bridge, prefer read-only operations and events that
 never reach the socket. Intercepting a component's outbound events in the

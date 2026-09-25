@@ -115,6 +115,7 @@ const els = {
 
 let ws = null;
 let wsReady = false;
+let wsWatch = null; // shared/ws-liveness.js watchdog for ws, when one is open
 let ready = false; // becomes true once a paired status arrives and initial data is loaded
 let loaded = false; // becomes true once /api/lights has actually answered at least once
 
@@ -235,21 +236,51 @@ function gridStyleAttr() {
 // ---------- transport ----------
 
 function connect() {
-  ws = new WebSocket(authWSURL('/ws'));
-  ws.onopen = () => {
+  const sock = new WebSocket(authWSURL('/ws'));
+  ws = sock;
+  sock.onopen = () => {
     wsReady = true;
     els.connDot.className = 'dot ok';
   };
-  ws.onclose = () => {
+  sock.onclose = () => {
     wsReady = false;
     els.connDot.className = 'dot';
+    // Retire this socket's watchdog: it cannot fire now (readyState is 3, and
+    // the predicate checks that), but its interval would otherwise outlive the
+    // socket it was watching, once per reconnect. Clearing it unconditionally
+    // is safe because the one path that discards a socket without closing it —
+    // reconnectNow — detaches onclose first, so a dead socket's onclose can
+    // never clear a newer socket's watch.
+    if (wsWatch) { wsWatch.stop(); wsWatch = null; }
     setTimeout(connect, 1500); // matches app.js's reconnect policy
   };
-  ws.onerror = () => { els.connDot.className = 'dot warn'; };
-  ws.onmessage = (ev) => {
+  sock.onerror = () => { els.connDot.className = 'dot warn'; };
+  sock.onmessage = (ev) => {
     if (typeof ev.data !== 'string') return;
     handleMessage(JSON.parse(ev.data));
   };
+  wsWatch = HueMuxWS.watch(sock, { onStale: reconnectNow });
+}
+
+// reconnectNow handles a socket that died quietly: no close frame, no error,
+// readyState still 1, every frame the server sends going nowhere. onclose will
+// never run for one of those, so waiting for it — which is all connect() did —
+// means waiting forever, with the panel silently showing stale lamps. The
+// watchdog in shared/ws-liveness.js catches it and calls this.
+//
+// The dead socket is closed for real, with its onclose detached first so it
+// cannot also queue a reconnect, and then one fresh socket is opened. The
+// server pushes a full light+room snapshot to every client on connect, so that
+// reconnect is also the resync: nothing else has to be asked for.
+function reconnectNow() {
+  if (wsWatch) { wsWatch.stop(); wsWatch = null; }
+  if (ws) {
+    ws.onclose = null;
+    try { ws.close(); } catch (e) { /* already gone */ }
+  }
+  wsReady = false;
+  els.connDot.className = 'dot warn';
+  connect();
 }
 
 function send(obj) {
@@ -1918,9 +1949,18 @@ HueMuxI18n.init().then(() => {
 // from the bridge, so the resync is a hard re-sync, not "whatever the
 // server cached."
 document.addEventListener('visibilitychange', () => {
-  if (document.visibilityState === 'visible' && wsReady) {
-    send({ type: 'resync_lights' });
+  if (document.visibilityState !== 'visible') return;
+  // Coming back from a sleep is not the same as coming back from a hidden tab:
+  // the socket itself may have died without closing (see
+  // shared/ws-liveness.js), and a resync_lights sent into one of those is lost
+  // with no error anywhere. A socket that has been quiet since before the
+  // screen went off gets a real reconnect instead — which is itself the
+  // resync, because the server snapshots every client on connect.
+  if (wsWatch && wsWatch.isStale()) {
+    reconnectNow();
+    return;
   }
+  if (wsReady) send({ type: 'resync_lights' });
 });
 
 connect();

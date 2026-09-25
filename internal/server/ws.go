@@ -13,6 +13,8 @@ import (
 	"net/url"
 	"strings"
 	"sync"
+	"sync/atomic"
+	"time"
 
 	"github.com/zamber/huemux/internal/appconfig"
 )
@@ -50,6 +52,19 @@ type Conn struct {
 	bw  *bufio.Writer
 
 	writeMu sync.Mutex
+
+	// recvNanos is when the last frame arrived from the peer, in unix
+	// nanoseconds — pongs included. A client that slept, changed network, or
+	// had its process killed leaves a socket that reads as open forever: no
+	// FIN is coming, so the read loop blocks and the connection is never
+	// reaped. That is what the keepalive in pushStatusLoop watches.
+	recvNanos atomic.Int64
+}
+
+// LastRecv is when the last frame — message, ping, pong or close — arrived
+// from this peer.
+func (c *Conn) LastRecv() time.Time {
+	return time.Unix(0, c.recvNanos.Load())
 }
 
 // checkOrigin is what stops any website the user happens to have open from
@@ -184,7 +199,12 @@ func Upgrade(w http.ResponseWriter, r *http.Request, allowedHost string, extraHo
 		return nil, fmt.Errorf("flush handshake response: %w", err)
 	}
 
-	return &Conn{rwc: rwc, br: brw.Reader, bw: bufio.NewWriter(rwc)}, nil
+	conn := &Conn{rwc: rwc, br: brw.Reader, bw: bufio.NewWriter(rwc)}
+	// Seed the receive clock. Without this the keepalive would read a zero
+	// timestamp as "nothing received since 1970" and close the connection on
+	// its first tick, before the peer has had a chance to answer anything.
+	conn.recvNanos.Store(time.Now().UnixNano())
+	return conn, nil
 }
 
 func acceptKey(key string) string {
@@ -208,6 +228,10 @@ func (c *Conn) ReadMessage() (byte, []byte, error) {
 		if err != nil {
 			return 0, nil, err
 		}
+		// Any frame counts as proof of life, before it is even interpreted:
+		// the keepalive only needs to know the peer is still there, and a
+		// browser's answer to a ping frame arrives here as an opPong.
+		c.recvNanos.Store(time.Now().UnixNano())
 
 		switch opcode {
 		case opPing:

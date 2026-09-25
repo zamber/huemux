@@ -39,6 +39,7 @@ const previewTypeByte = 0x03;
 
 let ws = null;
 let wsReady = false;
+let wsWatch = null; // shared/ws-liveness.js watchdog for ws, when one is open
 let worker = null;
 let stream = null;
 let videoEl = null; // used only by the <video>+rVFC fallback
@@ -58,21 +59,24 @@ let discoveryStarted = false;
 // --- WebSocket transport -----------------------------------------------
 
 function connect() {
-  ws = new WebSocket(authWSURL('/ws'));
-  ws.binaryType = 'arraybuffer';
+  const sock = new WebSocket(authWSURL('/ws'));
+  ws = sock;
+  sock.binaryType = 'arraybuffer';
 
-  ws.onopen = () => {
+  sock.onopen = () => {
     wsReady = true;
     els.connDot.className = 'dot ok';
     discoveryStarted = false; // a fresh connection gets a fresh scan if still unpaired
   };
-  ws.onclose = () => {
+  sock.onclose = () => {
     wsReady = false;
     els.connDot.className = 'dot';
+    // This socket's watchdog is finished — see the same lines in lights.js.
+    if (wsWatch) { wsWatch.stop(); wsWatch = null; }
     setTimeout(connect, 1500); // the service outlives any one tab; reconnect if it restarts
   };
-  ws.onerror = () => { els.connDot.className = 'dot warn'; };
-  ws.onmessage = (ev) => {
+  sock.onerror = () => { els.connDot.className = 'dot warn'; };
+  sock.onmessage = (ev) => {
     if (typeof ev.data === 'string') {
       handleControlMessage(JSON.parse(ev.data));
     } else if (ev.data instanceof ArrayBuffer) {
@@ -82,6 +86,25 @@ function connect() {
       handleBinaryMessage(ev.data);
     }
   };
+  wsWatch = HueMuxWS.watch(sock, { onStale: reconnectNow });
+}
+
+// reconnectNow is for a socket that died quietly — no close frame, no error,
+// readyState still 1 (see shared/ws-liveness.js). onclose never runs for one of
+// those, and this page is the worst place to leave one: it would keep capturing
+// the screen and encoding frames into a socket nobody is reading, while the
+// status line said "streaming". The old socket is closed for real, with its
+// onclose detached so it cannot queue a second reconnect, and one fresh socket
+// is opened; the server resyncs every client on connect.
+function reconnectNow() {
+  if (wsWatch) { wsWatch.stop(); wsWatch = null; }
+  if (ws) {
+    ws.onclose = null;
+    try { ws.close(); } catch (e) { /* already gone */ }
+  }
+  wsReady = false;
+  els.connDot.className = 'dot warn';
+  connect();
 }
 
 function send(obj) {

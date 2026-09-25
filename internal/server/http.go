@@ -1484,29 +1484,78 @@ func (s *Server) pairFail(msg string) {
 	s.pairMu.Unlock()
 }
 
+// The keepalive's three numbers. They are variables rather than constants so
+// the tests can drive a whole keepalive cycle in milliseconds; nothing else
+// changes them.
+var (
+	// How often a status snapshot goes out. Also the keepalive's clock.
+	wsStatusInterval = time.Second
+	// How often a ping frame goes out. A browser answers a ping by itself,
+	// with no page code involved, so a tab that is simply idle still proves
+	// it is alive.
+	wsPingInterval = 10 * time.Second
+	// How long the peer may go without sending anything at all — a pong
+	// included — before it is declared gone.
+	wsIdleTimeout = 35 * time.Second
+)
+
 // pushStatusLoop sends a status snapshot at least once a second, per
 // PROTOCOL.md. Faster on-change pushes are left as a future refinement;
 // 1 Hz is frequent enough that the UI never looks stale.
+//
+// It also doubles as the connection's keepalive, and that second job matters
+// more than the first. A socket can die without ever closing: a client that
+// slept, changed network, or was killed leaves a connection this server still
+// holds open and still writes to, and the client's own page still believes in.
+// Nothing is coming to end that — no FIN, so the read loop in handleWS blocks
+// forever and the conn stays in uiConns. The ping plus the silence test is what
+// turns that into an ordinary disconnect: the peer is dropped here, its read
+// loop ends, and it is removed from the broadcast set. A client that is still
+// running notices the close (or its own watchdog does) and reconnects, and the
+// server resyncs it with a fresh snapshot on connect.
+//
+// Failed writes are treated the same way, for the same reason: a write to a
+// discarded socket is the only other evidence available, and it is fatal.
 func (s *Server) pushStatusLoop(conn *Conn, done chan struct{}) {
-	t := time.NewTicker(time.Second)
+	t := time.NewTicker(wsStatusInterval)
 	defer t.Stop()
 
-	send := func() {
+	send := func() bool {
 		raw, err := json.Marshal(s.statusMessage(conn))
 		if err != nil {
-			return
+			return true // marshalling failed, not the connection
 		}
 		if err := conn.WriteMessage(opText, raw); err != nil {
-			return
+			conn.Close() //nolint:errcheck // the read loop's defer does the bookkeeping
+			return false
 		}
+		return true
 	}
-	send() // immediately, so a newly connected tab isn't waiting a full second
+	if !send() { // immediately, so a newly connected tab isn't waiting a full second
+		return
+	}
+
+	lastPing := time.Now()
 	for {
 		select {
 		case <-done:
 			return
 		case <-t.C:
-			send()
+			if time.Since(lastPing) >= wsPingInterval {
+				lastPing = time.Now()
+				if err := conn.WriteMessage(opPing, nil); err != nil {
+					conn.Close() //nolint:errcheck
+					return
+				}
+			}
+			if time.Since(conn.LastRecv()) > wsIdleTimeout {
+				debuglog.Infof("ws: dropping a silent connection (nothing received for %s)", wsIdleTimeout)
+				conn.Close() //nolint:errcheck
+				return
+			}
+			if !send() {
+				return
+			}
 		}
 	}
 }

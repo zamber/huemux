@@ -20,17 +20,35 @@
   };
 
   // ── WS connection ────────────────────────────────────────────────────────
+  var wsWatch = null; // shared/ws-liveness.js watchdog for ws, when one is open
+
   function connectWS() {
-    if (ws) { try { ws.close(); } catch (e) { /* ok */ } }
+    // Detach before closing: this is also the reconnect path (see wsWatch
+    // below), and the old socket's onclose would otherwise overwrite the new
+    // connection's status line with "Disconnected — reload page".
+    if (wsWatch) { wsWatch.stop(); wsWatch = null; }
+    if (ws) {
+      try { ws.onopen = ws.onclose = ws.onmessage = null; ws.close(); } catch (e) { /* ok */ }
+    }
     ws = new WebSocket(WS_URL);
     ws.binaryType = 'arraybuffer';
     ws.onopen = function () { $('#conn-dot').classList.add('connected'); updateStatus('Connected'); };
-    ws.onclose = function () { $('#conn-dot').classList.remove('connected'); updateStatus('Disconnected — reload page'); };
+    ws.onclose = function () {
+      $('#conn-dot').classList.remove('connected');
+      updateStatus('Disconnected — reload page');
+      // This socket's watchdog has nothing left to watch.
+      if (wsWatch) { wsWatch.stop(); wsWatch = null; }
+    };
     ws.onmessage = function (e) {
       if (typeof e.data === 'string') {
         try { handleMsg(JSON.parse(e.data)); } catch (_) {}
       }
     };
+    // A socket that dies without closing never fires onclose, so "Disconnected
+    // — reload page" would never appear and the page would sit on stale preset
+    // state forever. shared/ws-liveness.js spots the silence; connectWS() is
+    // already safe to call twice, so it is its own reconnect.
+    wsWatch = HueMuxWS.watch(ws, { onStale: connectWS });
   }
   function send(msg) { if (ws && ws.readyState === WebSocket.OPEN) ws.send(JSON.stringify(msg)); }
   function updateStatus(s) { $('#status-bar').textContent = s; }
