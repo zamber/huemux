@@ -61,7 +61,9 @@ func TestWSKeepaliveDropsSilentPeer(t *testing.T) {
 	time.Sleep(6 * wsIdleTimeout)
 
 	// The peer is gone from the server's side: the next read sees the close.
-	raw.SetReadDeadline(time.Now().Add(2 * time.Second))
+	if err := raw.SetReadDeadline(time.Now().Add(2 * time.Second)); err != nil {
+		t.Fatalf("set read deadline: %v", err)
+	}
 	for {
 		if _, _, err := conn.ReadMessage(); err != nil {
 			return // closed, as it must be
@@ -89,7 +91,9 @@ func TestWSKeepaliveKeepsAnsweringPeer(t *testing.T) {
 	statuses := 0
 	deadline := time.Now().Add(6 * wsIdleTimeout)
 	for time.Now().Before(deadline) {
-		raw.SetReadDeadline(time.Now().Add(2 * time.Second))
+		if err := raw.SetReadDeadline(time.Now().Add(2 * time.Second)); err != nil {
+			t.Fatalf("set read deadline: %v", err)
+		}
 		op, payload, err := conn.ReadMessage()
 		if err != nil {
 			t.Fatalf("idle-but-answering peer was dropped after %d status pushes: %v", statuses, err)
