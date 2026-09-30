@@ -46,11 +46,11 @@ screenshot below to zoom in.
   <h3>Screen sync</h3>
   <div class="shot-pair">
     <figure class="shot">
-      <img class="zoomable" src="screenshots/huemux-sync-light.png" alt="Screen sync panel, showing entertainment zone selection and the reactivity/sampling controls — light theme">
+      <img class="zoomable" src="screenshots/huemux-sync-light.png" alt="Screen sync panel: entertainment zone picker, a live capture preview with the zone rectangles drawn over it, and the reactivity/sampling controls — light theme">
       <figcaption>Light theme</figcaption>
     </figure>
     <figure class="shot">
-      <img class="zoomable" src="screenshots/huemux-sync-dark.png" alt="Screen sync panel, showing entertainment zone selection and the reactivity/sampling controls — dark theme">
+      <img class="zoomable" src="screenshots/huemux-sync-dark.png" alt="Screen sync panel: entertainment zone picker, a live capture preview with the zone rectangles drawn over it, and the reactivity/sampling controls — dark theme">
       <figcaption>Dark theme</figcaption>
     </figure>
   </div>

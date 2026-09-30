@@ -32,7 +32,7 @@ override via the header toggle) — shown here in both.
 <p align="center">
   <picture>
     <source media="(prefers-color-scheme: dark)" srcset="docs/screenshots/huemux-sync-dark.png">
-    <img src="docs/screenshots/huemux-sync-light.png" alt="Screen sync panel, showing entertainment zone selection and the reactivity/sampling controls" width="820">
+    <img src="docs/screenshots/huemux-sync-light.png" alt="Screen sync panel: entertainment zone picker, a live capture preview with the zone rectangles drawn over it, and the reactivity/sampling controls" width="820">
   </picture>
   <br><sub>Screen sync</sub>
 </p>
