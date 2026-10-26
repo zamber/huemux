@@ -137,6 +137,10 @@ class HueMuxHeader extends HTMLElement {
       html += '<a href="/node-editor.html" data-tab="presets" data-i18n="nav.presets"' +
         (active === 'presets' ? ' class="active"' : '') + '>Presets</a>';
     }
+    if (f.mux) {
+      html += '<a href="/mux.html" data-tab="mux"' +
+        (active === 'mux' ? ' class="active"' : '') + '>Mux</a>';
+    }
     // Every tab that exists gets a link, including when there is only one.
     //
     // A single feature tab used to render no link at all, on the reasoning

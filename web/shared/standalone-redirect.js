@@ -24,7 +24,8 @@
 
   var tab = location.pathname.indexOf('lights') !== -1 ? 'lights'
     : (location.pathname.indexOf('settings') !== -1 ? 'settings'
-    : (location.pathname.indexOf('node-editor') !== -1 ? 'presets' : 'sync'));
+    : (location.pathname.indexOf('node-editor') !== -1 ? 'presets'
+    : (location.pathname.indexOf('mux') !== -1 ? 'mux' : 'sync')));
   // replace(), not assign(): the standalone URL must not become a history
   // entry, or Back from the shell returns to the page we just redirected away
   // from and bounces straight back here. The page's query (?filter=...) rides

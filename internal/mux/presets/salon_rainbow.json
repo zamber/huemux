@@ -1,0 +1,25 @@
+{
+  "version": 1,
+  "name": "Salon rainbow drift",
+  "room": "Salon",
+  "master": { "brightness": 0.85 },
+  "lanes": [
+    {
+      "id": "rainbow",
+      "name": "Rainbow",
+      "source": { "type": "timer", "params": { "bpm": 12, "waveform": "sine" } },
+      "effect": { "type": "rainbow", "params": { "speed": 0.02, "spread": 1.2, "saturation": 0.9, "brightness": 0.75 } },
+      "blend": "replace",
+      "level": 1
+    },
+    {
+      "id": "chase",
+      "name": "Chase",
+      "source": { "type": "timer", "params": { "bpm": 24, "waveform": "saw" } },
+      "effect": { "type": "chase", "params": { "color": "#FFFFFF", "background": "#000000", "width": 0.12, "trail": 0.4, "speed": 0.18, "brightness": 0.7 } },
+      "blend": "add",
+      "level": 0.5
+    }
+  ],
+  "output": { "hz": 4, "transition_ms": 240 }
+}

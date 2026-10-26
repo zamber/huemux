@@ -11,7 +11,7 @@ window.HueMuxShell = (() => {
   // than from a fixed pair — otherwise switchTab would target a null element
   // and the shell would land on a frame that was never created.
   const frames = {};
-  for (const tab of ['sync', 'lights', 'settings', 'presets']) {
+  for (const tab of ['sync', 'lights', 'settings', 'presets', 'mux']) {
     const el = document.getElementById('frame-' + tab);
     if (el) frames[tab] = el;
   }
@@ -19,10 +19,10 @@ window.HueMuxShell = (() => {
   // Whichever frame exists, preferring lights to match the new default: light
   // control is the day-to-day screen, screen sync the less frequent one. A
   // profile that disabled the Lights tab falls through to whatever remains.
-  let active = frames.lights ? 'lights' : (frames.sync ? 'sync' : (frames.settings ? 'settings' : (frames.presets ? 'presets' : null)));
+  let active = frames.lights ? 'lights' : (frames.mux ? 'mux' : (frames.sync ? 'sync' : (frames.settings ? 'settings' : (frames.presets ? 'presets' : null))));
 
-  const NAV_KEY = { lights: 'nav.lights', sync: 'nav.sync', settings: 'nav.settings', presets: 'nav.presets' };
-  const PATH = { lights: '/lights.html', sync: '/sync.html', settings: '/settings.html', presets: '/node-editor.html' };
+  const NAV_KEY = { lights: 'nav.lights', sync: 'nav.sync', settings: 'nav.settings', presets: 'nav.presets', mux: 'nav.mux' };
+  const PATH = { lights: '/lights.html', sync: '/sync.html', settings: '/settings.html', presets: '/node-editor.html', mux: '/mux.html' };
 
   // Last tab the user had open. The shell switches tabs by toggling iframe
   // visibility (not navigating), so the address bar does not reliably
@@ -44,6 +44,7 @@ window.HueMuxShell = (() => {
   }
 
   function titleFor(tab) {
+    if (tab === 'mux') return 'HueMux — Mux';
     return 'HueMux — ' + HueMuxI18n.t(NAV_KEY[tab] || NAV_KEY.sync);
   }
 

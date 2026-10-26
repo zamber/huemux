@@ -27,6 +27,9 @@ import (
 	"github.com/zamber/huemux/internal/hue"
 	"github.com/zamber/huemux/internal/lightctl"
 	"github.com/zamber/huemux/internal/music"
+	"github.com/zamber/huemux/internal/mux"
+	"github.com/zamber/huemux/internal/muxhue"
+	"github.com/zamber/huemux/internal/muxrun"
 	"github.com/zamber/huemux/internal/pipeline"
 	"github.com/zamber/huemux/internal/preset"
 )
@@ -42,6 +45,12 @@ type Server struct {
 	store     *config.Store
 	favorites *config.FavoritesStore
 	presets   *preset.Store
+	muxStore  *mux.Store
+	muxMu     sync.Mutex
+	muxRT     *muxrun.Runtime
+	muxSink   *muxhue.Sink
+	muxDoc    mux.Document
+	muxInv    []mux.Light
 	mux       *http.ServeMux
 
 	// p holds both paired-bridge services (screen-sync engine and light
@@ -127,6 +136,7 @@ func New(cfg appconfig.Config, store *config.Store, favorites *config.FavoritesS
 	}
 	if dir, err := config.Dir(); err == nil {
 		s.presets, _ = preset.NewStore(dir + "/presets")
+		s.muxStore, _ = mux.NewStore(dir + "/mux")
 	}
 	if eng != nil || lights != nil {
 		s.setPaired(eng, lights)
@@ -356,6 +366,9 @@ func (s *Server) setPaired(eng *engine.Engine, lights *lightctl.Service) {
 	if lights != nil && s.Config().ShowsLightsTab() {
 		go s.runLightEventBroadcast(ctx, lights)
 	}
+	if lights != nil {
+		go s.attachMux(lights)
+	}
 }
 
 // runLightEventBroadcast relays every event from the bridge's eventstream
@@ -510,6 +523,13 @@ func (s *Server) routes() {
 	s.mux.HandleFunc("/api/presets", s.guard(s.handlePresets))
 	s.mux.HandleFunc("/api/presets/catalog", s.guard(s.handlePresetCatalog))
 	s.mux.HandleFunc("/api/presets/{slug}", s.guard(s.handlePresetSlug))
+	s.mux.HandleFunc("/api/mux", s.guard(s.handleMux))
+	s.mux.HandleFunc("/api/mux/state", s.guard(s.handleMuxState))
+	s.mux.HandleFunc("/api/mux/start", s.guard(s.handleMuxStart))
+	s.mux.HandleFunc("/api/mux/stop", s.guard(s.handleMuxStop))
+	s.mux.HandleFunc("/api/mux/off", s.guard(s.handleMuxOff))
+	s.mux.HandleFunc("/api/mux/presets", s.guard(s.handleMuxPresets))
+	s.mux.HandleFunc("/api/mux/presets/{slug}", s.guard(s.handleMuxPresetSlug))
 }
 
 // ListenAndServe binds the configured address and starts serving.

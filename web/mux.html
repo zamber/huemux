@@ -1,0 +1,98 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="color-scheme" content="light dark">
+<meta name="theme-color" content="#000000" id="theme-color-meta">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<title>HueMux — Mux</title>
+<script src="/shared/standalone-redirect.js"></script>
+<script>
+(function() {
+  var DARK = '#000000', LIGHT = '#f7f3ea';
+  var t = localStorage.getItem('theme');
+  var resolved;
+  var base = { light: 'light', dark: 'dark', 'simple-light': 'light', 'simple-dark': 'dark' }[t];
+  if (base) {
+    document.documentElement.setAttribute('data-theme', base);
+    resolved = base;
+  } else {
+    resolved = window.matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark';
+  }
+  if (localStorage.getItem('themeSimple') === '1' || (t && t.indexOf('simple-') === 0)) {
+    document.documentElement.setAttribute('data-simple', '');
+  }
+  var meta = document.getElementById('theme-color-meta');
+  if (meta) meta.setAttribute('content', resolved === 'light' ? LIGHT : DARK);
+})();
+</script>
+<link rel="stylesheet" href="/shared/theme.css">
+<link rel="stylesheet" href="/shared/header.css">
+<link rel="stylesheet" href="/shared/scrollbars.css">
+<link rel="stylesheet" href="/mux.css">
+</head>
+<body>
+<huemux-header active="mux"></huemux-header>
+
+<div id="app">
+  <section id="preview" aria-label="Live lamp preview">
+    <div class="preview-head">
+      <div>
+        <p class="eyebrow">Salon</p>
+        <h1 id="doc-name">Mux</h1>
+      </div>
+      <button id="btn-run" class="btn primary" type="button" disabled>Start</button>
+    </div>
+
+    <div id="lamp-stage" aria-hidden="true"></div>
+
+    <div class="preview-foot">
+      <span id="status-dot" class="dot"></span>
+      <span id="status-text">Loading…</span>
+      <span id="save-state"></span>
+    </div>
+    <p id="error-line" class="error" hidden></p>
+
+    <label class="master" for="master">
+      <span>Master</span>
+      <input id="master" type="range" min="0" max="100" step="1" value="90">
+      <output id="master-out" for="master">90%</output>
+    </label>
+  </section>
+
+  <div id="main">
+    <div id="lanes" aria-label="Effect layers"></div>
+    <p id="empty-state" class="empty" hidden>
+      No layers yet. Add one below, or load a preset.
+    </p>
+    <button id="add-lane" class="add" type="button">＋ Add layer</button>
+    <div id="bottom-actions">
+      <button id="btn-presets" class="btn" type="button">Presets</button>
+      <button id="btn-save" class="btn" type="button">Save as…</button>
+      <button id="btn-off" class="btn danger" type="button">All off</button>
+    </div>
+  </div>
+</div>
+
+<div id="sheet-backdrop" hidden></div>
+<div id="sheet" role="dialog" aria-modal="true" aria-labelledby="sheet-title" hidden>
+  <div class="sheet-grip" aria-hidden="true"></div>
+  <div class="sheet-head">
+    <h2 id="sheet-title"></h2>
+    <button id="sheet-close" class="icon-btn" type="button" aria-label="Close">✕</button>
+  </div>
+  <div id="sheet-body"></div>
+</div>
+<div id="toast" role="status" aria-live="polite"></div>
+
+<script src="/shared/theme.js"></script>
+<script src="/shared/scrollbars.js"></script>
+<script src="/shared/i18n.js"></script>
+<script src="/shared/features.js"></script>
+<script src="/shared/header.js"></script>
+<script src="/shared/auth.js"></script>
+<script>HueMuxI18n.init(); HueMuxFeatures.load();</script>
+<script src="/mux.js"></script>
+</body>
+</html>

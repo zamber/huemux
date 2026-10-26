@@ -212,3 +212,22 @@ func (c *Client) RecallScene(ctx context.Context, sceneRID string) error {
 	return c.doV2(ctx, http.MethodPut, "/clip/v2/resource/scene/"+sceneRID,
 		map[string]any{"recall": map[string]any{"action": "active"}}, nil)
 }
+
+// SetLightCommand updates power, brightness and color in one CLIP v2 PUT.
+// The mux output path uses it because three separate setters triple the
+// request count per frame, and the bridge is the bottleneck at effect rates.
+// dynamics.duration is the v2 transition time in milliseconds; the bridge
+// accepts it on light resources.
+func (c *Client) SetLightCommand(ctx context.Context, lightRID string, on bool, brightness, x, y float64, transitionMS int) error {
+	body := map[string]any{
+		"on": map[string]any{"on": on},
+	}
+	if on {
+		body["dimming"] = map[string]any{"brightness": brightness}
+		body["color"] = map[string]any{"xy": map[string]any{"x": x, "y": y}}
+	}
+	if transitionMS > 0 {
+		body["dynamics"] = map[string]any{"duration": transitionMS}
+	}
+	return c.doV2(ctx, http.MethodPut, "/clip/v2/resource/light/"+lightRID, body, nil)
+}

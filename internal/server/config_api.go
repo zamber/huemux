@@ -25,6 +25,7 @@ type configWire struct {
 	Lights  bool `json:"lights"`
 	Sync    bool `json:"sync"`
 	Presets bool `json:"presets"`
+	Mux     bool `json:"mux"`
 
 	Listen struct {
 		Host string `json:"host"`
@@ -82,6 +83,7 @@ func (s *Server) writeConfig(w http.ResponseWriter, r *http.Request) {
 	out.Lights = cfg.ShowsLightsTab()
 	out.Sync = cfg.ShowsSyncTab()
 	out.Presets = cfg.ShowsPresetsTab()
+	out.Mux = cfg.ShowsMuxTab()
 	out.Listen.Host = displayHost(cfg.Listen.Host)
 	out.Listen.Port = listenPort(s.Addr)
 	out.AllowedHosts = cfg.AllowedHosts

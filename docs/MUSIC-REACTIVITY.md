@@ -9,6 +9,11 @@ This document is the plan. It defines the primitives, the UI, the phases, and
 the extension points. Implementation decisions are documented with their
 rationale under [Decision Points](#decision-points).
 
+> Phase 1 of the multiplexer UI and runtime now lives in
+> [plans/05-multiplexer.md](../plans/05-multiplexer.md). The primitive catalogue
+> below remains the reference; the lane mixer replaces the node editor as the
+> on-ramp.
+
 See [POSSIBLE-FUTURE.md](../POSSIBLE-FUTURE.md) for market research on why
 these features were chosen and what existing clients fail to deliver.
 

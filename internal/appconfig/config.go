@@ -170,6 +170,13 @@ func (c Config) ShowsPresetsTab() bool {
 	return c.Profile == ProfileFull || c.Profile == ProfileSync
 }
 
+// ShowsMuxTab reports whether the effect multiplexer tab should be offered.
+// It needs lightctl (present under every profile) but not the sync engine, so
+// unlike ShowsPresetsTab it is available in a lights-only deployment.
+func (c Config) ShowsMuxTab() bool {
+	return true
+}
+
 // LoopbackOnly reports whether the configured listen host is unreachable from
 // other machines. Callers use this to decide whether the deployment needs an
 // auth story at all.
