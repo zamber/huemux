@@ -166,7 +166,7 @@ func writeAtomic(path string, raw []byte) error {
 		return err
 	}
 	name := tmp.Name()
-	defer os.Remove(name)
+	defer func() { _ = os.Remove(name) }()
 	if _, err := tmp.Write(raw); err != nil {
 		tmp.Close()
 		return err

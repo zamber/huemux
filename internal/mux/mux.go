@@ -559,7 +559,7 @@ func NewEffect(typ string, params map[string]any) (Effect, error) {
 	return spec.New(params)
 }
 
-// Catalog is the complete editor metadata.
+// CatalogData is the complete editor metadata.
 type CatalogData struct {
 	Sources []NodeMeta `json:"sources"`
 	Effects []NodeMeta `json:"effects"`
