@@ -16,11 +16,18 @@ Outputs:
     web/shared/icon-light.svg      light background, for light surfaces
     web/shared/icon-mark.svg       bare mark, no background, currentColor-safe
     web/favicon.svg                small-size variant, heavier strokes
+    web/favicon.ico                multi-resolution browser fallback
     android/.../ic_launcher_foreground.xml   adaptive foreground
     android/.../ic_launcher_background.xml   adaptive background
+    android/.../mipmap-*/ic_launcher.png     raster launcher fallbacks
+
+Raster generation needs ImageMagick's `convert`; the SVG and Android vector
+outputs do not, so the script still works on a machine without it.
 """
 
 import os
+import shutil
+import subprocess
 
 ROOT = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..")
 
@@ -233,5 +240,31 @@ write("android/app/src/main/res/drawable/ic_launcher_background.xml",
       '    android:viewportWidth="108" android:viewportHeight="108">\n'
       '    <path android:fillColor="#0A0A0A" android:pathData="M0,0h108v108h-108z"/>\n'
       '</vector>\n')
+
+# Raster outputs. The launcher and browser surfaces need actual bitmaps:
+# some launchers ignore the adaptive vector, and a browser tab caches an ICO
+# independently of the SVG. ImageMagick is optional so the vector pipeline
+# still runs on a bare machine.
+if shutil.which("convert"):
+    subprocess.run([
+        "convert", "-background", "none",
+        os.path.join(ROOT, "web/favicon.svg"),
+        "-define", "icon:auto-resize=48,32,16",
+        os.path.join(ROOT, "web/favicon.ico"),
+    ], check=True)
+    for density, size in (("mdpi", 48), ("hdpi", 72), ("xhdpi", 96),
+                          ("xxhdpi", 144), ("xxxhdpi", 192)):
+        outdir = os.path.join(ROOT, "android/app/src/main/res", "mipmap-" + density)
+        os.makedirs(outdir, exist_ok=True)
+        subprocess.run([
+            "convert", "-background", "none",
+            os.path.join(ROOT, "web/shared/icon.svg"),
+            "-resize", f"{size}x{size}",
+            os.path.join(outdir, "ic_launcher.png"),
+        ], check=True)
+    print("  web/favicon.ico")
+    print("  android/.../mipmap-*/ic_launcher.png")
+else:
+    print("  (ImageMagick convert not found; skipped favicon.ico and raster launcher icons)")
 
 print("done")
