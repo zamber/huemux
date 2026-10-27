@@ -5,8 +5,8 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <title>HueMux — Settings</title>
 <meta id="theme-color-meta" name="theme-color" content="#000000">
-<link rel="icon" href="/favicon.svg?v=0.0.5-alpha.7" type="image/svg+xml">
-<link rel="alternate icon" href="/favicon.ico?v=0.0.5-alpha.7" type="image/x-icon">
+<link rel="icon" href="/favicon.svg?v=0.0.5-alpha.8" type="image/svg+xml">
+<link rel="alternate icon" href="/favicon.ico?v=0.0.5-alpha.8" type="image/x-icon">
 <script src="/shared/standalone-redirect.js"></script>
 <script>
 // Inline so the theme is set before first paint — see the identical snippet
@@ -74,6 +74,19 @@
       <p class="hint" data-i18n="settings.listenHint">
         When on, other devices on your local network can reach HueMux.
         The port can be changed if another app already uses 7654.
+      </p>
+    </section>
+    <section class="setting">
+      <label for="set-allowed-hosts">Allowed hosts</label>
+      <div class="row">
+        <input type="text" id="set-allowed-hosts" spellcheck="false"
+               placeholder="lights.lan, luna-prime.tail8c20cd.ts.net">
+        <button type="button" id="set-allow-current">Use this host</button>
+      </div>
+      <p class="hint">
+        Extra hostnames the WebSocket may be opened from. Add the Tailscale or
+        reverse-proxy name you use. This machine's own names and addresses are
+        always allowed. Changes can only be saved from the machine running HueMux.
       </p>
     </section>
 

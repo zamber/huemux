@@ -14,6 +14,8 @@ const els = {
   shareDetail: document.getElementById('share-detail'),
   shareUrlList: document.getElementById('share-url-list'),
   port: document.getElementById('set-port'),
+  allowedHosts: document.getElementById('set-allowed-hosts'),
+  allowCurrent: document.getElementById('set-allow-current'),
   auth: document.getElementById('set-auth'),
   token: document.getElementById('set-token'),
   tokenRow: document.getElementById('token-row'),
@@ -103,6 +105,7 @@ function render(cfg) {
   els.share.checked = !!cfg.share_control;
   els.shareDetail.hidden = !cfg.share_control;
   els.port.value = cfg.listen.port || 7654;
+  els.allowedHosts.value = (cfg.allowed_hosts || []).join(', ');
 
   // Preview URLs.
   renderShareURLs(cfg);
@@ -208,6 +211,10 @@ let applyTimer = null;
 let inFlight = false;
 let pendingAgain = false;
 
+function splitHosts(value) {
+  return String(value || '').split(/[,\s]+/).map(function (s) { return s.trim(); }).filter(Boolean);
+}
+
 function currentBody() {
   var share = els.share.checked;
   var body = {
@@ -216,6 +223,7 @@ function currentBody() {
       host: share ? '0.0.0.0' : '127.0.0.1',
       port: share ? Number(els.port.value) || 7654 : 0,
     },
+    allowed_hosts: splitHosts(els.allowedHosts.value),
     auth: { mode: els.auth.value },
     tls: { mode: els.tls.value },
   };
@@ -315,6 +323,16 @@ els.share.addEventListener('change', function () {
 // Port: debounce, apply on blur.
 els.port.addEventListener('input', () => scheduleApply(false));
 els.port.addEventListener('blur', () => scheduleApply(true));
+els.allowedHosts.addEventListener('input', () => scheduleApply(false));
+els.allowedHosts.addEventListener('blur', () => scheduleApply(true));
+els.allowCurrent.addEventListener('click', function () {
+  var host = location.hostname;
+  if (!host) return;
+  var list = splitHosts(els.allowedHosts.value);
+  if (list.indexOf(host) === -1) list.push(host);
+  els.allowedHosts.value = list.join(', ');
+  scheduleApply(true);
+});
 
 // Token field: persist to localStorage on keystroke but do NOT auto-apply.
 // The Save button triggers the PATCH.
